@@ -1,0 +1,192 @@
+HadesCoin (Proyecto Android - Billetera Digital)
+├── 📁 app/
+│   ├── build.gradle.kts
+│   ├── proguard-rules.pro
+│   └── 📁 src/
+│       ├── 📁 main/
+│       │   ├── AndroidManifest.xml
+│       │   ├── 📁 java/com/example/hadescoin/
+│       │   │   ├── HadesCoinApp.kt (HiltAndroidApp)
+│       │   │   ├── MainActivity.kt
+│       │   │   ├── 📁 core/ (Constantes y utilidades)
+│       │   │   │   └── 📁 common/
+│       │   │   │       └── Constants.kt
+│       │   │   ├── 📁 data/ (Capas de datos - Repositorio + DataSources)
+│       │   │   │   ├── 📁 mapper/ (Conversión de modelos)
+│       │   │   │   │   └── TransactionMapper.kt
+│       │   │   │   ├── 📁 remote/
+│       │   │   │   │   └── 📁 firebase/
+│       │   │   │   │       ├── 📁 auth/ (Firebase Auth)
+│       │   │   │   │       │   └── FirebaseAuthDataSource.kt
+│       │   │   │   │       └── 📁 firestore/ (Cloud Firestore)
+│       │   │   │   │           ├── UserFirestoreDataSource.kt
+│       │   │   │   │           ├── WalletFirestoreDataSource.kt
+│       │   │   │   │           └── TransactionFirestoreDataSource.kt
+│       │   │   │   └── 📁 repository/
+│       │   │   │       ├── AuthRepositoryImpl.kt
+│       │   │   │       └── WalletRepositoryImpl.kt
+│       │   │   ├── 📁 di/ (Inyección de dependencias - Hilt)
+│       │   │   │   └── FirebaseModule.kt
+│       │   │   ├── 📁 domain/ (Lógica de negocio)
+│       │   │   │   ├── 📁 model/ (Modelos de dominio)
+│       │   │   │   │   ├── AppUser.kt
+│       │   │   │   │   └── WalletTransaction.kt
+│       │   │   │   ├── 📁 repository/ (Interfaces de repositorio)
+│       │   │   │   │   ├── AuthRepository.kt
+│       │   │   │   │   └── WalletRepository.kt
+│       │   │   │   └── 📁 usecase/ (Casos de uso)
+│       │   │   │       └── 📁 auth/
+│       │   │   │           ├── LoginUseCase.kt
+│       │   │   │           └── RegisterUseCase.kt
+│       │   │   ├── 📁 presentation/ (Capas de presentación - MVVM)
+│       │   │   │   ├── 📁 auth/
+│       │   │   │   │   ├── 📁 login/ (Pantalla de Login)
+│       │   │   │   │   │   ├── LoginScreen.kt
+│       │   │   │   │   │   ├── LoginViewModel.kt
+│       │   │   │   │   │   └── LoginUiState.kt
+│       │   │   │   │   └── 📁 register/ (Pantalla de Registro)
+│       │   │   │   │       ├── RegisterScreen.kt (TODO)
+│       │   │   │   │       ├── RegisterViewModel.kt
+│       │   │   │   │       └── RegisterUiState.kt
+│       │   │   │   ├── 📁 home/ (Pantalla de inicio después del login)
+│       │   │   │   │   ├── HomeScreen.kt
+│       │   │   │   │   └── HomeViewModel.kt
+│       │   │   │   ├── 📁 navigation/
+│       │   │   │   │   ├── AppNavHost.kt (Navegación principal)
+│       │   │   │   │   └── Screen.kt (Rutas de navegación)
+│       │   │   │   ├── 📁 theme/ (VACÍO - ver ui/theme)
+│       │   │   │   └── Theme.kt
+│       │   │   └── 📁 ui/
+│       │   │       └── 📁 theme/
+│       │   │           ├── Color.kt
+│       │   │           ├── Theme.kt
+│       │   │           └── Type.kt
+│       │   └── 📁 res/ (Recursos XML)
+│       │       ├── 📁 drawable/
+│       │       ├── 📁 mipmap-*/
+│       │       ├── 📁 values/
+│       │       │   ├── colors.xml
+│       │       │   ├── strings.xml
+│       │       │   └── themes.xml
+│       │       └── 📁 xml/
+│       │           ├── backup_rules.xml
+│       │           └── data_extraction_rules.xml
+│       ├── 📁 androidTest/
+│       │   └── java/.../ExampleInstrumentedTest.kt
+│       └── 📁 test/
+│           └── java/.../ExampleUnitTest.kt
+├── 📁 gradle/
+│   ├── gradle-daemon-jvm.properties
+│   ├── libs.versions.toml (Version Catalog)
+│   └── wrapper/
+│       ├── gradle-wrapper.jar
+│       └── gradle-wrapper.properties
+├── build.gradle.kts (Build raíz)
+├── settings.gradle.kts (Configuración de proyectos)
+├── gradlew
+├── gradlew.bat
+├── gradle.properties
+├── local.properties
+└── README.md
+
+═══════════════════════════════════════════════════════════════════════════════
+
+DESCRIPCIÓN DE CAPAS:
+
+📁 core/
+   └─ Constantes, extensiones y utilidades globales
+   └─ Constants.kt: Claves de Firestore, mensajes de error, etc.
+
+📁 data/
+   ├─ remote/firebase/
+   │  ├─ auth/: Interacción con Firebase Authentication
+   │  └─ firestore/: Interacción directa con Cloud Firestore
+   ├─ repository/: Implementación de repositorios (conecta datasources)
+   └─ mapper/: Convierte datos de Firestore a modelos de dominio
+
+📁 di/
+   └─ FirebaseModule.kt: Inyección de dependencias (Hilt)
+   └─ Proporciona instancias de Firebase y Firestore
+
+📁 domain/
+   ├─ model/: Modelos de negocio (AppUser, WalletTransaction)
+   ├─ repository/: Interfaces de repositorio (contratos)
+   └─ usecase/: Lógica de negocio independiente del framework
+
+📁 presentation/
+   ├─ auth/
+   │  ├─ login/: UI de Login (MVVM)
+   │  └─ register/: UI de Registro (MVVM)
+   ├─ home/: Pantalla principal después del login
+   ├─ navigation/: Configuración de navegación Compose
+   └─ theme/: Temas y estilos (Jetpack Compose Material 3)
+
+═══════════════════════════════════════════════════════════════════════════════
+
+FLUJO DE DATOS (Clean Architecture):
+
+1. UI (Composable) → UI State (StateFlow)
+   ↓
+2. ViewModel (MVVM)
+   ↓
+3. UseCase (Lógica de negocio)
+   ↓
+4. Repository (Interfaz de contrato)
+   ↓
+5. RepositoryImpl (Implementación)
+   ↓
+6. DataSource (Firebase Auth / Firestore)
+   ↓
+7. Firebase Cloud (Backend)
+
+═══════════════════════════════════════════════════════════════════════════════
+
+ARCHIVOS PENDIENTES POR IMPLEMENTAR:
+
+❌ presentation/auth/register/RegisterScreen.kt (TODO)
+❌ presentation/auth/register/RegisterViewModel.kt
+❌ presentation/auth/register/RegisterUiState.kt
+❌ presentation/auth/login/LoginScreen.kt
+❌ presentation/auth/login/LoginViewModel.kt
+❌ presentation/auth/login/LoginUiState.kt
+❌ presentation/home/HomeScreen.kt
+❌ presentation/home/HomeViewModel.kt
+❌ presentation/navigation/AppNavHost.kt
+❌ presentation/navigation/Screen.kt
+❌ domain/model/AppUser.kt
+❌ domain/model/WalletTransaction.kt
+❌ domain/repository/AuthRepository.kt
+❌ domain/repository/WalletRepository.kt
+❌ domain/usecase/auth/LoginUseCase.kt
+❌ domain/usecase/auth/RegisterUseCase.kt
+❌ data/remote/firebase/auth/FirebaseAuthDataSource.kt
+❌ data/remote/firebase/firestore/UserFirestoreDataSource.kt
+❌ data/remote/firebase/firestore/WalletFirestoreDataSource.kt
+❌ data/remote/firebase/firestore/TransactionFirestoreDataSource.kt
+❌ data/repository/AuthRepositoryImpl.kt
+❌ data/repository/WalletRepositoryImpl.kt
+❌ di/FirebaseModule.kt
+
+═══════════════════════════════════════════════════════════════════════════════
+
+TECNOLOGÍAS IMPLEMENTADAS:
+
+✅ Kotlin + Jetpack Compose (Material 3)
+✅ MVVM + Clean Architecture
+✅ StateFlow + MutableStateFlow
+✅ Hilt (Inyección de dependencias)
+✅ Firebase Authentication (Solo teléfono)
+✅ Cloud Firestore (Base de datos NoSQL)
+✅ Navigation Compose (Navegación)
+✅ Coroutines + LiveData
+
+═══════════════════════════════════════════════════════════════════════════════
+
+CONFIGURACIÓN GRADLE:
+
+✅ build.gradle.kts (raíz): Plugins y configuración global
+✅ app/build.gradle.kts: Dependencias y configuración del app
+✅ settings.gradle.kts: Version Catalog (libs.versions.toml)
+✅ gradle/libs.versions.toml: Versionamiento centralizado
+
+═══════════════════════════════════════════════════════════════════════════════
