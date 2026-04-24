@@ -1,5 +1,6 @@
 package com.example.hadescoin.data.remote.firebase.firestore
 
+ /**
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.tasks.await
 import javax.inject.Inject
@@ -17,4 +18,4 @@ class WalletFirestoreDataSource @Inject constructor(
         private const val BALANCE_FIELD = "balance"
     }
 }
-
+    */

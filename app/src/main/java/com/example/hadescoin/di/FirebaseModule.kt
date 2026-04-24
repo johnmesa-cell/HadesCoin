@@ -1,5 +1,6 @@
 package com.example.hadescoin.di
 
+/**
 import com.example.hadescoin.data.remote.firebase.firestore.TransactionFirestoreDataSource
 import com.example.hadescoin.data.remote.firebase.firestore.UserFirestoreDataSource
 import com.example.hadescoin.data.remote.firebase.firestore.WalletFirestoreDataSource
@@ -46,4 +47,4 @@ object FirebaseModule {
         return firestoreClass.getMethod("getInstance").invoke(null)!!
     }
 }
-
+    */

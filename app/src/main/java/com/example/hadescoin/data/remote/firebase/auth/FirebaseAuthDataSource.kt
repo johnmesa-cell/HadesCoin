@@ -1,5 +1,6 @@
 package com.example.hadescoin.data.remote.firebase.auth
 
+/**
 import com.google.firebase.auth.FirebaseAuth
 import kotlinx.coroutines.tasks.await
 import javax.inject.Inject
@@ -14,4 +15,4 @@ class FirebaseAuthDataSource @Inject constructor(
 
     fun signOut() = firebaseAuth.signOut()
 }
-
+    */

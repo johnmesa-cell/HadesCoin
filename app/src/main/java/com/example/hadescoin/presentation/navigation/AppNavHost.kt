@@ -1,38 +1,53 @@
 package com.example.hadescoin.presentation.navigation
 
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
-import androidx.compose.ui.Modifier
-import com.example.hadescoin.di.FirebaseModule
+import androidx.navigation.NavHostController
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
 import com.example.hadescoin.presentation.auth.login.LoginScreen
 import com.example.hadescoin.presentation.auth.register.RegisterScreen
 import com.example.hadescoin.presentation.home.HomeScreen
 
 @Composable
 fun AppNavHost(
-    modifier: Modifier = Modifier,
+    navController: NavHostController = rememberNavController(),
+    startDestination: String = Screen.Login.route
 ) {
-    var currentScreen by remember { mutableStateOf<Screen>(Screen.Login) }
+    NavHost(
+        navController = navController,
+        startDestination = startDestination
+    ) {
 
-    when (currentScreen) {
-        Screen.Login -> LoginScreen(
-            viewModel = FirebaseModule.provideLoginViewModel(),
-            onLoginSuccess = { currentScreen = Screen.Home },
-            onGoToRegister = { currentScreen = Screen.Register }
-        )
+        composable(route = Screen.Login.route) {
+            LoginScreen(
+                onLoginSuccess = {
+                    navController.navigate(Screen.Home.route) {
+                        popUpTo(Screen.Login.route) { inclusive = true }
+                    }
+                },
+                onNavigateToRegister = {
+                    navController.navigate(Screen.Register.route)
+                }
+            )
+        } // ← cierra composable Login
 
-        Screen.Register -> RegisterScreen(
-            viewModel = FirebaseModule.provideRegisterViewModel(),
-            onRegisterSuccess = { currentScreen = Screen.Home },
-            onBackToLogin = { currentScreen = Screen.Login }
-        )
+        composable(route = Screen.Register.route) {
+            RegisterScreen(
+                onRegisterSuccess = {
+                    navController.navigate(Screen.Home.route) {
+                        popUpTo(Screen.Login.route) { inclusive = true }
+                    }
+                },
+                onNavigateToLogin = {
+                    navController.popBackStack()
+                }
+            )
+        } // ← cierra composable Register
 
-        Screen.Home -> HomeScreen(
-            viewModel = FirebaseModule.provideHomeViewModel()
-        )
-    }
+        composable(route = Screen.Home.route) {
+            HomeScreen()
+        } // ← cierra composable Home
+
+    } // ← cierra NavHost
 }
-
