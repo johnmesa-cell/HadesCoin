@@ -2,55 +2,70 @@ package com.example.hadescoin.presentation.auth.register
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.hadescoin.domain.model.AppUser
+import com.example.hadescoin.domain.repository.AuthRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
-// ✅ Sin @HiltViewModel ni @Inject
-class RegisterViewModel : ViewModel() {
+class RegisterViewModel(
+    private val authRepository: AuthRepository
+) : ViewModel() {
 
     private val _uiState = MutableStateFlow(RegisterUiState())
     val uiState: StateFlow<RegisterUiState> = _uiState.asStateFlow()
 
-    fun register(email: String, password: String, confirmPassword: String) {
-
-        if (email.isBlank()) {
-            _uiState.update { it.copy(errorMessage = "El correo no puede estar vacío") }
+    fun register(documentNumber: String, phoneNumber: String, pin: String) {
+        // Validaciones locales
+        if (documentNumber.isBlank() || phoneNumber.isBlank() || pin.isBlank()) {
+            _uiState.value = _uiState.value.copy(
+                snackbarMessage = "Completa todos los campos",
+                snackbarIsError = true
+            )
             return
         }
-
-        if (!android.util.Patterns.EMAIL_ADDRESS.matcher(email).matches()) {
-            _uiState.update { it.copy(errorMessage = "Ingresa un correo válido") }
+        if (phoneNumber.length < 10) {
+            _uiState.value = _uiState.value.copy(
+                snackbarMessage = "El número de teléfono debe tener 10 dígitos",
+                snackbarIsError = true
+            )
             return
         }
-
-        if (password.isBlank()) {
-            _uiState.update { it.copy(errorMessage = "La contraseña no puede estar vacía") }
-            return
-        }
-
-        if (password.length < 6) {
-            _uiState.update { it.copy(errorMessage = "La contraseña debe tener mínimo 6 caracteres") }
-            return
-        }
-
-        if (password != confirmPassword) {
-            _uiState.update { it.copy(errorMessage = "Las contraseñas no coinciden") }
+        if (pin.length < 4) {
+            _uiState.value = _uiState.value.copy(
+                snackbarMessage = "El PIN debe tener 4 dígitos",
+                snackbarIsError = true
+            )
             return
         }
 
         viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true, errorMessage = null) }
+            _uiState.value = _uiState.value.copy(isLoading = true, snackbarMessage = null)
 
-            // TODO (Firebase): Aquí irá la llamada real
-            kotlinx.coroutines.delay(1500)
-            _uiState.update { it.copy(isLoading = false, isSuccess = true) }
+            authRepository.register(phoneNumber, documentNumber, pin)
+                .onSuccess {
+                    _uiState.value = _uiState.value.copy(
+                        isLoading = false,
+                        isSuccess = true,
+                        snackbarMessage = "¡Cuenta creada exitosamente!",
+                        snackbarIsError = false
+                    )
+                }
+                .onFailure { error ->
+                    _uiState.value = _uiState.value.copy(
+                        isLoading = false,
+                        snackbarMessage = error.message ?: "Error al crear cuenta",
+                        snackbarIsError = true
+                    )
+                }
         }
     }
 
-    fun clearError() {
-        _uiState.update { it.copy(errorMessage = null) }
+    fun clearSnackbar() {
+        _uiState.value = _uiState.value.copy(snackbarMessage = null)
     }
 }

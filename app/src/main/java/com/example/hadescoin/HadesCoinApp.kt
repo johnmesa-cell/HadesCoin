@@ -1,3 +1,5 @@
 package com.example.hadescoin
 
-// TODO: Implementar HadesCoinApp
+import android.app.Application
+
+class HadesCoinApp : Application()

@@ -1,5 +1,6 @@
 package com.example.hadescoin.presentation.auth.register
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -20,6 +21,8 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -39,10 +42,10 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.hadescoin.di.ServiceLocator
 import com.example.hadescoin.ui.theme.HadesCoinTheme
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -50,7 +53,11 @@ import com.example.hadescoin.ui.theme.HadesCoinTheme
 fun RegisterScreen(
     onRegisterSuccess: () -> Unit,
     onNavigateToLogin: () -> Unit,
-    viewModel: RegisterViewModel = viewModel()
+    viewModel: RegisterViewModel = viewModel(
+        factory = RegisterViewModelFactory(
+            ServiceLocator.getAuthRepository()
+        )
+    )
 ) {
     val uiState by viewModel.uiState.collectAsState()
 
@@ -60,13 +67,19 @@ fun RegisterScreen(
     var pinVisible by remember { mutableStateOf(false) }
 
     val focusManager = LocalFocusManager.current
+    val snackbarHostState = remember { SnackbarHostState() }
 
-    LaunchedEffect(uiState.isSuccess) {
-        if (uiState.isSuccess) onRegisterSuccess()
+    LaunchedEffect(uiState.snackbarMessage) {
+        uiState.snackbarMessage?.let { mensaje ->
+            snackbarHostState.showSnackbar(mensaje)
+            viewModel.clearSnackbar()
+        }
     }
 
-    LaunchedEffect(documentNumber, phoneNumber, pin) {
-        if (uiState.errorMessage != null) viewModel.clearError()
+    LaunchedEffect(uiState.isSuccess) {
+        if (uiState.isSuccess) {
+            onRegisterSuccess()
+        }
     }
 
     Scaffold(
@@ -79,19 +92,20 @@ fun RegisterScreen(
                     }
                 }
             )
-        }
-    ) { innerPadding ->
+        },
+        snackbarHost = { SnackbarHost(snackbarHostState) }
+    ) { paddingValues ->
 
         Column(
             modifier = Modifier
                 .fillMaxSize()
+                .background(MaterialTheme.colorScheme.background)
                 .verticalScroll(rememberScrollState())
-                .padding(innerPadding)
+                .padding(paddingValues)
                 .padding(horizontal = 28.dp),
             verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-
             Spacer(modifier = Modifier.height(24.dp))
 
             Text(
@@ -116,7 +130,6 @@ fun RegisterScreen(
 
             Spacer(modifier = Modifier.height(36.dp))
 
-            // ── Número de documento ───────────────────────────────
             OutlinedTextField(
                 value = documentNumber,
                 onValueChange = { documentNumber = it },
@@ -124,7 +137,7 @@ fun RegisterScreen(
                 placeholder = { Text("1234567890") },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
-                isError = uiState.errorMessage != null,
+                isError = uiState.snackbarMessage != null,
                 keyboardOptions = KeyboardOptions(
                     keyboardType = KeyboardType.Number,
                     imeAction = ImeAction.Next
@@ -136,7 +149,6 @@ fun RegisterScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // ── Número de teléfono (= número de cuenta) ───────────
             OutlinedTextField(
                 value = phoneNumber,
                 onValueChange = { if (it.length <= 10) phoneNumber = it },
@@ -144,7 +156,7 @@ fun RegisterScreen(
                 placeholder = { Text("300 123 4567") },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
-                isError = uiState.errorMessage != null,
+                isError = uiState.snackbarMessage != null,
                 keyboardOptions = KeyboardOptions(
                     keyboardType = KeyboardType.Phone,
                     imeAction = ImeAction.Next
@@ -157,14 +169,13 @@ fun RegisterScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // ── PIN de 4 dígitos ──────────────────────────────────
             OutlinedTextField(
                 value = pin,
                 onValueChange = { if (it.length <= 4) pin = it },
                 label = { Text("PIN de 4 dígitos *") },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
-                isError = uiState.errorMessage != null,
+                isError = uiState.snackbarMessage != null,
                 visualTransformation = if (pinVisible)
                     VisualTransformation.None
                 else
@@ -190,21 +201,8 @@ fun RegisterScreen(
                 supportingText = { Text("Solo números, 4 dígitos") }
             )
 
-            // ── Mensaje de error ──────────────────────────────────
-            uiState.errorMessage?.let { error ->
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(
-                    text = error,
-                    color = MaterialTheme.colorScheme.error,
-                    style = MaterialTheme.typography.bodySmall,
-                    modifier = Modifier.fillMaxWidth(),
-                    textAlign = TextAlign.Start
-                )
-            }
-
             Spacer(modifier = Modifier.height(28.dp))
 
-            // ── Botón crear cuenta ────────────────────────────────
             Button(
                 onClick = {
                     focusManager.clearFocus()
@@ -257,8 +255,6 @@ fun RegisterScreen(
         }
     }
 }
-
-// ── PREVIEWS ─────────────────────────────────────────────────────────────────
 
 @Preview(
     name = "Registro - Modo Claro",

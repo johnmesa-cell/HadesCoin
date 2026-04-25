@@ -1,5 +1,6 @@
 package com.example.hadescoin.presentation.auth.login
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -18,6 +19,9 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -36,18 +40,21 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.hadescoin.di.ServiceLocator
 import com.example.hadescoin.ui.theme.HadesCoinTheme
-import androidx.compose.foundation.background
 
 @Composable
 fun LoginScreen(
     onLoginSuccess: () -> Unit,
     onNavigateToRegister: () -> Unit,
-    viewModel: LoginViewModel = viewModel()
+    viewModel: LoginViewModel = viewModel(
+        factory = LoginViewModelFactory(
+            ServiceLocator.getAuthRepository()
+        )
+    )
 ) {
     val uiState by viewModel.uiState.collectAsState()
 
@@ -56,161 +63,153 @@ fun LoginScreen(
     var pinVisible by remember { mutableStateOf(false) }
 
     val focusManager = LocalFocusManager.current
+    val snackbarHostState = remember { SnackbarHostState() }
 
     LaunchedEffect(uiState.isSuccess) {
         if (uiState.isSuccess) onLoginSuccess()
     }
 
-    LaunchedEffect(phoneNumber, pin) {
-        if (uiState.errorMessage != null) viewModel.clearError()
+    LaunchedEffect(uiState.snackbarMessage) {
+        uiState.snackbarMessage?.let { mensaje ->
+            snackbarHostState.showSnackbar(mensaje)
+            viewModel.clearSnackbar()
+        }
     }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background) // ← agregar esta línea
-            .verticalScroll(rememberScrollState())
-            .padding(horizontal = 28.dp),
-        verticalArrangement = Arrangement.Center,
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Spacer(modifier = Modifier.height(48.dp))
+    Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) }
+    ) { paddingValues ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(MaterialTheme.colorScheme.background)
+                .verticalScroll(rememberScrollState())
+                .padding(paddingValues)
+                .padding(horizontal = 28.dp),
+            verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Spacer(modifier = Modifier.height(48.dp))
 
-        Text(
-            text = "💰",
-            style = MaterialTheme.typography.displayMedium
-        )
+            Text(
+                text = "💰",
+                style = MaterialTheme.typography.displayMedium
+            )
 
-        Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(8.dp))
 
-        Text(
-            text = "HadesCoin",
-            style = MaterialTheme.typography.headlineLarge,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.primary
-        )
+            Text(
+                text = "HadesCoin",
+                style = MaterialTheme.typography.headlineLarge,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.primary
+            )
 
-        Text(
-            text = "Tu billetera digital",
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
+            Text(
+                text = "Tu billetera digital",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
 
-        Spacer(modifier = Modifier.height(40.dp))
+            Spacer(modifier = Modifier.height(40.dp))
 
-        // ── Número de teléfono (= número de cuenta) ──────────────
-        OutlinedTextField(
-            value = phoneNumber,
-            onValueChange = { if (it.length <= 10) phoneNumber = it },
-            label = { Text("Número de teléfono") },
-            placeholder = { Text("300 123 4567") },
-            modifier = Modifier.fillMaxWidth(),
-            singleLine = true,
-            isError = uiState.errorMessage != null,
-            keyboardOptions = KeyboardOptions(
-                keyboardType = KeyboardType.Phone,
-                imeAction = ImeAction.Next
-            ),
-            keyboardActions = KeyboardActions(
-                onNext = { focusManager.moveFocus(FocusDirection.Down) }
-            ),
-            supportingText = { Text("Este es tu número de cuenta") }
-        )
+            OutlinedTextField(
+                value = phoneNumber,
+                onValueChange = { if (it.length <= 10) phoneNumber = it },
+                label = { Text("Número de teléfono") },
+                placeholder = { Text("300 123 4567") },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true,
+                isError = uiState.snackbarMessage != null,
+                keyboardOptions = KeyboardOptions(
+                    keyboardType = KeyboardType.Phone,
+                    imeAction = ImeAction.Next
+                ),
+                keyboardActions = KeyboardActions(
+                    onNext = { focusManager.moveFocus(FocusDirection.Down) }
+                ),
+                supportingText = { Text("Este es tu número de cuenta") }
+            )
 
-        Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(16.dp))
 
-        // ── PIN de 4 dígitos ─────────────────────────────────────
-        OutlinedTextField(
-            value = pin,
-            onValueChange = { if (it.length <= 4) pin = it },
-            label = { Text("PIN de 4 dígitos") },
-            modifier = Modifier.fillMaxWidth(),
-            singleLine = true,
-            isError = uiState.errorMessage != null,
-            visualTransformation = if (pinVisible)
-                VisualTransformation.None
-            else
-                PasswordVisualTransformation(),
-            keyboardOptions = KeyboardOptions(
-                keyboardType = KeyboardType.NumberPassword,
-                imeAction = ImeAction.Done
-            ),
-            keyboardActions = KeyboardActions(
-                onDone = {
+            OutlinedTextField(
+                value = pin,
+                onValueChange = { if (it.length <= 4) pin = it },
+                label = { Text("PIN de 4 dígitos") },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true,
+                isError = uiState.snackbarMessage != null,
+                visualTransformation = if (pinVisible)
+                    VisualTransformation.None
+                else
+                    PasswordVisualTransformation(),
+                keyboardOptions = KeyboardOptions(
+                    keyboardType = KeyboardType.NumberPassword,
+                    imeAction = ImeAction.Done
+                ),
+                keyboardActions = KeyboardActions(
+                    onDone = {
+                        focusManager.clearFocus()
+                        viewModel.login(phoneNumber, pin)
+                    }
+                ),
+                trailingIcon = {
+                    IconButton(onClick = { pinVisible = !pinVisible }) {
+                        Text(
+                            text = if (pinVisible) "🙈" else "👁️",
+                            style = MaterialTheme.typography.bodyLarge
+                        )
+                    }
+                }
+            )
+
+            Spacer(modifier = Modifier.height(28.dp))
+
+            Button(
+                onClick = {
                     focusManager.clearFocus()
                     viewModel.login(phoneNumber, pin)
-                }
-            ),
-            trailingIcon = {
-                IconButton(onClick = { pinVisible = !pinVisible }) {
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(50.dp),
+                enabled = !uiState.isLoading
+            ) {
+                if (uiState.isLoading) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(22.dp),
+                        strokeWidth = 2.5.dp,
+                        color = MaterialTheme.colorScheme.onPrimary
+                    )
+                } else {
                     Text(
-                        text = if (pinVisible) "🙈" else "👁️",
-                        style = MaterialTheme.typography.bodyLarge
+                        text = "Ingresar",
+                        style = MaterialTheme.typography.titleMedium
                     )
                 }
             }
-        )
 
-        // ── Mensaje de error ─────────────────────────────────────
-        uiState.errorMessage?.let { error ->
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = error,
-                color = MaterialTheme.colorScheme.error,
-                style = MaterialTheme.typography.bodySmall,
-                modifier = Modifier.fillMaxWidth(),
-                textAlign = TextAlign.Start
-            )
-        }
+            Spacer(modifier = Modifier.height(16.dp))
 
-        Spacer(modifier = Modifier.height(28.dp))
-
-        // ── Botón ingresar ───────────────────────────────────────
-        Button(
-            onClick = {
-                focusManager.clearFocus()
-                viewModel.login(phoneNumber, pin)
-            },
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(50.dp),
-            enabled = !uiState.isLoading
-        ) {
-            if (uiState.isLoading) {
-                CircularProgressIndicator(
-                    modifier = Modifier.size(22.dp),
-                    strokeWidth = 2.5.dp,
-                    color = MaterialTheme.colorScheme.onPrimary
-                )
-            } else {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Center
+            ) {
                 Text(
-                    text = "Ingresar",
-                    style = MaterialTheme.typography.titleMedium
+                    text = "¿No tienes cuenta?",
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    style = MaterialTheme.typography.bodyMedium
                 )
+                TextButton(onClick = onNavigateToRegister) {
+                    Text(text = "Regístrate")
+                }
             }
+
+            Spacer(modifier = Modifier.height(48.dp))
         }
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.Center
-        ) {
-            Text(
-                text = "¿No tienes cuenta?",
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                style = MaterialTheme.typography.bodyMedium
-            )
-            TextButton(onClick = onNavigateToRegister) {
-                Text(text = "Regístrate")
-            }
-        }
-
-        Spacer(modifier = Modifier.height(48.dp))
     }
 }
-
-// ── PREVIEWS ─────────────────────────────────────────────────────────────────
 
 @Preview(
     name = "Login - Modo Claro",

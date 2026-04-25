@@ -7,11 +7,7 @@ plugins {
 
 android {
     namespace = "com.example.hadescoin"
-    compileSdk {
-        version = release(36) {
-            minorApiLevel = 1
-        }
-    }
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.example.hadescoin"
@@ -32,10 +28,12 @@ android {
             )
         }
     }
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
     }
+
     buildFeatures {
         compose = true
     }
@@ -63,4 +61,6 @@ dependencies {
 
     implementation(platform("com.google.firebase:firebase-bom:34.12.0"))
     implementation("com.google.firebase:firebase-analytics")
+    implementation("com.google.firebase:firebase-database")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services")
 }

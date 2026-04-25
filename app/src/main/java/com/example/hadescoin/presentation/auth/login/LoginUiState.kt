@@ -7,8 +7,11 @@ package com.example.hadescoin.presentation.auth.login
  * @param isSuccess  true cuando el login fue exitoso (dispara la navegación).
  * @param errorMessage Mensaje de error a mostrar en pantalla, null si no hay error.
  */
+// presentation/auth/login/LoginUiState.kt
+
 data class LoginUiState(
     val isLoading: Boolean = false,
     val isSuccess: Boolean = false,
-    val errorMessage: String? = null
+    val snackbarMessage: String? = null,   // ← mensaje del Snackbar
+    val snackbarIsError: Boolean = false   // ← true=rojo, false=verde
 )

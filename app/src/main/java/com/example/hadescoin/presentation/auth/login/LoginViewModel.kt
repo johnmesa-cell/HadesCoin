@@ -2,50 +2,51 @@ package com.example.hadescoin.presentation.auth.login
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.hadescoin.domain.repository.AuthRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-// ✅ Sin @HiltViewModel ni @Inject
-class LoginViewModel : ViewModel() {
+class LoginViewModel(
+    private val authRepository: AuthRepository
+) : ViewModel() {
 
     private val _uiState = MutableStateFlow(LoginUiState())
     val uiState: StateFlow<LoginUiState> = _uiState.asStateFlow()
 
-    fun login(email: String, password: String) {
-
-        if (email.isBlank()) {
-            _uiState.update { it.copy(errorMessage = "El correo no puede estar vacío") }
-            return
-        }
-
-        if (!android.util.Patterns.EMAIL_ADDRESS.matcher(email).matches()) {
-            _uiState.update { it.copy(errorMessage = "Ingresa un correo válido") }
-            return
-        }
-
-        if (password.isBlank()) {
-            _uiState.update { it.copy(errorMessage = "La contraseña no puede estar vacía") }
-            return
-        }
-
-        if (password.length < 6) {
-            _uiState.update { it.copy(errorMessage = "La contraseña debe tener mínimo 6 caracteres") }
+    fun login(phoneNumber: String, pin: String) {
+        if (phoneNumber.isBlank() || pin.isBlank()) {
+            _uiState.value = _uiState.value.copy(
+                snackbarMessage = "Completa todos los campos",
+                snackbarIsError = true
+            )
             return
         }
 
         viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true, errorMessage = null) }
+            _uiState.value = _uiState.value.copy(isLoading = true, snackbarMessage = null)
 
-            // TODO (Firebase): Aquí irá la llamada real
-            kotlinx.coroutines.delay(1500)
-            _uiState.update { it.copy(isLoading = false, isSuccess = true) }
+            authRepository.login(phoneNumber, pin)
+                .onSuccess { user ->
+                    _uiState.value = _uiState.value.copy(
+                        isLoading = false,
+                        isSuccess = true,
+                        snackbarMessage = "¡Bienvenido, ${user.fullName}!",
+                        snackbarIsError = false
+                    )
+                }
+                .onFailure { error ->
+                    _uiState.value = _uiState.value.copy(
+                        isLoading = false,
+                        snackbarMessage = error.message ?: "Teléfono o PIN incorrectos",
+                        snackbarIsError = true
+                    )
+                }
         }
     }
 
-    fun clearError() {
-        _uiState.update { it.copy(errorMessage = null) }
+    fun clearSnackbar() {
+        _uiState.value = _uiState.value.copy(snackbarMessage = null)
     }
 }

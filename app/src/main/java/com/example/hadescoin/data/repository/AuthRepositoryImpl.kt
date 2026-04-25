@@ -1,45 +1,39 @@
 package com.example.hadescoin.data.repository
 
-import com.example.hadescoin.data.remote.firebase.firestore.UserFirestoreDataSource
+import com.example.hadescoin.data.remote.firebase.realtime.UserRealtimeDataSource
 import com.example.hadescoin.domain.model.AppUser
 import com.example.hadescoin.domain.repository.AuthRepository
 
 class AuthRepositoryImpl(
-    private val userFirestoreDataSource: UserFirestoreDataSource
+    private val userRealtimeDataSource: UserRealtimeDataSource
 ) : AuthRepository {
 
     private var cachedUser: AppUser? = null
 
     override suspend fun login(phoneNumber: String, pin: String): Result<AppUser> {
         return runCatching {
-            val remoteUser = userFirestoreDataSource.getUserByPhoneNumber(phoneNumber)
-                ?: error("Usuario no encontrado")
+            val remoteUser = userRealtimeDataSource.loginUser(phoneNumber, pin)
+                ?: error("Usuario no encontrado o PIN incorrecto")
 
-            // TODO(security): Reemplazar comparacion de PIN en texto plano por validacion segura con hash.
-            check(remoteUser.pin == pin) { "PIN incorrecto" }
-
-            AppUser(
-                phoneNumber = remoteUser.phoneNumber,
-                documentNumber = remoteUser.documentNumber
-            ).also { cachedUser = it }
+            cachedUser = remoteUser
+            remoteUser
         }
     }
 
     override suspend fun register(phoneNumber: String, documentNumber: String?, pin: String): Result<Unit> {
         return runCatching {
-            val existingUser = userFirestoreDataSource.getUserByPhoneNumber(phoneNumber)
-            check(existingUser == null) { "El numero ya esta registrado" }
-
-            userFirestoreDataSource.registerUser(
+            val newUser = AppUser(
+                id = "",
                 phoneNumber = phoneNumber,
-                documentNumber = documentNumber,
-                pin = pin
+                documentNumber = documentNumber ?: "",
+                fullName = "",
+                pin = pin,
+                balance = 0.0,
+                createdAt = System.currentTimeMillis().toString()
             )
 
-            cachedUser = AppUser(
-                phoneNumber = phoneNumber,
-                documentNumber = documentNumber
-            )
+            userRealtimeDataSource.createUser(newUser)
+            cachedUser = newUser
         }
     }
 

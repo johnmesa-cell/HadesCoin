@@ -1,0 +1,37 @@
+{
+  "users": {
+    "user_prueba_001": {
+      "documentNumber": "1010101010",
+      "phoneNumber": "3001234567",
+      "fullName": "Juan Pérez",
+      "pin": "1234",
+      "balance": 150000.0,
+      "createdAt": "2026-04-24T00:00:00Z"
+    },
+    "user_prueba_002": {
+      "documentNumber": "2020202020",
+      "phoneNumber": "3119876543",
+      "fullName": "María López",
+      "pin": "5678",
+      "balance": 75000.0,
+      "createdAt": "2026-04-24T00:00:00Z"
+    },
+    "user_prueba_003": {
+      "documentNumber": "3030303030",
+      "phoneNumber": "3204567890",
+      "fullName": "Carlos Gómez",
+      "pin": "9012",
+      "balance": 200000.0,
+      "createdAt": "2026-04-24T00:00:00Z"
+    }
+  },
+  "transactions": {
+    "tx_001": {
+      "senderId": "user_prueba_001",
+      "receiverId": "user_prueba_002",
+      "amount": 50000.0,
+      "type": "TRANSFER",
+      "timestamp": "2026-04-24T10:00:00Z"
+    }
+  }
+}
