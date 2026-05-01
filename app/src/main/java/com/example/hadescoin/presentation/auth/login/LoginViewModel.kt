@@ -1,52 +1,52 @@
 package com.example.hadescoin.presentation.auth.login
 
+import androidx.lifecycle.LiveData
+import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.hadescoin.domain.repository.AuthRepository
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
+import com.google.firebase.database.FirebaseDatabase
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.tasks.await
 
-class LoginViewModel(
-    private val authRepository: AuthRepository
-) : ViewModel() {
+class LoginViewModel : ViewModel() {
 
-    private val _uiState = MutableStateFlow(LoginUiState())
-    val uiState: StateFlow<LoginUiState> = _uiState.asStateFlow()
+    private val database = FirebaseDatabase.getInstance()
+
+    private val _loginExitoso = MutableLiveData<String>()
+    val loginExitoso: LiveData<String> = _loginExitoso
+
+    private val _loginError = MutableLiveData<String>()
+    val loginError: LiveData<String> = _loginError
+
+    private val _cargando = MutableLiveData<Boolean>()
+    val cargando: LiveData<Boolean> = _cargando
 
     fun login(phoneNumber: String, pin: String) {
         if (phoneNumber.isBlank() || pin.isBlank()) {
-            _uiState.value = _uiState.value.copy(
-                snackbarMessage = "Completa todos los campos",
-                snackbarIsError = true
-            )
+            _loginError.value = "Completa todos los campos"
             return
         }
-
         viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isLoading = true, snackbarMessage = null)
-
-            authRepository.login(phoneNumber, pin)
-                .onSuccess { user ->
-                    _uiState.value = _uiState.value.copy(
-                        isLoading = false,
-                        isSuccess = true,
-                        snackbarMessage = "¡Bienvenido, ${user.fullName}!",
-                        snackbarIsError = false
-                    )
+            _cargando.value = true
+            try {
+                val snapshot = database.getReference("users").get().await()
+                var encontrado = false
+                for (userSnapshot in snapshot.children) {
+                    val phone = userSnapshot.child("phoneNumber").getValue(String::class.java)
+                    val storedPin = userSnapshot.child("pin").getValue(String::class.java)
+                    val fullName = userSnapshot.child("fullName").getValue(String::class.java) ?: "Usuario"
+                    if (phone == phoneNumber && storedPin == pin) {
+                        encontrado = true
+                        _loginExitoso.value = "¡Bienvenido, $fullName!"
+                        break
+                    }
                 }
-                .onFailure { error ->
-                    _uiState.value = _uiState.value.copy(
-                        isLoading = false,
-                        snackbarMessage = error.message ?: "Teléfono o PIN incorrectos",
-                        snackbarIsError = true
-                    )
-                }
+                if (!encontrado) _loginError.value = "Teléfono o PIN incorrectos"
+            } catch (e: Exception) {
+                _loginError.value = "Error de conexión: ${e.message}"
+            } finally {
+                _cargando.value = false
+            }
         }
-    }
-
-    fun clearSnackbar() {
-        _uiState.value = _uiState.value.copy(snackbarMessage = null)
     }
 }

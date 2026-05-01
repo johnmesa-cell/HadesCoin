@@ -1,71 +1,55 @@
 package com.example.hadescoin.presentation.auth.register
 
+import androidx.lifecycle.LiveData
+import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.hadescoin.domain.model.AppUser
-import com.example.hadescoin.domain.repository.AuthRepository
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
+import com.google.firebase.database.FirebaseDatabase
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.tasks.await
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
-class RegisterViewModel(
-    private val authRepository: AuthRepository
-) : ViewModel() {
+class RegisterViewModel : ViewModel() {
 
-    private val _uiState = MutableStateFlow(RegisterUiState())
-    val uiState: StateFlow<RegisterUiState> = _uiState.asStateFlow()
+    private val database = FirebaseDatabase.getInstance()
+
+    private val _registroExitoso = MutableLiveData<String>()
+    val registroExitoso: LiveData<String> = _registroExitoso
+
+    private val _registroError = MutableLiveData<String>()
+    val registroError: LiveData<String> = _registroError
+
+    private val _cargando = MutableLiveData<Boolean>()
+    val cargando: LiveData<Boolean> = _cargando
 
     fun register(documentNumber: String, phoneNumber: String, pin: String) {
-        // Validaciones locales
         if (documentNumber.isBlank() || phoneNumber.isBlank() || pin.isBlank()) {
-            _uiState.value = _uiState.value.copy(
-                snackbarMessage = "Completa todos los campos",
-                snackbarIsError = true
-            )
+            _registroError.value = "Completa todos los campos"
             return
         }
-        if (phoneNumber.length < 10) {
-            _uiState.value = _uiState.value.copy(
-                snackbarMessage = "El número de teléfono debe tener 10 dígitos",
-                snackbarIsError = true
-            )
-            return
-        }
-        if (pin.length < 4) {
-            _uiState.value = _uiState.value.copy(
-                snackbarMessage = "El PIN debe tener 4 dígitos",
-                snackbarIsError = true
-            )
-            return
-        }
-
         viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isLoading = true, snackbarMessage = null)
-
-            authRepository.register(phoneNumber, documentNumber, pin)
-                .onSuccess {
-                    _uiState.value = _uiState.value.copy(
-                        isLoading = false,
-                        isSuccess = true,
-                        snackbarMessage = "¡Cuenta creada exitosamente!",
-                        snackbarIsError = false
-                    )
-                }
-                .onFailure { error ->
-                    _uiState.value = _uiState.value.copy(
-                        isLoading = false,
-                        snackbarMessage = error.message ?: "Error al crear cuenta",
-                        snackbarIsError = true
-                    )
-                }
+            _cargando.value = true
+            try {
+                val fechaActual = SimpleDateFormat(
+                    "yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.getDefault()
+                ).format(Date())
+                val nuevoUsuario = mapOf(
+                    "documentNumber" to documentNumber,
+                    "phoneNumber" to phoneNumber,
+                    "pin" to pin,
+                    "fullName" to "",
+                    "balance" to 0.0,
+                    "createdAt" to fechaActual
+                )
+                database.getReference("users").push().setValue(nuevoUsuario).await()
+                _registroExitoso.value = "¡Cuenta creada exitosamente!"
+            } catch (e: Exception) {
+                _registroError.value = "Error de conexión: ${e.message}"
+            } finally {
+                _cargando.value = false
+            }
         }
-    }
-
-    fun clearSnackbar() {
-        _uiState.value = _uiState.value.copy(snackbarMessage = null)
     }
 }

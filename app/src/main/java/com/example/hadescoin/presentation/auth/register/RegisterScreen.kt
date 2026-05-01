@@ -28,8 +28,8 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -45,7 +45,6 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.example.hadescoin.di.ServiceLocator
 import com.example.hadescoin.ui.theme.HadesCoinTheme
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -53,13 +52,11 @@ import com.example.hadescoin.ui.theme.HadesCoinTheme
 fun RegisterScreen(
     onRegisterSuccess: () -> Unit,
     onNavigateToLogin: () -> Unit,
-    viewModel: RegisterViewModel = viewModel(
-        factory = RegisterViewModelFactory(
-            ServiceLocator.getAuthRepository()
-        )
-    )
+    viewModel: RegisterViewModel = viewModel()
 ) {
-    val uiState by viewModel.uiState.collectAsState()
+    val registroExitoso by viewModel.registroExitoso.observeAsState()
+    val registroError by viewModel.registroError.observeAsState()
+    val cargando by viewModel.cargando.observeAsState(false)
 
     var documentNumber by remember { mutableStateOf("") }
     var phoneNumber by remember { mutableStateOf("") }
@@ -69,17 +66,15 @@ fun RegisterScreen(
     val focusManager = LocalFocusManager.current
     val snackbarHostState = remember { SnackbarHostState() }
 
-    LaunchedEffect(uiState.snackbarMessage) {
-        uiState.snackbarMessage?.let { mensaje ->
-            snackbarHostState.showSnackbar(mensaje)
-            viewModel.clearSnackbar()
+    LaunchedEffect(registroExitoso) {
+        registroExitoso?.let {
+            snackbarHostState.showSnackbar(it)
+            onRegisterSuccess()
         }
     }
 
-    LaunchedEffect(uiState.isSuccess) {
-        if (uiState.isSuccess) {
-            onRegisterSuccess()
-        }
+    LaunchedEffect(registroError) {
+        registroError?.let { snackbarHostState.showSnackbar(it) }
     }
 
     Scaffold(
@@ -137,7 +132,7 @@ fun RegisterScreen(
                 placeholder = { Text("1234567890") },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
-                isError = uiState.snackbarMessage != null,
+                isError = registroError != null,
                 keyboardOptions = KeyboardOptions(
                     keyboardType = KeyboardType.Number,
                     imeAction = ImeAction.Next
@@ -156,7 +151,7 @@ fun RegisterScreen(
                 placeholder = { Text("300 123 4567") },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
-                isError = uiState.snackbarMessage != null,
+                isError = registroError != null,
                 keyboardOptions = KeyboardOptions(
                     keyboardType = KeyboardType.Phone,
                     imeAction = ImeAction.Next
@@ -175,7 +170,7 @@ fun RegisterScreen(
                 label = { Text("PIN de 4 dígitos *") },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
-                isError = uiState.snackbarMessage != null,
+                isError = registroError != null,
                 visualTransformation = if (pinVisible)
                     VisualTransformation.None
                 else
@@ -211,9 +206,9 @@ fun RegisterScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(50.dp),
-                enabled = !uiState.isLoading
+                enabled = !cargando
             ) {
-                if (uiState.isLoading) {
+                if (cargando) {
                     CircularProgressIndicator(
                         modifier = Modifier.size(22.dp),
                         strokeWidth = 2.5.dp,
@@ -286,3 +281,4 @@ fun RegisterScreenDarkPreview() {
         )
     }
 }
+

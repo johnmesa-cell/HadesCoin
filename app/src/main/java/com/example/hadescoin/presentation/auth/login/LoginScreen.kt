@@ -26,8 +26,8 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -43,20 +43,17 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.example.hadescoin.di.ServiceLocator
 import com.example.hadescoin.ui.theme.HadesCoinTheme
 
 @Composable
 fun LoginScreen(
     onLoginSuccess: () -> Unit,
     onNavigateToRegister: () -> Unit,
-    viewModel: LoginViewModel = viewModel(
-        factory = LoginViewModelFactory(
-            ServiceLocator.getAuthRepository()
-        )
-    )
+    viewModel: LoginViewModel = viewModel()
 ) {
-    val uiState by viewModel.uiState.collectAsState()
+    val loginExitoso by viewModel.loginExitoso.observeAsState()
+    val loginError by viewModel.loginError.observeAsState()
+    val cargando by viewModel.cargando.observeAsState(false)
 
     var phoneNumber by remember { mutableStateOf("") }
     var pin by remember { mutableStateOf("") }
@@ -65,15 +62,15 @@ fun LoginScreen(
     val focusManager = LocalFocusManager.current
     val snackbarHostState = remember { SnackbarHostState() }
 
-    LaunchedEffect(uiState.isSuccess) {
-        if (uiState.isSuccess) onLoginSuccess()
+    LaunchedEffect(loginExitoso) {
+        loginExitoso?.let {
+            snackbarHostState.showSnackbar(it)
+            onLoginSuccess()
+        }
     }
 
-    LaunchedEffect(uiState.snackbarMessage) {
-        uiState.snackbarMessage?.let { mensaje ->
-            snackbarHostState.showSnackbar(mensaje)
-            viewModel.clearSnackbar()
-        }
+    LaunchedEffect(loginError) {
+        loginError?.let { snackbarHostState.showSnackbar(it) }
     }
 
     Scaffold(
@@ -120,7 +117,7 @@ fun LoginScreen(
                 placeholder = { Text("300 123 4567") },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
-                isError = uiState.snackbarMessage != null,
+                isError = loginError != null,
                 keyboardOptions = KeyboardOptions(
                     keyboardType = KeyboardType.Phone,
                     imeAction = ImeAction.Next
@@ -139,7 +136,7 @@ fun LoginScreen(
                 label = { Text("PIN de 4 dígitos") },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
-                isError = uiState.snackbarMessage != null,
+                isError = loginError != null,
                 visualTransformation = if (pinVisible)
                     VisualTransformation.None
                 else
@@ -174,9 +171,9 @@ fun LoginScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(50.dp),
-                enabled = !uiState.isLoading
+                enabled = !cargando
             ) {
-                if (uiState.isLoading) {
+                if (cargando) {
                     CircularProgressIndicator(
                         modifier = Modifier.size(22.dp),
                         strokeWidth = 2.5.dp,
