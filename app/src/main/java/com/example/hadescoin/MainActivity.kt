@@ -4,36 +4,24 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import com.example.hadescoin.presentation.navigation.AppNavHost
+// Importamos únicamente la navegación de tu proyecto
+import com.example.hadescoin.presentation.navigation.AppNavigation
 import com.example.hadescoin.ui.theme.HadesCoinTheme
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        // Habilita el diseño de pantalla completa (EdgeToEdge) como hace el profe
         enableEdgeToEdge()
+
         setContent {
+            // Usamos el tema de tu aplicación
             HadesCoinTheme {
-                // Punto de entrada de la navegación
-                AppNavHost()
+                // El punto de entrada es ÚNICAMENTE el AppNavigation
+                // Esto hace que la navegación tome el control desde el segundo 1
+                AppNavigation()
             }
         }
     }
 }
-/**
-@Composable
-fun Greeting(name: String, modifier: Modifier = Modifier) {
-    Text(
-        text = "Hello $name!",
-        modifier = modifier
-    )
-}
-
-
-@Preview(showBackground = true)
-@Composable
-fun GreetingPreview() {
-    HadesCoinTheme {
-        Greeting("Android")
-    }
-}
- */

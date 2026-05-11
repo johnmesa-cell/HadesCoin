@@ -1,3 +1,16 @@
 <resources>
     <string name="app_name">HadesCoin</string>
+
+    <string name="text_loading">Cargando...</string>
+    <string name="btn_accept">Aceptar</string>
+    <string name="dialog_error_title">Error</string>
+    <string name="dialog_success_title">Éxito</string>
+
+    <string name="error_register_failed">No se pudo crear la cuenta. Intenta de nuevo.</string>
+    <string name="register_success_message">¡Cuenta creada con éxito!</string>
+    <string name="error_login_failed">Teléfono o PIN incorrectos</string>
+
+    <string name="btn_login">Ingresar</string>
+    <string name="text_no_account">¿No tienes cuenta?</string>
+    <string name="text_register">Regístrate</string>
 </resources>

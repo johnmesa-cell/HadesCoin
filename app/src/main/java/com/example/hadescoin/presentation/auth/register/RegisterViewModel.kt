@@ -1,55 +1,53 @@
 package com.example.hadescoin.presentation.auth.register
 
-import androidx.lifecycle.LiveData
-import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewModelScope
 import com.google.firebase.database.FirebaseDatabase
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.tasks.await
+import com.google.firebase.database.DatabaseReference
+// IMPORTANTE: Asegúrate de que esta línea coincida con el nombre de tu paquete
+import com.example.hadescoin.R
 import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
+import java.util.*
 
 class RegisterViewModel : ViewModel() {
 
-    private val database = FirebaseDatabase.getInstance()
+    // Cambiamos a la forma en que el profesor inicializa la base de datos
+    private var database: DatabaseReference = FirebaseDatabase.getInstance().getReference("users")
 
-    private val _registroExitoso = MutableLiveData<String>()
-    val registroExitoso: LiveData<String> = _registroExitoso
-
-    private val _registroError = MutableLiveData<String>()
-    val registroError: LiveData<String> = _registroError
-
-    private val _cargando = MutableLiveData<Boolean>()
-    val cargando: LiveData<Boolean> = _cargando
-
-    fun register(documentNumber: String, phoneNumber: String, pin: String) {
+    fun register(
+        documentNumber: String,
+        phoneNumber: String,
+        pin: String,
+        onResult: (Boolean, Int) -> Unit
+    ) {
+        // 1. Validación de campos vacíos
         if (documentNumber.isBlank() || phoneNumber.isBlank() || pin.isBlank()) {
-            _registroError.value = "Completa todos los campos"
+            // R.string.error_register_failed debe existir en tu strings.xml
+            onResult(false, R.string.error_register_failed)
             return
         }
-        viewModelScope.launch {
-            _cargando.value = true
-            try {
-                val fechaActual = SimpleDateFormat(
-                    "yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.getDefault()
-                ).format(Date())
-                val nuevoUsuario = mapOf(
-                    "documentNumber" to documentNumber,
-                    "phoneNumber" to phoneNumber,
-                    "pin" to pin,
-                    "fullName" to "",
-                    "balance" to 0.0,
-                    "createdAt" to fechaActual
-                )
-                database.getReference("users").push().setValue(nuevoUsuario).await()
-                _registroExitoso.value = "¡Cuenta creada exitosamente!"
-            } catch (e: Exception) {
-                _registroError.value = "Error de conexión: ${e.message}"
-            } finally {
-                _cargando.value = false
+
+        // 2. Formatear la fecha actual
+        val fechaActual = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
+
+        // 3. Crear el objeto del usuario
+        val nuevoUsuario = mapOf(
+            "documentNumber" to documentNumber,
+            "phoneNumber" to phoneNumber,
+            "pin" to pin,
+            "fullName" to "",
+            "balance" to 0.0,
+            "createdAt" to fechaActual
+        )
+
+        // 4. Guardar en Firebase (Usando documentNumber como ID único)
+        database.child(documentNumber).setValue(nuevoUsuario)
+            .addOnSuccessListener {
+                // Envía éxito y el ID del string de éxito
+                onResult(true, R.string.register_success_message)
             }
-        }
+            .addOnFailureListener {
+                // Envía error si falla la conexión
+                onResult(false, R.string.error_register_failed)
+            }
     }
 }
