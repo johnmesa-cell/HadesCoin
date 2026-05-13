@@ -5,7 +5,7 @@
     android:viewportWidth="108"
     android:viewportHeight="108">
 
-    <!-- ═══ FONDO: degradado radial negro profundo ═══ -->
+    <!-- FONDO: degradado radial negro profundo -->
     <path
         android:pathData="M54,54m-54,0a54,54 0 1,0 108,0a54,54 0 1,0 -108,0">
         <aapt:attr name="android:fillColor">
@@ -21,14 +21,14 @@
         </aapt:attr>
     </path>
 
-    <!-- ═══ ANILLO EXTERIOR: degradado naranja → dorado ═══ -->
+    <!-- ANILLO EXTERIOR: degradado naranja dorado (sweep corregido) -->
     <path
         android:fillColor="#00000000"
         android:strokeWidth="4.5"
         android:pathData="M54,54m-50,0a50,50 0 1,0 100,0a50,50 0 1,0 -100,0">
         <aapt:attr name="android:strokeColor">
             <gradient
-                android:type="sweepGradient"
+                android:type="sweep"
                 android:centerX="54"
                 android:centerY="54">
                 <item android:offset="0"   android:color="#FF6B00"/>
@@ -39,7 +39,7 @@
         </aapt:attr>
     </path>
 
-    <!-- ═══ ANILLO INTERIOR: naranja fino (profundidad) ═══ -->
+    <!-- ANILLO INTERIOR: naranja fino -->
     <path
         android:fillColor="#00000000"
         android:strokeColor="#FF6B00"
@@ -47,7 +47,7 @@
         android:strokeAlpha="0.5"
         android:pathData="M54,54m-44,0a44,44 0 1,0 88,0a44,44 0 1,0 -88,0"/>
 
-    <!-- ═══ LETRA H — GLOW exterior (halo neón morado) ═══ -->
+    <!-- LETRA H: glow halo morado -->
     <path
         android:fillColor="#00000000"
         android:strokeColor="#7C3AED"
@@ -55,7 +55,7 @@
         android:strokeAlpha="0.35"
         android:pathData="M28,22 L28,86 L38,86 L38,58 L70,58 L70,86 L80,86 L80,22 L70,22 L70,48 L38,48 L38,22 Z"/>
 
-    <!-- ═══ LETRA H — cuerpo principal con degradado ═══ -->
+    <!-- LETRA H: cuerpo con degradado -->
     <path
         android:pathData="M28,22 L28,86 L38,86 L38,58 L70,58 L70,86 L80,86 L80,22 L70,22 L70,48 L38,48 L38,22 Z">
         <aapt:attr name="android:fillColor">
@@ -72,25 +72,13 @@
         </aapt:attr>
     </path>
 
-    <!-- ═══ ESQUINAS BISELADAS (cortes diagonales en los 4 vértices exteriores de la H) ═══ -->
-    <!-- Bevel superior izquierdo -->
-    <path
-        android:fillColor="#000000"
-        android:pathData="M28,22 L36,22 L28,30 Z"/>
-    <!-- Bevel superior derecho -->
-    <path
-        android:fillColor="#000000"
-        android:pathData="M80,22 L72,22 L80,30 Z"/>
-    <!-- Bevel inferior izquierdo -->
-    <path
-        android:fillColor="#000000"
-        android:pathData="M28,86 L36,86 L28,78 Z"/>
-    <!-- Bevel inferior derecho -->
-    <path
-        android:fillColor="#000000"
-        android:pathData="M80,86 L72,86 L80,78 Z"/>
+    <!-- ESQUINAS BISELADAS -->
+    <path android:fillColor="#000000" android:pathData="M28,22 L36,22 L28,30 Z"/>
+    <path android:fillColor="#000000" android:pathData="M80,22 L72,22 L80,30 Z"/>
+    <path android:fillColor="#000000" android:pathData="M28,86 L36,86 L28,78 Z"/>
+    <path android:fillColor="#000000" android:pathData="M80,86 L72,86 L80,78 Z"/>
 
-    <!-- ═══ REFLEJO METÁLICO: línea blanca semitransparente (efecto 3D) ═══ -->
+    <!-- REFLEJO METÁLICO -->
     <path
         android:fillColor="#00000000"
         android:strokeColor="#FFFFFF"
