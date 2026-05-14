@@ -1,5 +1,6 @@
 package com.example.hadescoin.presentation.auth.login
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
@@ -13,6 +14,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -22,6 +24,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
+import com.example.hadescoin.R
 import com.example.hadescoin.presentation.components.ShowLoadingAlertDialog
 import com.example.hadescoin.presentation.components.ShowMessageAlertDialog
 import com.example.hadescoin.ui.theme.*
@@ -80,7 +83,7 @@ fun LoginView(
 }
 
 // ─────────────────────────────────────────────────────────────────────────
-// CONTENIDO VISUAL PURO (sin ViewModel ni NavController — apto para @Preview)
+// CONTENIDO VISUAL PURO (apto para @Preview)
 // ─────────────────────────────────────────────────────────────────────────
 @Composable
 fun LoginContent(
@@ -92,12 +95,9 @@ fun LoginContent(
     onLoginClick: () -> Unit,
     onRegisterClick: () -> Unit
 ) {
-    // Gradiente de fondo: negro hacia navy oscuro
     val backgroundGradient = Brush.verticalGradient(
         colors = listOf(HadesBlack, HadesNavyDark, HadesBlack)
     )
-
-    // Gradiente del botón: naranja hacia morado
     val buttonGradient = Brush.horizontalGradient(
         colors = listOf(HadesOrange, HadesPurpleGlow)
     )
@@ -115,12 +115,15 @@ fun LoginContent(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
 
-            // —— LOGO Y TÍTULO —————————————————————————————————
-            Text(text = "💰", fontSize = 72.sp)
+            // —— LOGO ——————————————————————————————————————
+            Image(
+                painter = painterResource(id = R.drawable.ic_hadescoin_logo),
+                contentDescription = "HadesCoin Logo",
+                modifier = Modifier.size(110.dp)
+            )
 
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(12.dp))
 
-            // Título con efecto de letras espaciadas — estilo cyberpunk
             Text(
                 text = "HADESCOIN",
                 fontSize = 34.sp,
@@ -130,7 +133,6 @@ fun LoginContent(
                 textAlign = TextAlign.Center
             )
 
-            // Línea decorativa neón debajo del título
             Spacer(modifier = Modifier.height(6.dp))
             Box(
                 modifier = Modifier
@@ -142,7 +144,6 @@ fun LoginContent(
                         )
                     )
             )
-
             Spacer(modifier = Modifier.height(6.dp))
 
             Text(
@@ -154,9 +155,9 @@ fun LoginContent(
                 textAlign = TextAlign.Center
             )
 
-            Spacer(modifier = Modifier.height(36.dp))
+            Spacer(modifier = Modifier.height(32.dp))
 
-            // —— CARD CON BORDE NEÓN ———————————————————————————
+            // —— CARD CON BORDE NEÓN —————————————————————————
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -177,7 +178,6 @@ fun LoginContent(
             ) {
                 Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
 
-                    // Etiqueta de sección estilo terminal
                     Text(
                         text = "> INICIAR SESIÓN",
                         fontSize = 12.sp,
@@ -186,7 +186,16 @@ fun LoginContent(
                         color = HadesCyan
                     )
 
-                    // Campo teléfono con borde neón personalizado
+                    val fieldColors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor   = HadesCyan,
+                        unfocusedBorderColor = HadesPurple.copy(alpha = 0.5f),
+                        focusedLabelColor    = HadesCyan,
+                        unfocusedLabelColor  = HadesOnDark.copy(alpha = 0.5f),
+                        cursorColor          = HadesCyan,
+                        focusedTextColor     = HadesOnDark,
+                        unfocusedTextColor   = HadesOnDark
+                    )
+
                     OutlinedTextField(
                         value = phoneNumber,
                         onValueChange = onPhoneChange,
@@ -194,18 +203,9 @@ fun LoginContent(
                         modifier = Modifier.fillMaxWidth(),
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
                         singleLine = true,
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor   = HadesCyan,
-                            unfocusedBorderColor = HadesPurple.copy(alpha = 0.5f),
-                            focusedLabelColor    = HadesCyan,
-                            unfocusedLabelColor  = HadesOnDark.copy(alpha = 0.5f),
-                            cursorColor          = HadesCyan,
-                            focusedTextColor     = HadesOnDark,
-                            unfocusedTextColor   = HadesOnDark
-                        )
+                        colors = fieldColors
                     )
 
-                    // Campo PIN
                     OutlinedTextField(
                         value = pin,
                         onValueChange = onPinChange,
@@ -214,35 +214,27 @@ fun LoginContent(
                         visualTransformation = PasswordVisualTransformation(),
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
                         singleLine = true,
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor   = HadesCyan,
-                            unfocusedBorderColor = HadesPurple.copy(alpha = 0.5f),
-                            focusedLabelColor    = HadesCyan,
-                            unfocusedLabelColor  = HadesOnDark.copy(alpha = 0.5f),
-                            cursorColor          = HadesCyan,
-                            focusedTextColor     = HadesOnDark,
-                            unfocusedTextColor   = HadesOnDark
-                        )
+                        colors = fieldColors
                     )
 
                     Spacer(modifier = Modifier.height(4.dp))
 
-                    // Botón con gradiente naranja → morado
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(52.dp)
                             .clip(RoundedCornerShape(12.dp))
-                            .background(if (!cargando) buttonGradient else Brush.horizontalGradient(
-                                colors = listOf(Color.Gray, Color.DarkGray)
-                            ))
+                            .background(
+                                if (!cargando) buttonGradient
+                                else Brush.horizontalGradient(listOf(Color.Gray, Color.DarkGray))
+                            )
                     ) {
                         Button(
                             onClick = onLoginClick,
                             enabled = !cargando,
                             modifier = Modifier.fillMaxSize(),
                             colors = ButtonDefaults.buttonColors(
-                                containerColor    = Color.Transparent,
+                                containerColor         = Color.Transparent,
                                 disabledContainerColor = Color.Transparent
                             ),
                             shape = RoundedCornerShape(12.dp),
@@ -262,7 +254,6 @@ fun LoginContent(
 
             Spacer(modifier = Modifier.height(20.dp))
 
-            // —— LINK DE REGISTRO ————————————————————————————
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
                     text = "¿Sin cuenta? ",

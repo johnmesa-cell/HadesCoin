@@ -1,5 +1,6 @@
 package com.example.hadescoin.presentation.auth.register
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
@@ -15,6 +16,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -24,6 +26,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
+import com.example.hadescoin.R
 import com.example.hadescoin.presentation.components.ShowLoadingAlertDialog
 import com.example.hadescoin.presentation.components.ShowMessageAlertDialog
 import com.example.hadescoin.ui.theme.*
@@ -84,7 +87,7 @@ fun RegisterScreen(
 }
 
 // ─────────────────────────────────────────────────────────────────────────
-// CONTENIDO VISUAL PURO (sin ViewModel ni NavController — apto para @Preview)
+// CONTENIDO VISUAL PURO (apto para @Preview)
 // ─────────────────────────────────────────────────────────────────────────
 @Composable
 fun RegisterContent(
@@ -103,7 +106,6 @@ fun RegisterContent(
     val backgroundGradient = Brush.verticalGradient(
         colors = listOf(HadesBlack, HadesNavyDark, HadesBlack)
     )
-
     val buttonGradient = Brush.horizontalGradient(
         colors = listOf(HadesOrange, HadesPurpleGlow)
     )
@@ -121,10 +123,14 @@ fun RegisterContent(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
 
-            // —— LOGO Y TÍTULO —————————————————————————————————
-            Text(text = "📝", fontSize = 64.sp)
+            // —— LOGO ——————————————————————————————————————
+            Image(
+                painter = painterResource(id = R.drawable.ic_hadescoin_logo),
+                contentDescription = "HadesCoin Logo",
+                modifier = Modifier.size(110.dp)
+            )
 
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(12.dp))
 
             Text(
                 text = "HADESCOIN",
@@ -159,7 +165,7 @@ fun RegisterContent(
 
             Spacer(modifier = Modifier.height(28.dp))
 
-            // —— CARD CON BORDE NEÓN ———————————————————————————
+            // —— CARD CON BORDE NEÓN —————————————————————————
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -188,7 +194,6 @@ fun RegisterContent(
                         color = HadesCyan
                     )
 
-                    // Campos reutilizando el mismo estilo neón
                     val fieldColors = OutlinedTextFieldDefaults.colors(
                         focusedBorderColor   = HadesCyan,
                         unfocusedBorderColor = HadesPurple.copy(alpha = 0.5f),
@@ -241,7 +246,6 @@ fun RegisterContent(
 
                     Spacer(modifier = Modifier.height(4.dp))
 
-                    // Botón con gradiente naranja → morado
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -277,7 +281,6 @@ fun RegisterContent(
 
             Spacer(modifier = Modifier.height(20.dp))
 
-            // —— LINK VOLVER AL LOGIN —————————————————————————
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
                     text = "¿Ya tienes cuenta? ",
