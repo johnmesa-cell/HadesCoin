@@ -12,10 +12,10 @@ import androidx.compose.ui.unit.dp
  * Pantalla de inicio — Implementación temporal.
  * Esta pantalla se completará en futuras entregas.
  * Su único propósito por ahora es servir como destino
- * de navegación después de un login/registro exitoso.
+ * de navegación después de un login exitoso.
  */
 @Composable
-fun HomeScreen() {
+fun HomeScreen(userId: String) {
     Column(
         modifier = Modifier
             .fillMaxSize()

@@ -1,6 +1,5 @@
 package com.example.hadescoin.presentation.components
 
-
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material3.AlertDialog
@@ -10,57 +9,49 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.stringResource
-import com.example.hadescoin.R // Importante: usa el R de tu proyecto
 
 /**
- * Diálogo de Carga: Muestra un círculo de progreso.
- * El profesor lo usa para bloquear la pantalla mientras Firebase responde.
+ * Diálogo de carga — bloquea la pantalla mientras Firebase responde.
+ * No tiene botones ni se puede cerrar tocando fuera.
  */
 @Composable
 fun ShowLoadingAlertDialog() {
     AlertDialog(
-        onDismissRequest = { }, // No se cierra al tocar fuera (bloqueante)
-        title = {
-            // Usa un string de recursos para decir "Cargando..."
-            Text(stringResource(id = R.string.text_loading))
-        },
+        onDismissRequest = { },
+        title = { Text("Cargando...") },
         text = {
-            // Contenedor para centrar el círculo de carga
             Box(
                 modifier = Modifier.fillMaxWidth(),
                 contentAlignment = Alignment.Center
             ) {
-                CircularProgressIndicator() // El círculo giratorio
+                CircularProgressIndicator()
             }
         },
-        confirmButton = { } // No tiene botones porque se cierra automáticamente por código
+        confirmButton = { }
     )
 }
 
 /**
- * Diálogo de Mensaje: Se usa para mostrar errores o éxitos.
- * Recibe una función (onConfirmation) para saber qué hacer cuando el usuario da OK.
+ * Diálogo de mensaje — muestra errores o confirmaciones.
+ * Recibe Strings directamente, compatible con LiveData de todos los ViewModels.
+ *
+ * @param onConfirmation  Acción al pulsar Aceptar
+ * @param dialogTitle     Título del diálogo (ej: "Error", "Éxito")
+ * @param dialogText      Mensaje del cuerpo
  */
 @Composable
 fun ShowMessageAlertDialog(
-    onConfirmation: () -> Unit, // Acción que ocurre al pulsar el botón
-    dialogTitle: Int,           // ID del recurso string para el título
-    dialogText: Int             // ID del recurso string para el mensaje
+    onConfirmation: () -> Unit,
+    dialogTitle: String,
+    dialogText: String
 ) {
     AlertDialog(
-        // Cargamos los textos usando stringResource y los IDs recibidos
-        title = { Text(text = stringResource(id = dialogTitle)) },
-        text = { Text(text = stringResource(id = dialogText)) },
-        onDismissRequest = { }, // Obliga al usuario a presionar el botón
+        title = { Text(text = dialogTitle) },
+        text  = { Text(text = dialogText) },
+        onDismissRequest = { },
         confirmButton = {
-            Button(
-                onClick = {
-                    onConfirmation() // Ejecuta la lógica (ej: cerrar el diálogo)
-                }
-            ) {
-                // Texto del botón, usualmente "Aceptar"
-                Text(stringResource(id = R.string.btn_accept))
+            Button(onClick = { onConfirmation() }) {
+                Text("Aceptar")
             }
         }
     )

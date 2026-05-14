@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -13,7 +14,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
-import com.example.hadescoin.R
 import com.example.hadescoin.presentation.components.ShowLoadingAlertDialog
 import com.example.hadescoin.presentation.components.ShowMessageAlertDialog
 
@@ -22,16 +22,30 @@ fun RegisterScreen(
     navController: NavController,
     viewModel: RegisterViewModel = viewModel()
 ) {
-    // Estados para los inputs
+    var fullName       by remember { mutableStateOf("") }
     var documentNumber by remember { mutableStateOf("") }
-    var phoneNumber by remember { mutableStateOf("") }
-    var pin by remember { mutableStateOf("") }
+    var phoneNumber    by remember { mutableStateOf("") }
+    var pin            by remember { mutableStateOf("") }
 
-    // Estados para el control de alertas
-    var showLoadingAlert by remember { mutableStateOf(false) }
-    var showMessageAlert by remember { mutableStateOf(false) }
-    var titleDialog by remember { mutableIntStateOf(0) }
-    var messageDialog by remember { mutableIntStateOf(0) }
+    val cargando        by viewModel.cargando.observeAsState(false)
+    val registroExitoso by viewModel.registroExitoso.observeAsState()
+    val registroError   by viewModel.registroError.observeAsState()
+
+    var mensajeError by remember { mutableStateOf("") }
+    var showError    by remember { mutableStateOf(false) }
+
+    LaunchedEffect(registroExitoso) {
+        registroExitoso?.let {
+            navController.popBackStack()
+        }
+    }
+
+    LaunchedEffect(registroError) {
+        registroError?.let {
+            mensajeError = it
+            showError = true
+        }
+    }
 
     Column(
         modifier = Modifier
@@ -50,6 +64,15 @@ fun RegisterScreen(
         Text(text = "Crea tu billetera virtual", style = MaterialTheme.typography.bodyMedium)
 
         Spacer(modifier = Modifier.height(30.dp))
+
+        OutlinedTextField(
+            value = fullName,
+            onValueChange = { fullName = it },
+            label = { Text("Nombre completo") },
+            modifier = Modifier.fillMaxWidth()
+        )
+
+        Spacer(modifier = Modifier.height(16.dp))
 
         OutlinedTextField(
             value = documentNumber,
@@ -83,15 +106,8 @@ fun RegisterScreen(
         Spacer(modifier = Modifier.height(32.dp))
 
         Button(
-            onClick = {
-                showLoadingAlert = true
-                viewModel.register(documentNumber, phoneNumber, pin) { success, message ->
-                    showLoadingAlert = false
-                    titleDialog = if (success) R.string.dialog_success_title else R.string.dialog_error_title
-                    messageDialog = message
-                    showMessageAlert = true
-                }
-            },
+            onClick = { viewModel.register(fullName, documentNumber, phoneNumber, pin) },
+            enabled = !cargando,
             modifier = Modifier.fillMaxWidth().height(50.dp)
         ) {
             Text("Registrarme")
@@ -102,22 +118,15 @@ fun RegisterScreen(
         }
     }
 
-    // Lógica de visualización de Alertas
-    if (showLoadingAlert) {
+    if (cargando) {
         ShowLoadingAlertDialog()
     }
 
-    if (showMessageAlert) {
+    if (showError) {
         ShowMessageAlertDialog(
-            onConfirmation = {
-                showMessageAlert = false
-                // Si el registro fue exitoso, volvemos al login automáticamente
-                if (titleDialog == R.string.dialog_success_title) {
-                    navController.popBackStack()
-                }
-            },
-            dialogTitle = titleDialog,
-            dialogText = messageDialog
+            onConfirmation = { showError = false },
+            dialogTitle = "Error",
+            dialogText = mensajeError
         )
     }
 }
