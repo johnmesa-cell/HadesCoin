@@ -1,6 +1,7 @@
 package com.example.hadescoin.presentation.auth.register
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -11,9 +12,13 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -21,11 +26,11 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.example.hadescoin.presentation.components.ShowLoadingAlertDialog
 import com.example.hadescoin.presentation.components.ShowMessageAlertDialog
-import com.example.hadescoin.ui.theme.HadesCoinTheme
+import com.example.hadescoin.ui.theme.*
 
-// ─────────────────────────────────────────────────────────────────────────────
-// VISTA REAL — recibe NavController y ViewModel reales
-// ─────────────────────────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────
+// VISTA REAL
+// ─────────────────────────────────────────────────────────────────────────
 @Composable
 fun RegisterScreen(
     navController: NavController,
@@ -55,11 +60,11 @@ fun RegisterScreen(
     }
 
     RegisterContent(
-        fullName       = fullName,
-        documentNumber = documentNumber,
-        phoneNumber    = phoneNumber,
-        pin            = pin,
-        cargando       = cargando,
+        fullName               = fullName,
+        documentNumber         = documentNumber,
+        phoneNumber            = phoneNumber,
+        pin                    = pin,
+        cargando               = cargando,
         onFullNameChange       = { fullName = it },
         onDocumentNumberChange = { documentNumber = it },
         onPhoneChange          = { phoneNumber = it },
@@ -69,7 +74,6 @@ fun RegisterScreen(
     )
 
     if (cargando) ShowLoadingAlertDialog()
-
     if (showError) {
         ShowMessageAlertDialog(
             onConfirmation = { showError = false },
@@ -79,10 +83,9 @@ fun RegisterScreen(
     }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// CONTENIDO VISUAL — función pura sin ViewModel ni NavController
-// Es la que usa el @Preview. No tiene ninguna dependencia externa.
-// ─────────────────────────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────
+// CONTENIDO VISUAL PURO (sin ViewModel ni NavController — apto para @Preview)
+// ─────────────────────────────────────────────────────────────────────────
 @Composable
 fun RegisterContent(
     fullName: String,
@@ -97,56 +100,112 @@ fun RegisterContent(
     onRegisterClick: () -> Unit,
     onBackToLoginClick: () -> Unit
 ) {
+    val backgroundGradient = Brush.verticalGradient(
+        colors = listOf(HadesBlack, HadesNavyDark, HadesBlack)
+    )
+
+    val buttonGradient = Brush.horizontalGradient(
+        colors = listOf(HadesOrange, HadesPurpleGlow)
+    )
+
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background)
+            .background(brush = backgroundGradient)
     ) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
-                .padding(28.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
+                .padding(horizontal = 28.dp, vertical = 40.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
 
-            // —— Logo y título ———————————————————————————————————
+            // —— LOGO Y TÍTULO —————————————————————————————————
             Text(text = "📝", fontSize = 64.sp)
+
+            Spacer(modifier = Modifier.height(8.dp))
+
             Text(
-                text = "HadesCoin",
-                style = MaterialTheme.typography.headlineLarge,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.primary
-            )
-            Text(
-                text = "Crea tu billetera virtual",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
+                text = "HADESCOIN",
+                fontSize = 34.sp,
+                fontWeight = FontWeight.Black,
+                letterSpacing = 6.sp,
+                color = HadesPurple,
+                textAlign = TextAlign.Center
             )
 
-            Spacer(modifier = Modifier.height(32.dp))
+            Spacer(modifier = Modifier.height(6.dp))
+            Box(
+                modifier = Modifier
+                    .width(180.dp)
+                    .height(2.dp)
+                    .background(
+                        Brush.horizontalGradient(
+                            colors = listOf(Color.Transparent, HadesCyan, HadesOrange, Color.Transparent)
+                        )
+                    )
+            )
+            Spacer(modifier = Modifier.height(6.dp))
 
-            // —— Card con fondo navy ————————————————————————————
-            Card(
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surface
-                ),
-                elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
-                shape = RoundedCornerShape(16.dp),
-                modifier = Modifier.fillMaxWidth()
+            Text(
+                text = "// CREA TU CUENTA",
+                fontSize = 11.sp,
+                fontWeight = FontWeight.Medium,
+                letterSpacing = 2.sp,
+                color = HadesCyan.copy(alpha = 0.7f),
+                textAlign = TextAlign.Center
+            )
+
+            Spacer(modifier = Modifier.height(28.dp))
+
+            // —— CARD CON BORDE NEÓN ———————————————————————————
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(20.dp))
+                    .border(
+                        width = 1.dp,
+                        brush = Brush.verticalGradient(
+                            colors = listOf(HadesPurple, HadesCyan.copy(alpha = 0.5f))
+                        ),
+                        shape = RoundedCornerShape(20.dp)
+                    )
+                    .background(
+                        Brush.verticalGradient(
+                            colors = listOf(HadesNavyDark, HadesNavy)
+                        )
+                    )
+                    .padding(24.dp)
             ) {
-                Column(
-                    modifier = Modifier.padding(24.dp),
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
-                ) {
+                Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+
+                    Text(
+                        text = "> NUEVO USUARIO",
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = 2.sp,
+                        color = HadesCyan
+                    )
+
+                    // Campos reutilizando el mismo estilo neón
+                    val fieldColors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor   = HadesCyan,
+                        unfocusedBorderColor = HadesPurple.copy(alpha = 0.5f),
+                        focusedLabelColor    = HadesCyan,
+                        unfocusedLabelColor  = HadesOnDark.copy(alpha = 0.5f),
+                        cursorColor          = HadesCyan,
+                        focusedTextColor     = HadesOnDark,
+                        unfocusedTextColor   = HadesOnDark
+                    )
 
                     OutlinedTextField(
                         value = fullName,
                         onValueChange = onFullNameChange,
                         label = { Text("Nombre completo") },
                         modifier = Modifier.fillMaxWidth(),
-                        singleLine = true
+                        singleLine = true,
+                        colors = fieldColors
                     )
 
                     OutlinedTextField(
@@ -155,7 +214,8 @@ fun RegisterContent(
                         label = { Text("Número de Documento") },
                         modifier = Modifier.fillMaxWidth(),
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                        singleLine = true
+                        singleLine = true,
+                        colors = fieldColors
                     )
 
                     OutlinedTextField(
@@ -164,7 +224,8 @@ fun RegisterContent(
                         label = { Text("Número de Teléfono") },
                         modifier = Modifier.fillMaxWidth(),
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
-                        singleLine = true
+                        singleLine = true,
+                        colors = fieldColors
                     )
 
                     OutlinedTextField(
@@ -174,42 +235,65 @@ fun RegisterContent(
                         modifier = Modifier.fillMaxWidth(),
                         visualTransformation = PasswordVisualTransformation(),
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
-                        singleLine = true
+                        singleLine = true,
+                        colors = fieldColors
                     )
 
                     Spacer(modifier = Modifier.height(4.dp))
 
-                    Button(
-                        onClick = onRegisterClick,
-                        enabled = !cargando,
-                        modifier = Modifier.fillMaxWidth().height(50.dp),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.secondary,
-                            contentColor   = MaterialTheme.colorScheme.onSecondary
-                        ),
-                        shape = RoundedCornerShape(12.dp)
+                    // Botón con gradiente naranja → morado
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(52.dp)
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(
+                                if (!cargando) buttonGradient
+                                else Brush.horizontalGradient(listOf(Color.Gray, Color.DarkGray))
+                            )
                     ) {
-                        Text(
-                            text = "Registrarme",
-                            style = MaterialTheme.typography.labelLarge,
-                            fontWeight = FontWeight.Bold
-                        )
+                        Button(
+                            onClick = onRegisterClick,
+                            enabled = !cargando,
+                            modifier = Modifier.fillMaxSize(),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor         = Color.Transparent,
+                                disabledContainerColor = Color.Transparent
+                            ),
+                            shape = RoundedCornerShape(12.dp),
+                            elevation = ButtonDefaults.buttonElevation(0.dp)
+                        ) {
+                            Text(
+                                text = if (cargando) "PROCESANDO..." else "[ CREAR CUENTA ]",
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Black,
+                                letterSpacing = 3.sp,
+                                color = Color.White
+                            )
+                        }
                     }
                 }
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(20.dp))
 
+            // —— LINK VOLVER AL LOGIN —————————————————————————
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
                     text = "¿Ya tienes cuenta? ",
-                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
+                    fontSize = 13.sp,
+                    color = HadesOnDark.copy(alpha = 0.5f)
                 )
-                TextButton(onClick = onBackToLoginClick) {
+                TextButton(
+                    onClick = onBackToLoginClick,
+                    contentPadding = PaddingValues(horizontal = 4.dp)
+                ) {
                     Text(
-                        text = "Inicia sesión",
+                        text = "INICIAR SESIÓN ›",
+                        fontSize = 13.sp,
                         fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.primary
+                        letterSpacing = 1.sp,
+                        color = HadesOrange
                     )
                 }
             }
@@ -217,26 +301,17 @@ fun RegisterContent(
     }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// PREVIEW — datos quemados, sin Firebase, sin NavController
-// Solo se ejecuta en Android Studio, no afecta la app real
-// ─────────────────────────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────
+// PREVIEWS
+// ─────────────────────────────────────────────────────────────────────────
 @Preview(showBackground = true, showSystemUi = true, name = "Register — vacío")
 @Composable
 fun RegisterScreenPreview() {
     HadesCoinTheme {
         RegisterContent(
-            fullName       = "",
-            documentNumber = "",
-            phoneNumber    = "",
-            pin            = "",
-            cargando       = false,
-            onFullNameChange       = {},
-            onDocumentNumberChange = {},
-            onPhoneChange          = {},
-            onPinChange            = {},
-            onRegisterClick        = {},
-            onBackToLoginClick     = {}
+            fullName = "", documentNumber = "", phoneNumber = "", pin = "", cargando = false,
+            onFullNameChange = {}, onDocumentNumberChange = {}, onPhoneChange = {},
+            onPinChange = {}, onRegisterClick = {}, onBackToLoginClick = {}
         )
     }
 }
@@ -246,17 +321,10 @@ fun RegisterScreenPreview() {
 fun RegisterScreenFilledPreview() {
     HadesCoinTheme {
         RegisterContent(
-            fullName       = "Juan Pérez",
-            documentNumber = "1010101010",
-            phoneNumber    = "3001234567",
-            pin            = "1234",
-            cargando       = false,
-            onFullNameChange       = {},
-            onDocumentNumberChange = {},
-            onPhoneChange          = {},
-            onPinChange            = {},
-            onRegisterClick        = {},
-            onBackToLoginClick     = {}
+            fullName = "Juan Pérez", documentNumber = "1010101010",
+            phoneNumber = "3001234567", pin = "1234", cargando = false,
+            onFullNameChange = {}, onDocumentNumberChange = {}, onPhoneChange = {},
+            onPinChange = {}, onRegisterClick = {}, onBackToLoginClick = {}
         )
     }
 }
@@ -266,17 +334,10 @@ fun RegisterScreenFilledPreview() {
 fun RegisterScreenLoadingPreview() {
     HadesCoinTheme {
         RegisterContent(
-            fullName       = "Juan Pérez",
-            documentNumber = "1010101010",
-            phoneNumber    = "3001234567",
-            pin            = "1234",
-            cargando       = true,
-            onFullNameChange       = {},
-            onDocumentNumberChange = {},
-            onPhoneChange          = {},
-            onPinChange            = {},
-            onRegisterClick        = {},
-            onBackToLoginClick     = {}
+            fullName = "Juan Pérez", documentNumber = "1010101010",
+            phoneNumber = "3001234567", pin = "1234", cargando = true,
+            onFullNameChange = {}, onDocumentNumberChange = {}, onPhoneChange = {},
+            onPinChange = {}, onRegisterClick = {}, onBackToLoginClick = {}
         )
     }
 }
