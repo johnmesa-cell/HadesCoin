@@ -1,138 +1,314 @@
 package com.example.hadescoin.presentation.auth.login
 
-// IMPORTACIONES: Solo las que el profesor usa.
-// Eliminamos LiveData, FocusManager porque él no los explicó.
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.example.hadescoin.R
-// Importamos los componentes de alerta (deben estar en tu carpeta components)
 import com.example.hadescoin.presentation.components.ShowLoadingAlertDialog
 import com.example.hadescoin.presentation.components.ShowMessageAlertDialog
+import com.example.hadescoin.ui.theme.*
 
+// ─────────────────────────────────────────────────────────────────────────
+// VISTA REAL
+// ─────────────────────────────────────────────────────────────────────────
 @Composable
 fun LoginView(
-    // El profesor usa NavController directamente para la navegación
     navController: NavController,
     viewModel: LoginViewModel = viewModel()
 ) {
-    // --- ESTADOS DE LA INTERFAZ ---
-    // Variables para capturar lo que el usuario escribe
     var phoneNumber by remember { mutableStateOf("") }
-    var pin by remember { mutableStateOf("") }
+    var pin         by remember { mutableStateOf("") }
 
-    // --- ESTADOS DE LAS ALERTAS (Lógica del profesor) ---
-    // Booleanos para mostrar u ocultar los diálogos
-    var showLoadingAlert by remember { mutableStateOf(false) }
-    var showMessageAlert by remember { mutableStateOf(false) }
+    val cargando     by viewModel.cargando.observeAsState(false)
+    val loginExitoso by viewModel.loginExitoso.observeAsState()
+    val loginError   by viewModel.loginError.observeAsState()
 
-    // Variables para guardar los IDs de los textos (R.string) que se mostrarán
-    var titleDialog by remember { mutableIntStateOf(0) }
-    var messageDialog by remember { mutableIntStateOf(0) }
+    var mensajeError by remember { mutableStateOf("") }
+    var showError    by remember { mutableStateOf(false) }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(28.dp),
-        verticalArrangement = Arrangement.Center,
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        // Logotipo y Nombre (HadesCoin)
-        Text(text = "💰", fontSize = 50.sp)
-        Text(
-            text = "HadesCoin",
-            style = MaterialTheme.typography.headlineLarge,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.primary
-        )
-
-        Spacer(modifier = Modifier.height(40.dp))
-
-        // Campo de entrada: Teléfono
-        OutlinedTextField(
-            value = phoneNumber,
-            onValueChange = { phoneNumber = it },
-            label = { Text("Número de teléfono") },
-            modifier = Modifier.fillMaxWidth(),
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone)
-        )
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        // Campo de entrada: PIN
-        OutlinedTextField(
-            value = pin,
-            onValueChange = { pin = it },
-            label = { Text("PIN de 4 dígitos") },
-            modifier = Modifier.fillMaxWidth(),
-            // PasswordVisualTransformation oculta los caracteres (los vuelve puntos)
-            visualTransformation = PasswordVisualTransformation(),
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword)
-        )
-
-        Spacer(modifier = Modifier.height(28.dp))
-
-        // BOTÓN DE INGRESAR
-        Button(
-            onClick = {
-                // 1. Mostramos el diálogo de carga inmediatamente
-                showLoadingAlert = true
-
-                // 2. Ejecutamos la lógica del ViewModel
-                // Al final de la función, el ViewModel nos "responde" mediante las llaves { }
-                viewModel.login(phoneNumber, pin) { success, message ->
-
-                    // 3. Cuando llega la respuesta, quitamos la carga
-                    showLoadingAlert = false
-
-                    if (success) {
-                        // Si los datos son correctos, navegamos al Home
-                        navController.navigate("home")
-                    } else {
-                        // Si falló, preparamos el diálogo de error con los textos de strings.xml
-                        titleDialog = R.string.dialog_error_title
-                        messageDialog = message // El mensaje de error viene del ViewModel
-                        showMessageAlert = true // Mostramos la alerta
-                    }
-                }
-            },
-            modifier = Modifier.fillMaxWidth().height(50.dp)
-        ) {
-            Text(text = "Ingresar")
-        }
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        // Navegación hacia la pantalla de Registro
-        Row {
-            Text(text = "¿No tienes cuenta? ")
-            TextButton(onClick = { navController.navigate("register") }) {
-                Text(text = "Regístrate", fontWeight = FontWeight.Bold)
+    LaunchedEffect(loginExitoso) {
+        loginExitoso?.let { userId ->
+            navController.navigate("home/$userId") {
+                popUpTo("login") { inclusive = true }
             }
         }
     }
 
-    // --- COMPONENTES DE ALERTA ---
-    // Estos if controlan si el diálogo aparece en pantalla o no
-    if (showLoadingAlert) {
-        ShowLoadingAlertDialog()
+    LaunchedEffect(loginError) {
+        loginError?.let {
+            mensajeError = it
+            showError = true
+        }
     }
 
-    if (showMessageAlert) {
+    LoginContent(
+        phoneNumber     = phoneNumber,
+        pin             = pin,
+        cargando        = cargando,
+        onPhoneChange   = { phoneNumber = it },
+        onPinChange     = { pin = it },
+        onLoginClick    = { viewModel.login(phoneNumber, pin) },
+        onRegisterClick = { navController.navigate("register") }
+    )
+
+    if (cargando) ShowLoadingAlertDialog()
+    if (showError) {
         ShowMessageAlertDialog(
-            onConfirmation = { showMessageAlert = false }, // Se cierra al presionar el botón
-            dialogTitle = titleDialog,
-            dialogText = messageDialog
+            onConfirmation = { showError = false },
+            dialogTitle    = "Error",
+            dialogText     = mensajeError
+        )
+    }
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// CONTENIDO VISUAL PURO (apto para @Preview)
+// ─────────────────────────────────────────────────────────────────────────
+@Composable
+fun LoginContent(
+    phoneNumber: String,
+    pin: String,
+    cargando: Boolean,
+    onPhoneChange: (String) -> Unit,
+    onPinChange: (String) -> Unit,
+    onLoginClick: () -> Unit,
+    onRegisterClick: () -> Unit
+) {
+    val backgroundGradient = Brush.verticalGradient(
+        colors = listOf(HadesBlack, HadesNavyDark, HadesBlack)
+    )
+    val buttonGradient = Brush.horizontalGradient(
+        colors = listOf(HadesOrange, HadesPurpleGlow)
+    )
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(brush = backgroundGradient)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 28.dp),
+            verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+
+            // —— LOGO ——————————————————————————————————————
+            Image(
+                painter = painterResource(id = R.drawable.ic_hadescoin_logo),
+                contentDescription = "HadesCoin Logo",
+                modifier = Modifier.size(110.dp)
+            )
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            Text(
+                text = "HADESCOIN",
+                fontSize = 34.sp,
+                fontWeight = FontWeight.Black,
+                letterSpacing = 6.sp,
+                color = HadesPurple,
+                textAlign = TextAlign.Center
+            )
+
+            Spacer(modifier = Modifier.height(6.dp))
+            Box(
+                modifier = Modifier
+                    .width(180.dp)
+                    .height(2.dp)
+                    .background(
+                        Brush.horizontalGradient(
+                            colors = listOf(Color.Transparent, HadesCyan, HadesOrange, Color.Transparent)
+                        )
+                    )
+            )
+            Spacer(modifier = Modifier.height(6.dp))
+
+            Text(
+                text = "// TU BILLETERA DEL FUTURO",
+                fontSize = 11.sp,
+                fontWeight = FontWeight.Medium,
+                letterSpacing = 2.sp,
+                color = HadesCyan.copy(alpha = 0.7f),
+                textAlign = TextAlign.Center
+            )
+
+            Spacer(modifier = Modifier.height(32.dp))
+
+            // —— CARD CON BORDE NEÓN —————————————————————————
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(20.dp))
+                    .border(
+                        width = 1.dp,
+                        brush = Brush.verticalGradient(
+                            colors = listOf(HadesPurple, HadesCyan.copy(alpha = 0.5f))
+                        ),
+                        shape = RoundedCornerShape(20.dp)
+                    )
+                    .background(
+                        Brush.verticalGradient(
+                            colors = listOf(HadesNavyDark, HadesNavy)
+                        )
+                    )
+                    .padding(24.dp)
+            ) {
+                Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+
+                    Text(
+                        text = "> INICIAR SESIÓN",
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = 2.sp,
+                        color = HadesCyan
+                    )
+
+                    val fieldColors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor   = HadesCyan,
+                        unfocusedBorderColor = HadesPurple.copy(alpha = 0.5f),
+                        focusedLabelColor    = HadesCyan,
+                        unfocusedLabelColor  = HadesOnDark.copy(alpha = 0.5f),
+                        cursorColor          = HadesCyan,
+                        focusedTextColor     = HadesOnDark,
+                        unfocusedTextColor   = HadesOnDark
+                    )
+
+                    OutlinedTextField(
+                        value = phoneNumber,
+                        onValueChange = onPhoneChange,
+                        label = { Text("Número de teléfono") },
+                        modifier = Modifier.fillMaxWidth(),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
+                        singleLine = true,
+                        colors = fieldColors
+                    )
+
+                    OutlinedTextField(
+                        value = pin,
+                        onValueChange = onPinChange,
+                        label = { Text("PIN de 4 dígitos") },
+                        modifier = Modifier.fillMaxWidth(),
+                        visualTransformation = PasswordVisualTransformation(),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
+                        singleLine = true,
+                        colors = fieldColors
+                    )
+
+                    Spacer(modifier = Modifier.height(4.dp))
+
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(52.dp)
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(
+                                if (!cargando) buttonGradient
+                                else Brush.horizontalGradient(listOf(Color.Gray, Color.DarkGray))
+                            )
+                    ) {
+                        Button(
+                            onClick = onLoginClick,
+                            enabled = !cargando,
+                            modifier = Modifier.fillMaxSize(),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor         = Color.Transparent,
+                                disabledContainerColor = Color.Transparent
+                            ),
+                            shape = RoundedCornerShape(12.dp),
+                            elevation = ButtonDefaults.buttonElevation(0.dp)
+                        ) {
+                            Text(
+                                text = if (cargando) "VERIFICANDO..." else "[ INGRESAR ]",
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Black,
+                                letterSpacing = 3.sp,
+                                color = Color.White
+                            )
+                        }
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(20.dp))
+
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = "¿Sin cuenta? ",
+                    fontSize = 13.sp,
+                    color = HadesOnDark.copy(alpha = 0.5f)
+                )
+                TextButton(
+                    onClick = onRegisterClick,
+                    contentPadding = PaddingValues(horizontal = 4.dp)
+                ) {
+                    Text(
+                        text = "REGISTRARSE ›",
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = 1.sp,
+                        color = HadesOrange
+                    )
+                }
+            }
+        }
+    }
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// PREVIEWS
+// ─────────────────────────────────────────────────────────────────────────
+@Preview(showBackground = true, showSystemUi = true, name = "Login — vacío")
+@Composable
+fun LoginViewPreview() {
+    HadesCoinTheme {
+        LoginContent(
+            phoneNumber = "", pin = "", cargando = false,
+            onPhoneChange = {}, onPinChange = {}, onLoginClick = {}, onRegisterClick = {}
+        )
+    }
+}
+
+@Preview(showBackground = true, showSystemUi = true, name = "Login — con datos")
+@Composable
+fun LoginViewFilledPreview() {
+    HadesCoinTheme {
+        LoginContent(
+            phoneNumber = "3001234567", pin = "1234", cargando = false,
+            onPhoneChange = {}, onPinChange = {}, onLoginClick = {}, onRegisterClick = {}
+        )
+    }
+}
+
+@Preview(showBackground = true, showSystemUi = true, name = "Login — cargando")
+@Composable
+fun LoginViewLoadingPreview() {
+    HadesCoinTheme {
+        LoginContent(
+            phoneNumber = "3001234567", pin = "1234", cargando = true,
+            onPhoneChange = {}, onPinChange = {}, onLoginClick = {}, onRegisterClick = {}
         )
     }
 }
