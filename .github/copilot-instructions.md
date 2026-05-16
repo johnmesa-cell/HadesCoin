@@ -13,10 +13,47 @@ HadesCoin es una billetera digital Android (similar a Nequi/Daviplata) desarroll
 - **NO usar** Firebase Authentication
 - **NO usar** Hilt ni inyección de dependencias
 - **NO usar** ViewModelFactory
-- **NO usar** UiState (LoginUiState, RegisterUiState)
+- **NO usar UiState de ninguna forma** — ni clases `data class XxxUiState`, ni `sealed class`, ni `StateFlow<UiState>`. Está completamente prohibido.
+- El estado se expone únicamente con **`LiveData`** / **`MutableLiveData`** — una variable por concepto (ej: `_loginExitoso`, `_loginError`, `_cargando`)
+- **NO usar** `StateFlow`, `MutableStateFlow` ni `uiState` como propiedad del ViewModel
 - **NO encriptar** contraseñas — el PIN se guarda en **texto plano**
-- Usar `LiveData` y `MutableLiveData` para exponer estado a la UI
 - Usar `viewModelScope.launch` + `kotlinx.coroutines.tasks.await` para operaciones async
+
+---
+
+## ❌ Patrón PROHIBIDO — NO hacer esto
+
+```kotlin
+// ❌ MAL — UiState prohibido
+data class LoginUiState(
+    val isLoading: Boolean = false,
+    val errorMessage: String? = null,
+    val successMessage: String? = null
+)
+
+class LoginViewModel : ViewModel() {
+    private val _uiState = MutableStateFlow(LoginUiState())
+    val uiState: StateFlow<LoginUiState> = _uiState
+}
+```
+
+---
+
+## ✅ Patrón CORRECTO — LiveData separadas por concepto
+
+```kotlin
+// ✅ BIEN — LiveData individuales
+class LoginViewModel : ViewModel() {
+    private val _loginExitoso = MutableLiveData<String>()
+    val loginExitoso: LiveData<String> = _loginExitoso
+
+    private val _loginError = MutableLiveData<String>()
+    val loginError: LiveData<String> = _loginError
+
+    private val _cargando = MutableLiveData<Boolean>()
+    val cargando: LiveData<Boolean> = _cargando
+}
+```
 
 ---
 
@@ -79,7 +116,7 @@ class LoginUseCase(private val userRepository: UserRepository) {
 
 ### `presentation/`
 - ViewModels instancian el UseCase directamente (sin Hilt).
-- Exponen estado con `LiveData`.
+- Exponen estado con `LiveData` individuales — **NUNCA con UiState**.
 - Las Screens observan el ViewModel con `observeAsState()`.
 
 ---
@@ -169,7 +206,6 @@ class UserRepositoryImpl(
         return dataSource.getAllUsers().find { it.phoneNumber == phoneNumber }
     }
     override suspend fun registerUser(user: AppUser): Boolean {
-        // implementación con dataSource
         return true
     }
 }
@@ -265,6 +301,8 @@ Scaffold(snackbarHost = { SnackbarHost(snackbarHostState) }) { padding ->
 - `RegisterUiState.kt`
 - `LoginViewModelFactory.kt`
 - `RegisterViewModelFactory.kt`
+- Cualquier archivo con el sufijo `UiState.kt`
+- Cualquier `sealed class` o `data class` que modele estado de UI
 
 ---
 
