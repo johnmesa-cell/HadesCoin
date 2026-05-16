@@ -1,7 +1,7 @@
 # Instrucciones para GitHub Copilot — HadesCoin
 
 ## Contexto del proyecto
-HadesCoin es una billetera digital Android (similar a Nequi/Daviplata) desarrollada en **Android Studio** con **Kotlin nativo** y **Jetpack Compose**. El proyecto sigue arquitectura **Clean Architecture + MVVM**.
+HadesCoin es una billetera digital Android (similar a Nequi/Daviplata) desarrollada en **Android Studio** con **Kotlin nativo** y **Jetpack Compose**. El proyecto sigue **Clean Architecture + MVVM** con separación estricta de capas.
 
 ---
 
@@ -11,44 +11,80 @@ HadesCoin es una billetera digital Android (similar a Nequi/Daviplata) desarroll
 - UI: **Jetpack Compose** (NO usar XML layouts)
 - Base de datos: **Firebase Realtime Database** únicamente
 - **NO usar** Firebase Authentication
-- **NO usar** AuthRepository ni ningún Repository para autenticación
+- **NO usar** Hilt ni inyección de dependencias
 - **NO usar** ViewModelFactory
 - **NO usar** UiState (LoginUiState, RegisterUiState)
-- **NO usar** Hilt ni inyección de dependencias
 - **NO encriptar** contraseñas — el PIN se guarda en **texto plano**
-- El ViewModel instancia `FirebaseDatabase.getInstance()` directamente
 - Usar `LiveData` y `MutableLiveData` para exponer estado a la UI
 - Usar `viewModelScope.launch` + `kotlinx.coroutines.tasks.await` para operaciones async
 
 ---
 
-## Estructura de paquetes
+## Estructura de paquetes — Clean Architecture
 
 ```
 com.example.hadescoin
-├── presentation/
-│   ├── auth/
-│   │   ├── login/
-│   │   │   ├── LoginScreen.kt       ← Jetpack Compose UI
-│   │   │   └── LoginViewModel.kt    ← ViewModel con FirebaseDatabase directo
-│   │   └── register/
-│   │       ├── RegisterScreen.kt    ← Jetpack Compose UI
-│   │       └── RegisterViewModel.kt ← ViewModel con FirebaseDatabase directo
-│   └── home/
-│       └── HomeScreen.kt
+├── data/
+│   ├── datasource/          ← Acceso directo a Firebase (FirebaseDatabase.getInstance())
+│   └── repository/          ← Implementación de las interfaces definidas en domain
 ├── domain/
-│   └── model/
-│       └── AppUser.kt
-└── data/
-    └── remote/
-        └── firebase/
-            └── realtime/
-                └── UserRealtimeDataSource.kt
+│   ├── model/               ← Modelos de datos puros (AppUser, Transaction, etc.)
+│   ├── repository/          ← Interfaces/contratos del repositorio
+│   └── usecase/             ← Casos de uso (lógica de negocio)
+├── presentation/
+│   ├── components/          ← Composables reutilizables (botones, inputs, etc.)
+│   ├── home/                ← HomeScreen.kt + HomeViewModel.kt
+│   ├── login/               ← LoginScreen.kt + LoginViewModel.kt
+│   ├── navigation/          ← NavGraph.kt y rutas de navegación
+│   └── register/            ← RegisterScreen.kt + RegisterViewModel.kt
+└── ui/                      ← Theme, colores, tipografía (Material3)
 ```
 
 ---
 
-## Modelo de datos — AppUser.kt
+## Responsabilidad de cada capa
+
+### `data/datasource/`
+- Contiene clases que interactúan **directamente** con Firebase Realtime Database.
+- Ejemplo: `UserRemoteDataSource.kt`
+- Instancia `FirebaseDatabase.getInstance()` aquí, **NO en el ViewModel**.
+
+### `data/repository/`
+- Implementa las interfaces de `domain/repository/`.
+- Llama al datasource y mapea datos a modelos de `domain/model/`.
+- Ejemplo: `UserRepositoryImpl.kt`
+
+### `domain/repository/`
+- Solo **interfaces** (contratos). No contiene lógica ni Firebase.
+- Ejemplo:
+```kotlin
+interface UserRepository {
+    suspend fun getUserByPhone(phoneNumber: String): AppUser?
+    suspend fun registerUser(user: AppUser): Boolean
+}
+```
+
+### `domain/usecase/`
+- Un archivo por caso de uso. Contiene la lógica de negocio.
+- Recibe el Repository por constructor.
+- Ejemplo: `LoginUseCase.kt`, `RegisterUseCase.kt`
+```kotlin
+class LoginUseCase(private val userRepository: UserRepository) {
+    suspend operator fun invoke(phoneNumber: String, pin: String): AppUser? {
+        return userRepository.getUserByPhone(phoneNumber)
+            ?.takeIf { it.pin == pin }
+    }
+}
+```
+
+### `presentation/`
+- ViewModels instancian el UseCase directamente (sin Hilt).
+- Exponen estado con `LiveData`.
+- Las Screens observan el ViewModel con `observeAsState()`.
+
+---
+
+## Modelo de datos — AppUser.kt (`domain/model/`)
 
 ```kotlin
 data class AppUser(
@@ -84,14 +120,6 @@ data class AppUser(
       "pin": "5678",
       "balance": 75000.0,
       "createdAt": "2026-04-24T00:00:00Z"
-    },
-    "user_prueba_003": {
-      "documentNumber": "3030303030",
-      "phoneNumber": "3204567890",
-      "fullName": "Carlos Gómez",
-      "pin": "9012",
-      "balance": 200000.0,
-      "createdAt": "2026-04-24T00:00:00Z"
     }
   },
   "transactions": {
@@ -108,22 +136,62 @@ data class AppUser(
 
 ---
 
-## LoginViewModel.kt — Patrón correcto
+## Ejemplo completo de flujo Login
 
+### `data/datasource/UserRemoteDataSource.kt`
 ```kotlin
-package com.example.hadescoin.presentation.auth.login
+class UserRemoteDataSource {
+    private val database = FirebaseDatabase.getInstance()
 
-import androidx.lifecycle.LiveData
-import androidx.lifecycle.MutableLiveData
-import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewModelScope
-import com.google.firebase.database.FirebaseDatabase
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.tasks.await
+    suspend fun getAllUsers(): List<AppUser> {
+        val snapshot = database.getReference("users").get().await()
+        return snapshot.children.mapNotNull { userSnapshot ->
+            AppUser(
+                id = userSnapshot.key ?: "",
+                documentNumber = userSnapshot.child("documentNumber").getValue(String::class.java) ?: "",
+                phoneNumber = userSnapshot.child("phoneNumber").getValue(String::class.java) ?: "",
+                fullName = userSnapshot.child("fullName").getValue(String::class.java) ?: "",
+                pin = userSnapshot.child("pin").getValue(String::class.java) ?: "",
+                balance = userSnapshot.child("balance").getValue(Double::class.java) ?: 0.0,
+                createdAt = userSnapshot.child("createdAt").getValue(String::class.java) ?: ""
+            )
+        }
+    }
+}
+```
 
+### `data/repository/UserRepositoryImpl.kt`
+```kotlin
+class UserRepositoryImpl(
+    private val dataSource: UserRemoteDataSource
+) : UserRepository {
+    override suspend fun getUserByPhone(phoneNumber: String): AppUser? {
+        return dataSource.getAllUsers().find { it.phoneNumber == phoneNumber }
+    }
+    override suspend fun registerUser(user: AppUser): Boolean {
+        // implementación con dataSource
+        return true
+    }
+}
+```
+
+### `domain/usecase/LoginUseCase.kt`
+```kotlin
+class LoginUseCase(private val userRepository: UserRepository) {
+    suspend operator fun invoke(phoneNumber: String, pin: String): AppUser? {
+        return userRepository.getUserByPhone(phoneNumber)
+            ?.takeIf { it.pin == pin }
+    }
+}
+```
+
+### `presentation/login/LoginViewModel.kt`
+```kotlin
 class LoginViewModel : ViewModel() {
 
-    private val database = FirebaseDatabase.getInstance()
+    private val dataSource = UserRemoteDataSource()
+    private val repository = UserRepositoryImpl(dataSource)
+    private val loginUseCase = LoginUseCase(repository)
 
     private val _loginExitoso = MutableLiveData<String>()
     val loginExitoso: LiveData<String> = _loginExitoso
@@ -142,83 +210,14 @@ class LoginViewModel : ViewModel() {
         viewModelScope.launch {
             _cargando.value = true
             try {
-                val snapshot = database.getReference("users").get().await()
-                var encontrado = false
-                for (userSnapshot in snapshot.children) {
-                    val phone = userSnapshot.child("phoneNumber").getValue(String::class.java)
-                    val storedPin = userSnapshot.child("pin").getValue(String::class.java)
-                    val fullName = userSnapshot.child("fullName").getValue(String::class.java) ?: "Usuario"
-                    if (phone == phoneNumber && storedPin == pin) {
-                        encontrado = true
-                        _loginExitoso.value = "¡Bienvenido, $fullName!"
-                        break
-                    }
+                val user = loginUseCase(phoneNumber, pin)
+                if (user != null) {
+                    _loginExitoso.value = "¡Bienvenido, ${user.fullName}!"
+                } else {
+                    _loginError.value = "Teléfono o PIN incorrectos"
                 }
-                if (!encontrado) _loginError.value = "Teléfono o PIN incorrectos"
             } catch (e: Exception) {
                 _loginError.value = "Error de conexión: ${e.message}"
-            } finally {
-                _cargando.value = false
-            }
-        }
-    }
-}
-```
-
----
-
-## RegisterViewModel.kt — Patrón correcto
-
-```kotlin
-package com.example.hadescoin.presentation.auth.register
-
-import androidx.lifecycle.LiveData
-import androidx.lifecycle.MutableLiveData
-import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewModelScope
-import com.google.firebase.database.FirebaseDatabase
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.tasks.await
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
-
-class RegisterViewModel : ViewModel() {
-
-    private val database = FirebaseDatabase.getInstance()
-
-    private val _registroExitoso = MutableLiveData<String>()
-    val registroExitoso: LiveData<String> = _registroExitoso
-
-    private val _registroError = MutableLiveData<String>()
-    val registroError: LiveData<String> = _registroError
-
-    private val _cargando = MutableLiveData<Boolean>()
-    val cargando: LiveData<Boolean> = _cargando
-
-    fun register(documentNumber: String, phoneNumber: String, pin: String) {
-        if (documentNumber.isBlank() || phoneNumber.isBlank() || pin.isBlank()) {
-            _registroError.value = "Completa todos los campos"
-            return
-        }
-        viewModelScope.launch {
-            _cargando.value = true
-            try {
-                val fechaActual = SimpleDateFormat(
-                    "yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.getDefault()
-                ).format(Date())
-                val nuevoUsuario = mapOf(
-                    "documentNumber" to documentNumber,
-                    "phoneNumber" to phoneNumber,
-                    "pin" to pin,
-                    "fullName" to "",
-                    "balance" to 0.0,
-                    "createdAt" to fechaActual
-                )
-                database.getReference("users").push().setValue(nuevoUsuario).await()
-                _registroExitoso.value = "¡Cuenta creada exitosamente!"
-            } catch (e: Exception) {
-                _registroError.value = "Error de conexión: ${e.message}"
             } finally {
                 _cargando.value = false
             }
@@ -239,7 +238,7 @@ val viewModel: RegisterViewModel = viewModel()
 
 ---
 
-## Snackbar — patrón para mensajes de feedback al usuario
+## Snackbar — patrón para mensajes de feedback
 
 ```kotlin
 val snackbarHostState = remember { SnackbarHostState() }
@@ -266,7 +265,6 @@ Scaffold(snackbarHost = { SnackbarHost(snackbarHostState) }) { padding ->
 - `RegisterUiState.kt`
 - `LoginViewModelFactory.kt`
 - `RegisterViewModelFactory.kt`
-- Cualquier archivo en `domain/repository/` relacionado con autenticación
 
 ---
 
