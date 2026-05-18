@@ -4,13 +4,15 @@ import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.google.firebase.database.FirebaseDatabase
+import com.example.hadescoin.domain.usecase.auth.LoginUseCase // Asegúrate de que esta ruta sea la de tu archivo
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.tasks.await
 
-class LoginViewModel : ViewModel() {
+// 1. Ahora el ViewModel "pide" el Caso de Uso en sus paréntesis
+class LoginViewModel(
+    private val loginUseCase: LoginUseCase
+) : ViewModel() {
 
-    private val database = FirebaseDatabase.getInstance()
+    // ¡Adiós a la línea de FirebaseDatabase! Ya no existe aquí.
 
     private val _loginExitoso = MutableLiveData<String>()
     val loginExitoso: LiveData<String> = _loginExitoso
@@ -26,27 +28,23 @@ class LoginViewModel : ViewModel() {
             _loginError.value = "Completa todos los campos"
             return
         }
+
         viewModelScope.launch {
             _cargando.value = true
-            try {
-                val snapshot = database.getReference("users").get().await()
-                var encontrado = false
-                for (userSnapshot in snapshot.children) {
-                    val phone = userSnapshot.child("phoneNumber").getValue(String::class.java)
-                    val storedPin = userSnapshot.child("pin").getValue(String::class.java)
-                    val fullName = userSnapshot.child("fullName").getValue(String::class.java) ?: "Usuario"
-                    if (phone == phoneNumber && storedPin == pin) {
-                        encontrado = true
-                        _loginExitoso.value = "¡Bienvenido, $fullName!"
-                        break
-                    }
-                }
-                if (!encontrado) _loginError.value = "Teléfono o PIN incorrectos"
-            } catch (e: Exception) {
-                _loginError.value = "Error de conexión: ${e.message}"
-            } finally {
-                _cargando.value = false
+
+            // 2. Le pasamos el trabajo al gerente (Caso de Uso)
+            val resultado = loginUseCase(phoneNumber, pin)
+
+            // 3. Revisamos cómo le fue al gerente usando el "Result"
+            resultado.onSuccess { appUser ->
+                // Si todo salió bien, saludamos
+                _loginExitoso.value = "¡Bienvenido!"
+            }.onFailure { exception ->
+                // Si algo falló (pin incorrecto, sin internet), mostramos el error
+                _loginError.value = exception.message ?: "Error al iniciar sesión"
             }
+
+            _cargando.value = false
         }
     }
 }
