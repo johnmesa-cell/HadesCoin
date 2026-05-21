@@ -36,7 +36,7 @@ fun ShowLoadingAlertDialog() {
  * Recibe Strings directamente, compatible con LiveData de todos los ViewModels.
  *
  * @param onConfirmation  Acción al pulsar Aceptar
- * @param dialogTitle     Título del diálogo (ej: "Error", "Éxito")
+ * @param dialogTitle     Título del diálogo (ejemplo: "Error", "Éxito")
  * @param dialogText      Mensaje del cuerpo
  */
 @Composable

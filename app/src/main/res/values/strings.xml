@@ -11,6 +11,21 @@
     <string name="error_login_failed">Teléfono o PIN incorrectos</string>
 
     <string name="btn_login">Ingresar</string>
+    <string name="btn_register">Registrarse</string>
     <string name="text_no_account">¿No tienes cuenta?</string>
     <string name="text_register">Regístrate</string>
+    <string name="text_back_to_login">Volver al Login</string>
+    <string name="text_welcome">Bienvenido</string>
+
+    <string name="login_title">HadesCoin Login</string>
+    <string name="register_title">HadesCoin Register</string>
+
+    <string name="label_full_name">Nombre Completo</string>
+    <string name="label_document_number">Cédula</string>
+    <string name="label_phone_number">Teléfono</string>
+    <string name="label_pin">PIN</string>
+    <string name="label_available_balance">Saldo disponible</string>
+    <string name="label_transactions_history">Historial de transacciones</string>
+
+    <string name="btn_forgot_password">¿Olvidaste tu PIN?</string>
 </resources>

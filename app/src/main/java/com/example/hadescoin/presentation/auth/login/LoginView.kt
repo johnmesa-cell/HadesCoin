@@ -2,24 +2,22 @@ package com.example.hadescoin.presentation.auth.login
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -27,85 +25,28 @@ import androidx.navigation.NavController
 import com.example.hadescoin.R
 import com.example.hadescoin.presentation.components.ShowLoadingAlertDialog
 import com.example.hadescoin.presentation.components.ShowMessageAlertDialog
-import com.example.hadescoin.ui.theme.*
 
-// ─────────────────────────────────────────────────────────────────────────
-// VISTA REAL
-// ─────────────────────────────────────────────────────────────────────────
+// 1. Colores extraídos para evitar su recreación en cada recomposición
+private val ColorFondo = Color(0xFF0A0B10)
+private val ColorTarjeta = Color(0xFF121626)
+private val ColorMorado = Color(0xFF9D4EDD)
+private val ColorCian = Color(0xFF00F0FF)
+private val ColorNaranja = Color(0xFFFF5400)
+
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun LoginView(
-    navController: NavController,
-    viewModel: LoginViewModel = viewModel()
-) {
-    var phoneNumber by remember { mutableStateOf("") }
-    var pin         by remember { mutableStateOf("") }
+fun LoginView(navController: NavController, viewModel: LoginViewModel = viewModel()) {
+    var docNumber by remember { mutableStateOf("") }
+    var pin by remember { mutableStateOf("") }
+    var cargando by remember { mutableStateOf(false) }
 
-    val cargando     by viewModel.cargando.observeAsState(false)
-    val loginExitoso by viewModel.loginExitoso.observeAsState()
-    val loginError   by viewModel.loginError.observeAsState()
-
-    var mensajeError by remember { mutableStateOf("") }
-    var showError    by remember { mutableStateOf(false) }
-
-    LaunchedEffect(loginExitoso) {
-        loginExitoso?.let { userId ->
-            navController.navigate("home/$userId") {
-                popUpTo("login") { inclusive = true }
-            }
-        }
-    }
-
-    LaunchedEffect(loginError) {
-        loginError?.let {
-            mensajeError = it
-            showError = true
-        }
-    }
-
-    LoginContent(
-        phoneNumber     = phoneNumber,
-        pin             = pin,
-        cargando        = cargando,
-        onPhoneChange   = { phoneNumber = it },
-        onPinChange     = { pin = it },
-        onLoginClick    = { viewModel.login(phoneNumber, pin) },
-        onRegisterClick = { navController.navigate("register") }
-    )
-
-    if (cargando) ShowLoadingAlertDialog()
-    if (showError) {
-        ShowMessageAlertDialog(
-            onConfirmation = { showError = false },
-            dialogTitle    = "Error",
-            dialogText     = mensajeError
-        )
-    }
-}
-
-// ─────────────────────────────────────────────────────────────────────────
-// CONTENIDO VISUAL PURO (apto para @Preview)
-// ─────────────────────────────────────────────────────────────────────────
-@Composable
-fun LoginContent(
-    phoneNumber: String,
-    pin: String,
-    cargando: Boolean,
-    onPhoneChange: (String) -> Unit,
-    onPinChange: (String) -> Unit,
-    onLoginClick: () -> Unit,
-    onRegisterClick: () -> Unit
-) {
-    val backgroundGradient = Brush.verticalGradient(
-        colors = listOf(HadesBlack, HadesNavyDark, HadesBlack)
-    )
-    val buttonGradient = Brush.horizontalGradient(
-        colors = listOf(HadesOrange, HadesPurpleGlow)
-    )
+    // 2. Corrección: Uso de mutableIntStateOf para optimizar el manejo del entero
+    var errorResId by remember { mutableIntStateOf(0) }
 
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(brush = backgroundGradient)
+            .background(ColorFondo)
     ) {
         Column(
             modifier = Modifier
@@ -114,11 +55,9 @@ fun LoginContent(
             verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-
-            // —— LOGO ——————————————————————————————————————
             Image(
                 painter = painterResource(id = R.drawable.ic_hadescoin_logo),
-                contentDescription = "HadesCoin Logo",
+                contentDescription = "Logo Hadescoin",
                 modifier = Modifier.size(110.dp)
             )
 
@@ -129,186 +68,120 @@ fun LoginContent(
                 fontSize = 34.sp,
                 fontWeight = FontWeight.Black,
                 letterSpacing = 6.sp,
-                color = HadesPurple,
-                textAlign = TextAlign.Center
+                color = ColorMorado
             )
-
-            Spacer(modifier = Modifier.height(6.dp))
-            Box(
-                modifier = Modifier
-                    .width(180.dp)
-                    .height(2.dp)
-                    .background(
-                        Brush.horizontalGradient(
-                            colors = listOf(Color.Transparent, HadesCyan, HadesOrange, Color.Transparent)
-                        )
-                    )
-            )
-            Spacer(modifier = Modifier.height(6.dp))
 
             Text(
                 text = "// TU BILLETERA DEL FUTURO",
                 fontSize = 11.sp,
                 fontWeight = FontWeight.Medium,
-                letterSpacing = 2.sp,
-                color = HadesCyan.copy(alpha = 0.7f),
-                textAlign = TextAlign.Center
+                color = ColorCian.copy(alpha = 0.7f),
+                modifier = Modifier.padding(vertical = 6.dp)
             )
 
-            Spacer(modifier = Modifier.height(32.dp))
+            Spacer(modifier = Modifier.height(26.dp))
 
-            // —— CARD CON BORDE NEÓN —————————————————————————
-            Box(
+            Column(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(20.dp))
-                    .border(
-                        width = 1.dp,
-                        brush = Brush.verticalGradient(
-                            colors = listOf(HadesPurple, HadesCyan.copy(alpha = 0.5f))
-                        ),
-                        shape = RoundedCornerShape(20.dp)
-                    )
-                    .background(
-                        Brush.verticalGradient(
-                            colors = listOf(HadesNavyDark, HadesNavy)
-                        )
-                    )
-                    .padding(24.dp)
+                    .background(ColorTarjeta)
+                    .padding(24.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                Text(
+                    text = "> INICIAR SESIÓN",
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = ColorCian
+                )
 
+                OutlinedTextField(
+                    value = docNumber,
+                    onValueChange = { docNumber = it },
+                    label = { Text("Número de documento") },
+                    modifier = Modifier.fillMaxWidth(),
+                    keyboardOptions = KeyboardOptions(
+                        keyboardType = KeyboardType.Number,
+                        imeAction = ImeAction.Next
+                    ),
+                    singleLine = true
+                )
+
+                OutlinedTextField(
+                    value = pin,
+                    onValueChange = { pin = it },
+                    label = { Text("PIN de 4 dígitos") },
+                    modifier = Modifier.fillMaxWidth(),
+                    visualTransformation = PasswordVisualTransformation(),
+                    keyboardOptions = KeyboardOptions(
+                        keyboardType = KeyboardType.NumberPassword,
+                        imeAction = ImeAction.Done
+                    ),
+                    singleLine = true
+                )
+
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(52.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(if (!cargando) ColorNaranja else Color.Gray)
+                        .clickable(enabled = !cargando) {
+                            cargando = true
+                            viewModel.login(docNumber, pin) { success, resId ->
+                                cargando = false
+                                if (success) {
+                                    navController.navigate("home/$docNumber") {
+                                        popUpTo("login") { inclusive = true }
+                                    }
+                                } else {
+                                    errorResId = resId
+                                }
+                            }
+                        },
+                    contentAlignment = Alignment.Center
+                ) {
                     Text(
-                        text = "> INICIAR SESIÓN",
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Bold,
-                        letterSpacing = 2.sp,
-                        color = HadesCyan
+                        text = if (cargando) "VERIFICANDO..." else "[ INGRESAR ]",
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Black,
+                        color = Color.White
                     )
-
-                    val fieldColors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor   = HadesCyan,
-                        unfocusedBorderColor = HadesPurple.copy(alpha = 0.5f),
-                        focusedLabelColor    = HadesCyan,
-                        unfocusedLabelColor  = HadesOnDark.copy(alpha = 0.5f),
-                        cursorColor          = HadesCyan,
-                        focusedTextColor     = HadesOnDark,
-                        unfocusedTextColor   = HadesOnDark
-                    )
-
-                    OutlinedTextField(
-                        value = phoneNumber,
-                        onValueChange = onPhoneChange,
-                        label = { Text("Número de teléfono") },
-                        modifier = Modifier.fillMaxWidth(),
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
-                        singleLine = true,
-                        colors = fieldColors
-                    )
-
-                    OutlinedTextField(
-                        value = pin,
-                        onValueChange = onPinChange,
-                        label = { Text("PIN de 4 dígitos") },
-                        modifier = Modifier.fillMaxWidth(),
-                        visualTransformation = PasswordVisualTransformation(),
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
-                        singleLine = true,
-                        colors = fieldColors
-                    )
-
-                    Spacer(modifier = Modifier.height(4.dp))
-
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(52.dp)
-                            .clip(RoundedCornerShape(12.dp))
-                            .background(
-                                if (!cargando) buttonGradient
-                                else Brush.horizontalGradient(listOf(Color.Gray, Color.DarkGray))
-                            )
-                    ) {
-                        Button(
-                            onClick = onLoginClick,
-                            enabled = !cargando,
-                            modifier = Modifier.fillMaxSize(),
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor         = Color.Transparent,
-                                disabledContainerColor = Color.Transparent
-                            ),
-                            shape = RoundedCornerShape(12.dp),
-                            elevation = ButtonDefaults.buttonElevation(0.dp)
-                        ) {
-                            Text(
-                                text = if (cargando) "VERIFICANDO..." else "[ INGRESAR ]",
-                                fontSize = 14.sp,
-                                fontWeight = FontWeight.Black,
-                                letterSpacing = 3.sp,
-                                color = Color.White
-                            )
-                        }
-                    }
                 }
             }
 
-            Spacer(modifier = Modifier.height(20.dp))
-
-            Row(verticalAlignment = Alignment.CenterVertically) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.padding(top = 20.dp)
+            ) {
                 Text(
                     text = "¿Sin cuenta? ",
                     fontSize = 13.sp,
-                    color = HadesOnDark.copy(alpha = 0.5f)
+                    color = Color.White.copy(alpha = 0.5f)
                 )
-                TextButton(
-                    onClick = onRegisterClick,
-                    contentPadding = PaddingValues(horizontal = 4.dp)
-                ) {
+                TextButton(onClick = { navController.navigate("register") }) {
                     Text(
                         text = "REGISTRARSE ›",
                         fontSize = 13.sp,
                         fontWeight = FontWeight.Bold,
-                        letterSpacing = 1.sp,
-                        color = HadesOrange
+                        color = ColorNaranja
                     )
                 }
             }
         }
     }
-}
 
-// ─────────────────────────────────────────────────────────────────────────
-// PREVIEWS
-// ─────────────────────────────────────────────────────────────────────────
-@Preview(showBackground = true, showSystemUi = true, name = "Login — vacío")
-@Composable
-fun LoginViewPreview() {
-    HadesCoinTheme {
-        LoginContent(
-            phoneNumber = "", pin = "", cargando = false,
-            onPhoneChange = {}, onPinChange = {}, onLoginClick = {}, onRegisterClick = {}
-        )
+    if (cargando) {
+        ShowLoadingAlertDialog()
     }
-}
 
-@Preview(showBackground = true, showSystemUi = true, name = "Login — con datos")
-@Composable
-fun LoginViewFilledPreview() {
-    HadesCoinTheme {
-        LoginContent(
-            phoneNumber = "3001234567", pin = "1234", cargando = false,
-            onPhoneChange = {}, onPinChange = {}, onLoginClick = {}, onRegisterClick = {}
-        )
-    }
-}
-
-@Preview(showBackground = true, showSystemUi = true, name = "Login — cargando")
-@Composable
-fun LoginViewLoadingPreview() {
-    HadesCoinTheme {
-        LoginContent(
-            phoneNumber = "3001234567", pin = "1234", cargando = true,
-            onPhoneChange = {}, onPinChange = {}, onLoginClick = {}, onRegisterClick = {}
+    if (errorResId > 0) {
+        // 3. Corrección: Conversión de Int (Resource ID) a String usando stringResource()
+        ShowMessageAlertDialog(
+            onConfirmation = { errorResId = 0 },
+            dialogTitle = stringResource(id = R.string.dialog_error_title),
+            dialogText = stringResource(id = errorResId)
         )
     }
 }

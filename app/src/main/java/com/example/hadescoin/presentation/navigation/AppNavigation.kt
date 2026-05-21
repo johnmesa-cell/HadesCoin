@@ -32,7 +32,7 @@ fun AppNavigation() {
             arguments = listOf(navArgument("userId") { type = NavType.StringType })
         ) { backStackEntry ->
             val userId = backStackEntry.arguments?.getString("userId") ?: ""
-            HomeScreen(userId = userId)
+            HomeScreen(phoneNumber = userId)
         }
     }
 }
