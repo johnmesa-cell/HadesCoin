@@ -26,13 +26,13 @@ fun AppNavigation() {
             RegisterScreen(navController = navController)
         }
 
-        // Recibe el phoneNumber como argumento de ruta
+        // Recibe el documentNumber como argumento de ruta
         composable(
-            route = "home/{userId}",
-            arguments = listOf(navArgument("userId") { type = NavType.StringType })
+            route = "home/{documentNumber}",
+            arguments = listOf(navArgument("documentNumber") { type = NavType.StringType })
         ) { backStackEntry ->
-            val userId = backStackEntry.arguments?.getString("userId") ?: ""
-            HomeScreen(phoneNumber = userId)
+            val documentNumber = backStackEntry.arguments?.getString("documentNumber") ?: ""
+            HomeScreen(phoneNumber = documentNumber)
         }
     }
 }

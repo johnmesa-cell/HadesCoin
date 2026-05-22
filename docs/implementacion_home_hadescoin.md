@@ -1,3 +1,103 @@
+# 🏗️ IMPLEMENTACIÓN — Lista 2: Home funcional real
+
+---
+
+## Contexto
+
+La cadena de datos ya existe completa en el proyecto:
+`GetWalletDataUseCase → WalletRepositoryImpl → FirebaseTransactionDataSource + FirebaseUserDataSource`
+
+Solo falta crear el ViewModel real y reescribir la pantalla para que los consuma.
+
+Modelos disponibles:
+- `AppUser` → campos: `id`, `documentNumber`, `phoneNumber`, `fullName`, `pin`, `balance: Double`, `createdAt`
+- `WalletTransaction` → campos: `id`, `amount: Double`, `type`, `createdAt`
+- Colores del tema: `HadesBlack`, `HadesNavyDark`, `HadesNavy`, `HadesPurple`, `HadesPurpleGlow`, `HadesCyan`, `HadesOrange`, `HadesOnDark`
+
+---
+
+## PASO 1 — Crear HomeViewModel.kt (archivo nuevo)
+
+**Ruta:** `app/src/main/java/com/example/hadescoin/presentation/home/HomeViewModel.kt`
+
+```kotlin
+package com.example.hadescoin.presentation.home
+
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.lifecycle.ViewModel
+import com.example.hadescoin.di.ServiceLocator
+import com.example.hadescoin.domain.model.AppUser
+import com.example.hadescoin.domain.model.WalletTransaction
+import com.example.hadescoin.domain.usecase.GetWalletDataUseCase
+
+class HomeViewModel(
+    private val getWalletDataUseCase: GetWalletDataUseCase = ServiceLocator.provideGetWalletDataUseCase()
+) : ViewModel() {
+
+    var isLoading by mutableStateOf(false)
+        private set
+
+    var appUser by mutableStateOf<AppUser?>(null)
+        private set
+
+    var transactions by mutableStateOf<List<WalletTransaction>>(emptyList())
+        private set
+
+    var errorMessage by mutableStateOf<String?>(null)
+        private set
+
+    private var isDataLoaded = false
+
+    fun loadWalletData(documentNumber: String) {
+        if (isDataLoaded) return
+
+        isLoading = true
+
+        getWalletDataUseCase(documentNumber) { success, user, txList ->
+            isLoading = false
+            if (success && user != null) {
+                appUser = user
+                transactions = txList ?: emptyList()
+                isDataLoaded = true
+            } else {
+                errorMessage = "No se pudo cargar la información. Intenta de nuevo."
+            }
+        }
+    }
+
+    fun clearError() {
+        errorMessage = null
+    }
+}
+```
+
+---
+
+## PASO 2 — Agregar provideHomeViewModel() al ServiceLocator
+
+**Archivo:** `app/src/main/java/com/example/hadescoin/di/ServiceLocator.kt`
+
+Agrega esta función al final del objeto, antes del cierre `}`:
+
+```kotlin
+fun provideGetWalletDataUseCase(): GetWalletDataUseCase {
+    return GetWalletDataUseCase(walletRepository)
+}
+```
+
+> ⚠️ Este método ya existe. Verificar que esté presente. Si ya está, no agregar nada.
+
+---
+
+## PASO 3 — Reescribir HomeScreen.kt completo
+
+**Archivo:** `app/src/main/java/com/example/hadescoin/presentation/home/HomeScreen.kt`
+
+Reemplaza el archivo completo con esto:
+
+```kotlin
 package com.example.hadescoin.presentation.home
 
 import androidx.compose.foundation.background
@@ -13,7 +113,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -62,6 +161,7 @@ fun HomeScreen(
 
             Spacer(modifier = Modifier.height(24.dp))
 
+            // Tarjeta de saldo
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -175,11 +275,49 @@ private fun TransactionRow(tx: WalletTransaction) {
         )
     }
 }
+```
 
-@Preview(showBackground = true, showSystemUi = true)
-@Composable
-fun PreviewHomeScreen() {
-    HadesCoinTheme {
-        HomeScreen(phoneNumber = "123456789")
-    }
+---
+
+## PASO 4 — Verificar que AppNavigation pasa documentNumber correctamente
+
+**Archivo:** `app/src/main/java/com/example/hadescoin/presentation/navigation/AppNavigation.kt`
+
+Confirmar que el bloque del Home quedó así (aplicado en la Lista 1):
+
+```kotlin
+composable(
+    route = "home/{documentNumber}",
+    arguments = listOf(navArgument("documentNumber") { type = NavType.StringType })
+) { backStackEntry ->
+    val documentNumber = backStackEntry.arguments?.getString("documentNumber") ?: ""
+    HomeScreen(phoneNumber = documentNumber)
 }
+```
+
+> Si ya se aplicó la Corrección 5 de la Lista 1, este paso no requiere ningún cambio.
+
+---
+
+## Orden de aplicación
+
+1. Crear `HomeViewModel.kt` (archivo nuevo) — Paso 1
+2. Verificar `ServiceLocator.kt` tiene `provideGetWalletDataUseCase()` — Paso 2
+3. Reescribir `HomeScreen.kt` — Paso 3
+4. Verificar `AppNavigation.kt` — Paso 4
+
+---
+
+## Flujo completo resultante
+
+```
+HomeScreen
+    └── LaunchedEffect → viewModel.loadWalletData(documentNumber)
+            └── GetWalletDataUseCase(documentNumber)
+                    └── WalletRepositoryImpl
+                            ├── FirebaseUserDataSource.getUser()  → AppUser
+                            └── FirebaseTransactionDataSource.getTransactions() → List<WalletTransaction>
+```
+
+El ViewModel actualiza `isLoading`, `appUser`, `transactions` y `errorMessage`.
+La pantalla reacciona automáticamente a cada cambio de estado.

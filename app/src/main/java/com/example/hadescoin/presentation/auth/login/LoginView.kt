@@ -25,6 +25,9 @@ import androidx.navigation.NavController
 import com.example.hadescoin.R
 import com.example.hadescoin.presentation.components.ShowLoadingAlertDialog
 import com.example.hadescoin.presentation.components.ShowMessageAlertDialog
+import androidx.compose.ui.tooling.preview.Preview
+import androidx.navigation.compose.rememberNavController
+import com.example.hadescoin.ui.theme.HadesCoinTheme
 
 // 1. Colores extraídos para evitar su recreación en cada recomposición
 private val ColorFondo = Color(0xFF0A0B10)
@@ -183,5 +186,13 @@ fun LoginView(navController: NavController, viewModel: LoginViewModel = viewMode
             dialogTitle = stringResource(id = R.string.dialog_error_title),
             dialogText = stringResource(id = errorResId)
         )
+    }
+}
+
+@Preview(showBackground = true, showSystemUi = true)
+@Composable
+fun PreviewLoginView() {
+    HadesCoinTheme {
+        LoginView(navController = rememberNavController())
     }
 }

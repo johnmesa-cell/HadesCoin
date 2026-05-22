@@ -27,6 +27,8 @@ import com.example.hadescoin.R
 import com.example.hadescoin.presentation.components.ShowLoadingAlertDialog
 import com.example.hadescoin.presentation.components.ShowMessageAlertDialog
 import com.example.hadescoin.ui.theme.*
+import androidx.compose.ui.tooling.preview.Preview
+import androidx.navigation.compose.rememberNavController
 
 // 1. Degradados extraídos para evitar su recreación en cada recomposición
 private val BackgroundGradient = Brush.verticalGradient(listOf(HadesBlack, HadesNavyDark, HadesBlack))
@@ -194,5 +196,13 @@ fun RegisterScreen(navController: NavController, viewModel: RegisterViewModel = 
             dialogTitle = stringResource(id = if (esExitoso) R.string.dialog_success_title else R.string.dialog_error_title),
             dialogText = stringResource(id = dialogMsgId)
         )
+    }
+}
+
+@Preview(showBackground = true, showSystemUi = true)
+@Composable
+fun PreviewRegisterScreen() {
+    HadesCoinTheme {
+        RegisterScreen(navController = rememberNavController())
     }
 }
