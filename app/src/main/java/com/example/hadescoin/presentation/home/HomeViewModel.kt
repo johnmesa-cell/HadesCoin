@@ -1,8 +1,7 @@
 package com.example.hadescoin.presentation.home
 
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
+import androidx.lifecycle.LiveData
+import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import com.example.hadescoin.di.ServiceLocator
 import com.example.hadescoin.domain.model.AppUser
@@ -13,39 +12,39 @@ class HomeViewModel(
     private val getWalletDataUseCase: GetWalletDataUseCase = ServiceLocator.provideGetWalletDataUseCase()
 ) : ViewModel() {
 
-    var isLoading by mutableStateOf(false)
-        private set
+    private val _cargando = MutableLiveData(false)
+    val cargando: LiveData<Boolean> = _cargando
 
-    var appUser by mutableStateOf<AppUser?>(null)
-        private set
+    private val _appUser = MutableLiveData<AppUser?>(null)
+    val appUser: LiveData<AppUser?> = _appUser
 
-    var transactions by mutableStateOf<List<WalletTransaction>>(emptyList())
-        private set
+    private val _transactions = MutableLiveData<List<WalletTransaction>>(emptyList())
+    val transactions: LiveData<List<WalletTransaction>> = _transactions
 
-    var errorMessage by mutableStateOf<String?>(null)
-        private set
+    private val _error = MutableLiveData<String?>(null)
+    val error: LiveData<String?> = _error
 
     private var isDataLoaded = false
 
     fun loadWalletData(documentNumber: String) {
         if (isDataLoaded) return
 
-        isLoading = true
+        _cargando.value = true
 
         getWalletDataUseCase(documentNumber) { success, user, txList ->
-            isLoading = false
+            _cargando.value = false
             if (success && user != null) {
-                appUser = user
-                transactions = txList ?: emptyList()
+                _appUser.value = user
+                _transactions.value = txList ?: emptyList()
                 isDataLoaded = true
             } else {
-                errorMessage = "No se pudo cargar la información. Intenta de nuevo."
+                _error.value = "No se pudo cargar la información. Intenta de nuevo."
             }
         }
     }
 
     fun clearError() {
-        errorMessage = null
+        _error.value = null
     }
 }
 
