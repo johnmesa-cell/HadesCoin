@@ -77,6 +77,7 @@ fun RegisterScreen(
     )
 
     if (cargando) ShowLoadingAlertDialog()
+
     if (showError) {
         ShowMessageAlertDialog(
             onConfirmation = { showError = false },
@@ -122,8 +123,6 @@ fun RegisterContent(
                 .padding(horizontal = 28.dp, vertical = 40.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-
-            // —— LOGO ——————————————————————————————————————
             Image(
                 painter = painterResource(id = R.drawable.ic_hadescoin_logo),
                 contentDescription = "HadesCoin Logo",
@@ -165,7 +164,6 @@ fun RegisterContent(
 
             Spacer(modifier = Modifier.height(28.dp))
 
-            // —— CARD CON BORDE NEÓN —————————————————————————
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -261,7 +259,7 @@ fun RegisterContent(
                             enabled = !cargando,
                             modifier = Modifier.fillMaxSize(),
                             colors = ButtonDefaults.buttonColors(
-                                containerColor         = Color.Transparent,
+                                containerColor = Color.Transparent,
                                 disabledContainerColor = Color.Transparent
                             ),
                             shape = RoundedCornerShape(12.dp),

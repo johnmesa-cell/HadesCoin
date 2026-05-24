@@ -48,8 +48,8 @@ fun LoginView(
     var showError    by remember { mutableStateOf(false) }
 
     LaunchedEffect(loginExitoso) {
-        loginExitoso?.let { userId ->
-            navController.navigate("home/$userId") {
+        loginExitoso?.let { documentNumber ->
+            navController.navigate("home/$documentNumber") {
                 popUpTo("login") { inclusive = true }
             }
         }
@@ -63,16 +63,17 @@ fun LoginView(
     }
 
     LoginContent(
-        phoneNumber     = phoneNumber,
-        pin             = pin,
-        cargando        = cargando,
-        onPhoneChange   = { phoneNumber = it },
-        onPinChange     = { pin = it },
-        onLoginClick    = { viewModel.login(phoneNumber, pin) },
+        phoneNumber   = phoneNumber,
+        pin           = pin,
+        cargando      = cargando,
+        onPhoneChange = { phoneNumber = it },
+        onPinChange   = { pin = it },
+        onLoginClick  = { viewModel.login(phoneNumber, pin) },
         onRegisterClick = { navController.navigate("register") }
     )
 
     if (cargando) ShowLoadingAlertDialog()
+
     if (showError) {
         ShowMessageAlertDialog(
             onConfirmation = { showError = false },
@@ -114,8 +115,6 @@ fun LoginContent(
             verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-
-            // —— LOGO ——————————————————————————————————————
             Image(
                 painter = painterResource(id = R.drawable.ic_hadescoin_logo),
                 contentDescription = "HadesCoin Logo",
@@ -157,7 +156,6 @@ fun LoginContent(
 
             Spacer(modifier = Modifier.height(32.dp))
 
-            // —— CARD CON BORDE NEÓN —————————————————————————
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -199,9 +197,9 @@ fun LoginContent(
                     OutlinedTextField(
                         value = phoneNumber,
                         onValueChange = onPhoneChange,
-                        label = { Text("Número de teléfono") },
+                        label = { Text("Número de documento") },
                         modifier = Modifier.fillMaxWidth(),
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                         singleLine = true,
                         colors = fieldColors
                     )
@@ -234,7 +232,7 @@ fun LoginContent(
                             enabled = !cargando,
                             modifier = Modifier.fillMaxSize(),
                             colors = ButtonDefaults.buttonColors(
-                                containerColor         = Color.Transparent,
+                                containerColor = Color.Transparent,
                                 disabledContainerColor = Color.Transparent
                             ),
                             shape = RoundedCornerShape(12.dp),
@@ -296,7 +294,7 @@ fun LoginViewPreview() {
 fun LoginViewFilledPreview() {
     HadesCoinTheme {
         LoginContent(
-            phoneNumber = "3001234567", pin = "1234", cargando = false,
+            phoneNumber = "1010101010", pin = "1234", cargando = false,
             onPhoneChange = {}, onPinChange = {}, onLoginClick = {}, onRegisterClick = {}
         )
     }
@@ -307,7 +305,7 @@ fun LoginViewFilledPreview() {
 fun LoginViewLoadingPreview() {
     HadesCoinTheme {
         LoginContent(
-            phoneNumber = "3001234567", pin = "1234", cargando = true,
+            phoneNumber = "1010101010", pin = "1234", cargando = true,
             onPhoneChange = {}, onPinChange = {}, onLoginClick = {}, onRegisterClick = {}
         )
     }

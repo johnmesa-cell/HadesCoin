@@ -1,9 +1,9 @@
 package com.example.hadescoin.domain.model
 
 data class WalletTransaction(
-    val id: String,
-    val amount: Double,
-    val type: String,
-    val createdAt: Long
+    val id: String = "",
+    val amount: Double = 0.0,
+    val type: String = "TRANSFER",
+    val createdAt: String = ""
 )
 
