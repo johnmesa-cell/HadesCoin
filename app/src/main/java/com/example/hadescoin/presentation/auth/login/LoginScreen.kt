@@ -30,7 +30,7 @@ import com.example.hadescoin.presentation.components.ShowMessageAlertDialog
 import com.example.hadescoin.ui.theme.*
 
 // ─────────────────────────────────────────────────────────────────────────
-// VISTA REAL
+// VISTA REAL (LÓGICA)
 // ─────────────────────────────────────────────────────────────────────────
 @Composable
 fun LoginView(
@@ -66,8 +66,15 @@ fun LoginView(
         phoneNumber   = phoneNumber,
         pin           = pin,
         cargando      = cargando,
-        onPhoneChange = { phoneNumber = it },
-        onPinChange   = { pin = it },
+        loginError    = loginError, // Solución N3: Pasamos el error al diseño visual
+        onPhoneChange = { 
+            phoneNumber = it 
+            viewModel.clearError() // Solución N1: La limpieza se hace aquí, fuera del diseño
+        },
+        onPinChange   = { 
+            pin = it 
+            viewModel.clearError() // Solución N1: La limpieza se hace aquí
+        },
         onLoginClick  = { viewModel.login(phoneNumber, pin) },
         onRegisterClick = { navController.navigate("register") }
     )
@@ -84,13 +91,14 @@ fun LoginView(
 }
 
 // ─────────────────────────────────────────────────────────────────────────
-// CONTENIDO VISUAL PURO (apto para @Preview)
+// CONTENIDO VISUAL PURO (DISEÑO)
 // ─────────────────────────────────────────────────────────────────────────
 @Composable
 fun LoginContent(
     phoneNumber: String,
     pin: String,
     cargando: Boolean,
+    loginError: String?, // Solución N3: Recibe la variable para saber si hay error
     onPhoneChange: (String) -> Unit,
     onPinChange: (String) -> Unit,
     onLoginClick: () -> Unit,
@@ -194,26 +202,27 @@ fun LoginContent(
                         unfocusedTextColor   = HadesOnDark
                     )
 
-
                     OutlinedTextField(
                         value = phoneNumber,
-                        onValueChange = {
-                            phoneNumber = it
-                            viewModel.clearError() // Limpia el error al escribir (Error #4)
-                        },
+                        onValueChange = onPhoneChange, // Solución N1: Llama a la función limpia
                         label = { Text("Número de teléfono") },
-                        isError = loginError != null && phoneNumber.isBlank() // Mejora visual (Error #3)
+                        modifier = Modifier.fillMaxWidth(), // Solución N2: Ancho completo
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone), // Consistencia visual
+                        singleLine = true,
+                        colors = fieldColors, // Solución N2: Aplica colores
+                        isError = loginError != null && phoneNumber.isBlank()
                     )
-
 
                     OutlinedTextField(
                         value = pin,
-                        onValueChange = {
-                            pin = it
-                            viewModel.clearError() // Limpia el error al escribir (Error #4)
-                        },
+                        onValueChange = onPinChange, // Solución N1: Llama a la función limpia
                         label = { Text("PIN de 4 dígitos") },
-                        isError = loginError != null && pin.isBlank() // Mejora visual (Error #3)
+                        modifier = Modifier.fillMaxWidth(), // Solución N2: Ancho completo
+                        visualTransformation = PasswordVisualTransformation(), // Consistencia visual
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword), // Consistencia visual
+                        singleLine = true,
+                        colors = fieldColors, // Solución N2: Aplica colores
+                        isError = loginError != null && pin.isBlank()
                     )
 
                     Spacer(modifier = Modifier.height(4.dp))
@@ -284,7 +293,7 @@ fun LoginContent(
 fun LoginViewPreview() {
     HadesCoinTheme {
         LoginContent(
-            phoneNumber = "", pin = "", cargando = false,
+            phoneNumber = "", pin = "", cargando = false, loginError = null,
             onPhoneChange = {}, onPinChange = {}, onLoginClick = {}, onRegisterClick = {}
         )
     }
@@ -295,7 +304,7 @@ fun LoginViewPreview() {
 fun LoginViewFilledPreview() {
     HadesCoinTheme {
         LoginContent(
-            phoneNumber = "1010101010", pin = "1234", cargando = false,
+            phoneNumber = "1010101010", pin = "1234", cargando = false, loginError = null,
             onPhoneChange = {}, onPinChange = {}, onLoginClick = {}, onRegisterClick = {}
         )
     }
@@ -306,9 +315,8 @@ fun LoginViewFilledPreview() {
 fun LoginViewLoadingPreview() {
     HadesCoinTheme {
         LoginContent(
-            phoneNumber = "1010101010", pin = "1234", cargando = true,
+            phoneNumber = "1010101010", pin = "1234", cargando = true, loginError = null,
             onPhoneChange = {}, onPinChange = {}, onLoginClick = {}, onRegisterClick = {}
         )
     }
 }
-
