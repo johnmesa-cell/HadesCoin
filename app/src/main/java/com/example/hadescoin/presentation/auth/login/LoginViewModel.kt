@@ -4,47 +4,57 @@ import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.hadescoin.domain.usecase.auth.LoginUseCase // Asegúrate de que esta ruta sea la de tu archivo
+import com.example.hadescoin.di.ServiceLocator
+import com.example.hadescoin.domain.usecase.LoginUseCase
 import kotlinx.coroutines.launch
 
-// 1. Ahora el ViewModel "pide" el Caso de Uso en sus paréntesis
 class LoginViewModel(
-    private val loginUseCase: LoginUseCase
+    private val loginUseCase: LoginUseCase = ServiceLocator.provideLoginUseCase()
 ) : ViewModel() {
 
-    // ¡Adiós a la línea de FirebaseDatabase! Ya no existe aquí.
-
-    private val _loginExitoso = MutableLiveData<String>()
-    val loginExitoso: LiveData<String> = _loginExitoso
-
-    private val _loginError = MutableLiveData<String>()
-    val loginError: LiveData<String> = _loginError
-
-    private val _cargando = MutableLiveData<Boolean>()
+    private val _cargando = MutableLiveData(false)
     val cargando: LiveData<Boolean> = _cargando
 
-    fun login(phoneNumber: String, pin: String) {
-        if (phoneNumber.isBlank() || pin.isBlank()) {
-            _loginError.value = "Completa todos los campos"
+    private val _loginExitoso = MutableLiveData<String?>()
+    val loginExitoso: LiveData<String?> = _loginExitoso
+
+    private val _loginError = MutableLiveData<String?>()
+    val loginError: LiveData<String?> = _loginError
+
+    fun login(documentNumber: String, pin: String) {
+        // 1. Validación de campos vacíos
+        if (documentNumber.isBlank() || pin.isBlank()) {
+            _loginError.value = "Por favor completa todos los campos"
             return
         }
 
+        // 2. Validación del documento (Mayor o igual a 5 y solo números)
+        if (documentNumber.length < 5 || !documentNumber.all { it.isDigit() }) {
+            _loginError.value = "El documento debe tener al menos 5 números"
+            return
+        }
+
+        // 3. Validación del PIN (Exactamente 4 dígitos y solo números)
+        if (pin.length != 4 || !pin.all { it.isDigit() }) {
+            _loginError.value = "El PIN debe ser exactamente de 4 dígitos"
+            return
+        }
+
+        // 4. Proceso de Login (Solo se ejecuta si las validaciones anteriores pasan)
         viewModelScope.launch {
             _cargando.value = true
-
-            // 2. Le pasamos el trabajo al gerente (Caso de Uso)
-            val resultado = loginUseCase(phoneNumber, pin)
-
-            // 3. Revisamos cómo le fue al gerente usando el "Result"
-            resultado.onSuccess { appUser ->
-                // Si todo salió bien, saludamos
-                _loginExitoso.value = "¡Bienvenido!"
-            }.onFailure { exception ->
-                // Si algo falló (pin incorrecto, sin internet), mostramos el error
-                _loginError.value = exception.message ?: "Error al iniciar sesión"
+            try {
+                val success = loginUseCase(documentNumber, pin)
+                if (success) {
+                    _loginExitoso.value = documentNumber
+                } else {
+                    _loginError.value = "Documento o PIN incorrectos"
+                }
+            } catch (e: Exception) {
+                _loginError.value = "Error de conexión: ${e.message}"
+            } finally {
+                _cargando.value = false
             }
-
-            _cargando.value = false
         }
     }
 }
