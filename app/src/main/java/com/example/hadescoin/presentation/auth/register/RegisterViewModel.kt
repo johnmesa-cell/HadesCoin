@@ -22,33 +22,34 @@ class RegisterViewModel(
     private val _registroError = MutableLiveData<String?>()
     val registroError: LiveData<String?> = _registroError
 
+    // Función para limpiar el error (Error #4)
+    fun clearError() {
+        _registroError.value = null
+    }
+
     fun register(fullName: String, documentNumber: String, phoneNumber: String, pin: String) {
-        // 1. Validación de campos vacíos
         if (fullName.isBlank() || documentNumber.isBlank() ||
             phoneNumber.isBlank() || pin.isBlank()) {
             _registroError.value = "Por favor completa todos los campos"
             return
         }
 
-        // 2. Validación del documento (Mayor o igual a 5 y solo números)
         if (documentNumber.length < 5 || !documentNumber.all { it.isDigit() }) {
             _registroError.value = "El documento debe tener al menos 5 números"
             return
         }
 
-        // 3. Validación del teléfono (Opcional, pero recomendado: solo números)
-        if (!phoneNumber.all { it.isDigit() }) {
+        // Validación de teléfono con longitud mínima de 7 (Error #5)
+        if (phoneNumber.length < 7 || !phoneNumber.all { it.isDigit() }) {
             _registroError.value = "El número de teléfono no es válido"
             return
         }
 
-        // 4. Validación del PIN (Exactamente 4 dígitos y solo números)
         if (pin.length != 4 || !pin.all { it.isDigit() }) {
             _registroError.value = "El PIN debe ser exactamente de 4 dígitos"
             return
         }
 
-        // 5. Proceso de Registro (Solo se ejecuta si todo lo anterior está correcto)
         viewModelScope.launch {
             _cargando.value = true
             try {

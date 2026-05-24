@@ -21,34 +21,36 @@ class LoginViewModel(
     private val _loginError = MutableLiveData<String?>()
     val loginError: LiveData<String?> = _loginError
 
-    fun login(documentNumber: String, pin: String) {
-        // 1. Validación de campos vacíos
-        if (documentNumber.isBlank() || pin.isBlank()) {
+    // Función para limpiar el error cuando el usuario empieza a escribir (Error #4)
+    fun clearError() {
+        _loginError.value = null
+    }
+
+    // Se cambió documentNumber a phoneNumber para consistencia con la vista (Error #2)
+    fun login(phoneNumber: String, pin: String) {
+        if (phoneNumber.isBlank() || pin.isBlank()) {
             _loginError.value = "Por favor completa todos los campos"
             return
         }
 
-        // 2. Validación del documento (Mayor o igual a 5 y solo números)
-        if (documentNumber.length < 5 || !documentNumber.all { it.isDigit() }) {
-            _loginError.value = "El documento debe tener al menos 5 números"
+        if (phoneNumber.length < 5 || !phoneNumber.all { it.isDigit() }) {
+            _loginError.value = "El teléfono debe tener al menos 5 números"
             return
         }
 
-        // 3. Validación del PIN (Exactamente 4 dígitos y solo números)
         if (pin.length != 4 || !pin.all { it.isDigit() }) {
             _loginError.value = "El PIN debe ser exactamente de 4 dígitos"
             return
         }
 
-        // 4. Proceso de Login (Solo se ejecuta si las validaciones anteriores pasan)
         viewModelScope.launch {
             _cargando.value = true
             try {
-                val success = loginUseCase(documentNumber, pin)
+                val success = loginUseCase(phoneNumber, pin)
                 if (success) {
-                    _loginExitoso.value = documentNumber
+                    _loginExitoso.value = phoneNumber
                 } else {
-                    _loginError.value = "Documento o PIN incorrectos"
+                    _loginError.value = "Teléfono o PIN incorrectos"
                 }
             } catch (e: Exception) {
                 _loginError.value = "Error de conexión: ${e.message}"
