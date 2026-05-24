@@ -3,9 +3,11 @@ package com.example.hadescoin.presentation.auth.register
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import com.example.hadescoin.di.ServiceLocator
 import com.example.hadescoin.domain.model.AppUser
 import com.example.hadescoin.domain.usecase.RegisterUseCase
+import kotlinx.coroutines.launch
 
 class RegisterViewModel(
     private val registerUseCase: RegisterUseCase = ServiceLocator.provideRegisterUseCase()
@@ -21,28 +23,32 @@ class RegisterViewModel(
     val registroError: LiveData<String?> = _registroError
 
     fun register(fullName: String, documentNumber: String, phoneNumber: String, pin: String) {
-        if (fullName.trim().isEmpty() || documentNumber.trim().isEmpty() ||
-            phoneNumber.trim().isEmpty() || pin.trim().isEmpty()) {
+        if (fullName.isBlank() || documentNumber.isBlank() ||
+            phoneNumber.isBlank() || pin.isBlank()) {
             _registroError.value = "Por favor completa todos los campos"
             return
         }
 
-        _cargando.value = true
-
-        val nuevoUsuario = AppUser(
-            documentNumber = documentNumber,
-            phoneNumber    = phoneNumber,
-            fullName       = fullName,
-            pin            = pin,
-            balance        = 0.0
-        )
-
-        registerUseCase(nuevoUsuario) { success, _ ->
-            _cargando.value = false
-            if (success) {
-                _registroExitoso.value = true
-            } else {
-                _registroError.value = "No se pudo crear la cuenta. Intenta de nuevo."
+        viewModelScope.launch {
+            _cargando.value = true
+            try {
+                val user = AppUser(
+                    documentNumber = documentNumber,
+                    phoneNumber    = phoneNumber,
+                    fullName       = fullName,
+                    pin            = pin,
+                    balance        = 0.0
+                )
+                val success = registerUseCase(user)
+                if (success) {
+                    _registroExitoso.value = true
+                } else {
+                    _registroError.value = "No se pudo crear la cuenta. Intenta de nuevo."
+                }
+            } catch (e: Exception) {
+                _registroError.value = "Error de conexión: ${e.message}"
+            } finally {
+                _cargando.value = false
             }
         }
     }

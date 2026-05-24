@@ -1,27 +1,33 @@
 package com.example.hadescoin.data.datasource
 
-import com.google.android.gms.tasks.Task
-import com.google.firebase.database.DataSnapshot
+import com.example.hadescoin.domain.model.AppUser
 import com.google.firebase.database.FirebaseDatabase
+import kotlinx.coroutines.tasks.await
 
 class FirebaseUserDataSource {
 
-    // Apunta directamente al nodo principal de usuarios en tu base de datos de Firebase
     private val database = FirebaseDatabase.getInstance().getReference("users")
 
-
-    /**
-     * Guarda o actualiza la información de un usuario en la base de datos.
-     * Recibe un mapa plano con los campos mapeados (fullName, phoneNumber, pin, balance, etc.).
-     */
-    fun saveUser(documentNumber: String, userData: Map<String, String>): Task<Void> {
-        return database.child(documentNumber).setValue(userData)
+    suspend fun getUser(documentNumber: String): AppUser? {
+        val snapshot = database.child(documentNumber).get().await()
+        if (!snapshot.exists()) return null
+        return AppUser(
+            id             = snapshot.key ?: "",
+            documentNumber = snapshot.child("documentNumber").getValue(String::class.java) ?: "",
+            phoneNumber    = snapshot.child("phoneNumber").getValue(String::class.java) ?: "",
+            fullName       = snapshot.child("fullName").getValue(String::class.java) ?: "",
+            pin            = snapshot.child("pin").getValue(String::class.java) ?: "",
+            balance        = snapshot.child("balance").getValue(Double::class.java) ?: 0.0,
+            createdAt      = snapshot.child("createdAt").getValue(String::class.java) ?: ""
+        )
     }
 
-    /**
-     * Obtiene la información de un usuario por su número de documento.
-     */
-    fun getUser(documentNumber: String): Task<DataSnapshot> {
-        return database.child(documentNumber).get()
+    suspend fun saveUser(documentNumber: String, userData: Map<String, Any>): Boolean {
+        return try {
+            database.child(documentNumber).setValue(userData).await()
+            true
+        } catch (e: Exception) {
+            false
+        }
     }
 }
