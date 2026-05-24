@@ -26,18 +26,29 @@ class HomeViewModel(
     private val _error = MutableLiveData<String?>()
     val error: LiveData<String?> = _error
 
+    private var documentNumberCache: String = ""
     private var isDataLoaded = false
 
     fun loadWalletData(documentNumber: String) {
         if (isDataLoaded) return
+        documentNumberCache = documentNumber
+        fetchData(documentNumber)
+    }
 
+    fun refresh() {
+        if (documentNumberCache.isBlank()) return
+        isDataLoaded = false
+        fetchData(documentNumberCache)
+    }
+
+    private fun fetchData(documentNumber: String) {
         viewModelScope.launch {
             _cargando.value = true
             try {
                 val (user, txList) = getWalletDataUseCase(documentNumber)
                 if (user != null) {
                     _appUser.value = user
-                    _transactions.value = txList
+                    _transactions.value = txList.sortedByDescending { it.createdAt }
                     isDataLoaded = true
                 } else {
                     _error.value = "No se pudo cargar la información. Intenta de nuevo."
