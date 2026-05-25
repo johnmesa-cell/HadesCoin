@@ -9,6 +9,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDownward
 import androidx.compose.material.icons.filled.ArrowUpward
+import androidx.compose.material.icons.filled.ExitToApp
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -23,6 +24,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavController
 import com.example.hadescoin.domain.model.AppUser
 import com.example.hadescoin.domain.model.WalletTransaction
 import com.example.hadescoin.presentation.components.ShowLoadingAlertDialog
@@ -36,6 +38,7 @@ import java.util.Locale
 @Composable
 fun HomeScreen(
     phoneNumber: String,
+    navController: NavController,
     viewModel: HomeViewModel = viewModel()
 ) {
     val cargando     by viewModel.cargando.observeAsState(false)
@@ -61,7 +64,12 @@ fun HomeScreen(
         appUser      = appUser,
         transactions = transactions,
         cargando     = cargando,
-        onRefresh    = { viewModel.refresh() }
+        onRefresh    = { viewModel.refresh() },
+        onLogout     = {
+            navController.navigate("login") {
+                popUpTo(0) { inclusive = true }
+            }
+        }
     )
 
     if (cargando) ShowLoadingAlertDialog()
@@ -70,6 +78,7 @@ fun HomeScreen(
         ShowMessageAlertDialog(
             onConfirmation = {
                 viewModel.clearError()
+                showError = false
             },
             dialogTitle = "Error",
             dialogText  = mensajeError
@@ -85,7 +94,8 @@ fun HomeContent(
     appUser: AppUser?,
     transactions: List<WalletTransaction>,
     cargando: Boolean,
-    onRefresh: () -> Unit = {}
+    onRefresh: () -> Unit = {},
+    onLogout: () -> Unit = {}
 ) {
     val backgroundGradient = Brush.verticalGradient(
         colors = listOf(HadesBlack, HadesNavyDark, HadesBlack)
@@ -106,7 +116,7 @@ fun HomeContent(
             // ── HEADER ──────────────────────────────────────────────────
             item {
                 Spacer(modifier = Modifier.height(40.dp))
-                HomeHeader(appUser = appUser, onRefresh = onRefresh)
+                HomeHeader(appUser = appUser, onRefresh = onRefresh, onLogout = onLogout)
                 Spacer(modifier = Modifier.height(24.dp))
             }
 
@@ -185,7 +195,8 @@ fun HomeContent(
 @Composable
 private fun HomeHeader(
     appUser: AppUser?,
-    onRefresh: () -> Unit
+    onRefresh: () -> Unit,
+    onLogout: () -> Unit
 ) {
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -232,14 +243,24 @@ private fun HomeHeader(
             }
         }
 
-        // Botón refresh
-        IconButton(onClick = onRefresh) {
-            Icon(
-                imageVector = Icons.Filled.Refresh,
-                contentDescription = "Actualizar",
-                tint = HadesCyan,
-                modifier = Modifier.size(22.dp)
-            )
+        // Botones refresh y logout
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            IconButton(onClick = onRefresh) {
+                Icon(
+                    imageVector = Icons.Filled.Refresh,
+                    contentDescription = "Actualizar",
+                    tint = HadesCyan,
+                    modifier = Modifier.size(22.dp)
+                )
+            }
+            IconButton(onClick = onLogout) {
+                Icon(
+                    imageVector = Icons.Filled.ExitToApp,
+                    contentDescription = "Salir",
+                    tint = HadesOrange,
+                    modifier = Modifier.size(22.dp)
+                )
+            }
         }
     }
 }
@@ -368,7 +389,7 @@ private fun TransactionRow(tx: WalletTransaction) {
                     color = HadesOnDark,
                     fontSize = 14.sp
                 )
-                val dateText = if (tx.createdAt.length >= 10) tx.createdAt.take(10) else tx.createdAt
+                val dateText = if (tx.timestamp.length >= 10) tx.timestamp.take(10) else tx.timestamp
                 Text(
                     text = dateText,
                     fontSize = 11.sp,
@@ -421,7 +442,8 @@ fun HomeScreenEmptyPreview() {
             appUser      = AppUser(fullName = "Juan Pérez", balance = 0.0, phoneNumber = "3001234567", documentNumber = "1010101010"),
             transactions = emptyList(),
             cargando     = false,
-            onRefresh    = {}
+            onRefresh    = {},
+            onLogout     = {}
         )
     }
 }
@@ -438,14 +460,15 @@ fun HomeScreenFilledPreview() {
                 documentNumber = "1010101010"
             ),
             transactions = listOf(
-                WalletTransaction(type = "DEPOSIT",  amount = 500.0,  createdAt = "2026-05-21T10:00:00Z"),
-                WalletTransaction(type = "WITHDRAW", amount = 50.25,  createdAt = "2026-05-20T08:00:00Z"),
-                WalletTransaction(type = "TRANSFER", amount = 200.0,  createdAt = "2026-05-19T15:00:00Z"),
-                WalletTransaction(type = "INCOME",   amount = 1000.0, createdAt = "2026-05-18T09:00:00Z"),
-                WalletTransaction(type = "PAYMENT",  amount = 75.0,   createdAt = "2026-05-17T12:00:00Z")
+                WalletTransaction(type = "DEPOSIT",  amount = 500.0,  timestamp = "2026-05-21T10:00:00Z"),
+                WalletTransaction(type = "WITHDRAW", amount = 50.25,  timestamp = "2026-05-20T08:00:00Z"),
+                WalletTransaction(type = "TRANSFER", amount = 200.0,  timestamp = "2026-05-19T15:00:00Z"),
+                WalletTransaction(type = "INCOME",   amount = 1000.0, timestamp = "2026-05-18T09:00:00Z"),
+                WalletTransaction(type = "PAYMENT",  amount = 75.0,   timestamp = "2026-05-17T12:00:00Z")
             ),
             cargando  = false,
-            onRefresh = {}
+            onRefresh = {},
+            onLogout  = {}
         )
     }
 }
@@ -458,7 +481,8 @@ fun HomeScreenLoadingPreview() {
             appUser      = null,
             transactions = emptyList(),
             cargando     = true,
-            onRefresh    = {}
+            onRefresh    = {},
+            onLogout     = {}
         )
     }
 }

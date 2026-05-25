@@ -48,8 +48,8 @@ fun LoginView(
     var showError    by remember { mutableStateOf(false) }
 
     LaunchedEffect(loginExitoso) {
-        loginExitoso?.let { documentNumber ->
-            navController.navigate("home/$documentNumber") {
+        loginExitoso?.let { phoneNumber ->
+            navController.navigate("home/$phoneNumber") {
                 popUpTo("login") { inclusive = true }
             }
         }
@@ -63,11 +63,12 @@ fun LoginView(
     }
 
     LoginContent(
-        phoneNumber   = phoneNumber,
+        phoneNumber = phoneNumber,
         pin           = pin,
         cargando      = cargando,
-        onPhoneChange = { phoneNumber = it },
-        onPinChange   = { pin = it },
+        loginError    = loginError,
+        onPhoneChange = { if (it.length <= 10 && it.all { char -> char.isDigit() }) { phoneNumber = it; viewModel.clearError() } },
+        onPinChange   = { if (it.length <= 4 && it.all { char -> char.isDigit() }) { pin = it; viewModel.clearError() } },
         onLoginClick  = { viewModel.login(phoneNumber, pin) },
         onRegisterClick = { navController.navigate("register") }
     )
@@ -91,6 +92,7 @@ fun LoginContent(
     phoneNumber: String,
     pin: String,
     cargando: Boolean,
+    loginError: String?,
     onPhoneChange: (String) -> Unit,
     onPinChange: (String) -> Unit,
     onLoginClick: () -> Unit,
@@ -197,11 +199,12 @@ fun LoginContent(
                     OutlinedTextField(
                         value = phoneNumber,
                         onValueChange = onPhoneChange,
-                        label = { Text("Número de documento") },
+                        label = { Text("Número de teléfono") },
                         modifier = Modifier.fillMaxWidth(),
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                         singleLine = true,
-                        colors = fieldColors
+                        colors = fieldColors,
+                        isError = loginError != null && phoneNumber.isBlank()
                     )
 
                     OutlinedTextField(
@@ -212,7 +215,8 @@ fun LoginContent(
                         visualTransformation = PasswordVisualTransformation(),
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
                         singleLine = true,
-                        colors = fieldColors
+                        colors = fieldColors,
+                        isError = loginError != null && pin.length < 4
                     )
 
                     Spacer(modifier = Modifier.height(4.dp))
@@ -229,7 +233,7 @@ fun LoginContent(
                     ) {
                         Button(
                             onClick = onLoginClick,
-                            enabled = !cargando,
+                            enabled = !cargando && phoneNumber.length >= 5 && pin.length == 4,
                             modifier = Modifier.fillMaxSize(),
                             colors = ButtonDefaults.buttonColors(
                                 containerColor = Color.Transparent,
@@ -283,7 +287,7 @@ fun LoginContent(
 fun LoginViewPreview() {
     HadesCoinTheme {
         LoginContent(
-            phoneNumber = "", pin = "", cargando = false,
+            phoneNumber = "", pin = "", cargando = false, loginError = null,
             onPhoneChange = {}, onPinChange = {}, onLoginClick = {}, onRegisterClick = {}
         )
     }
@@ -294,7 +298,7 @@ fun LoginViewPreview() {
 fun LoginViewFilledPreview() {
     HadesCoinTheme {
         LoginContent(
-            phoneNumber = "1010101010", pin = "1234", cargando = false,
+            phoneNumber = "3001234567", pin = "1234", cargando = false, loginError = null,
             onPhoneChange = {}, onPinChange = {}, onLoginClick = {}, onRegisterClick = {}
         )
     }
@@ -305,7 +309,7 @@ fun LoginViewFilledPreview() {
 fun LoginViewLoadingPreview() {
     HadesCoinTheme {
         LoginContent(
-            phoneNumber = "1010101010", pin = "1234", cargando = true,
+            phoneNumber = "3001234567", pin = "1234", cargando = true, loginError = null,
             onPhoneChange = {}, onPinChange = {}, onLoginClick = {}, onRegisterClick = {}
         )
     }

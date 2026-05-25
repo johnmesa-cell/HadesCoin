@@ -29,6 +29,26 @@ class RegisterViewModel(
             return
         }
 
+        if (!esNombreCompletoValido(fullName)) {
+            _registroError.value = "El nombre completo solo debe contener letras"
+            return
+        }
+
+        if (!esDocumentoValido(documentNumber)) {
+            _registroError.value = "El documento debe tener entre 5 y 10 dígitos y contener solo números"
+            return
+        }
+
+        if (!esTelefonoValido(phoneNumber)) {
+            _registroError.value = "El teléfono debe tener exactamente 10 dígitos, empezar por 3 y contener solo números"
+            return
+        }
+
+        if (!esPinValido(pin)) {
+            _registroError.value = "El PIN debe tener exactamente 4 dígitos y contener solo números"
+            return
+        }
+
         viewModelScope.launch {
             _cargando.value = true
             try {
@@ -43,7 +63,7 @@ class RegisterViewModel(
                 if (success) {
                     _registroExitoso.value = true
                 } else {
-                    _registroError.value = "No se pudo crear la cuenta. Intenta de nuevo."
+                    _registroError.value = "Ya existe una cuenta con ese número de teléfono"
                 }
             } catch (e: Exception) {
                 _registroError.value = "Error de conexión: ${e.message}"
@@ -51,5 +71,25 @@ class RegisterViewModel(
                 _cargando.value = false
             }
         }
+    }
+
+    private fun esDocumentoValido(documentNumber: String): Boolean {
+        return documentNumber.length in 5..10 && documentNumber.all { it.isDigit() }
+    }
+
+    private fun esNombreCompletoValido(fullName: String): Boolean {
+        return fullName.isNotBlank() && fullName.all { it.isLetter() || it.isWhitespace() }
+    }
+
+    private fun esTelefonoValido(phoneNumber: String): Boolean {
+        return phoneNumber.length == 10 && phoneNumber.firstOrNull() == '3' && phoneNumber.all { it.isDigit() }
+    }
+
+    private fun esPinValido(pin: String): Boolean {
+        return pin.length == 4 && pin.all { it.isDigit() }
+    }
+
+    fun clearError() {
+        _registroError.value = null
     }
 }

@@ -7,12 +7,12 @@ import com.example.hadescoin.domain.model.WalletTransaction
 import com.example.hadescoin.domain.repository.WalletRepository
 
 class WalletRepositoryImpl(
-    private val userDataSource: FirebaseUserDataSource = FirebaseUserDataSource(),
-    private val transactionDataSource: FirebaseTransactionDataSource = FirebaseTransactionDataSource()
+    private val userDataSource: FirebaseUserDataSource,
+    private val transactionDataSource: FirebaseTransactionDataSource
 ) : WalletRepository {
 
-    override suspend fun getWalletData(documentNumber: String): Pair<AppUser?, List<WalletTransaction>> {
-        val user = userDataSource.getUser(documentNumber) ?: return Pair(null, emptyList())
+    override suspend fun getWalletData(phoneNumber: String): Pair<AppUser?, List<WalletTransaction>> {
+        val user = userDataSource.getUserByPhoneNumber(phoneNumber) ?: return Pair(null, emptyList())
         val transactions = transactionDataSource.getTransactionsByPhone(user.phoneNumber)
         return Pair(user, transactions)
     }

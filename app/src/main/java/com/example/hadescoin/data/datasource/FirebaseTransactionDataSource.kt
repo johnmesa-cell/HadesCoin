@@ -22,7 +22,7 @@ class FirebaseTransactionDataSource {
                         id        = child.key ?: "",
                         amount    = child.child("amount").getValue(Double::class.java) ?: 0.0,
                         type      = child.child("type").getValue(String::class.java) ?: "TRANSFER",
-                        createdAt = child.child("timestamp").getValue(String::class.java) ?: ""
+                        timestamp = child.child("timestamp").getValue(String::class.java) ?: ""
                     )
                 )
             }
@@ -30,4 +30,3 @@ class FirebaseTransactionDataSource {
         return result
     }
 }
-

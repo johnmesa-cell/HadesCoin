@@ -4,5 +4,5 @@ import com.example.hadescoin.domain.model.AppUser
 import com.example.hadescoin.domain.model.WalletTransaction
 
 interface WalletRepository {
-    suspend fun getWalletData(documentNumber: String): Pair<AppUser?, List<WalletTransaction>>
+    suspend fun getWalletData(phoneNumber: String): Pair<AppUser?, List<WalletTransaction>>
 }

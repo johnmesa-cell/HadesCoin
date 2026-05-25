@@ -9,4 +9,3 @@ data class AppUser(
     val balance: Double = 0.0,
     val createdAt: String = ""
 )
-
