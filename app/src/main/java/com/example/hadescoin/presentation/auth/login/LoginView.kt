@@ -66,8 +66,8 @@ fun LoginView(
         phoneNumber   = phoneNumber,
         pin           = pin,
         cargando      = cargando,
-        onPhoneChange = { phoneNumber = it },
-        onPinChange   = { pin = it },
+        onPhoneChange = { if (it.length <= 10 && it.all { char -> char.isDigit() }) phoneNumber = it },
+        onPinChange   = { if (it.length <= 4 && it.all { char -> char.isDigit() }) pin = it },
         onLoginClick  = { viewModel.login(phoneNumber, pin) },
         onRegisterClick = { navController.navigate("register") }
     )
