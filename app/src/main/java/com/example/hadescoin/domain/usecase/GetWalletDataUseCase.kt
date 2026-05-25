@@ -5,7 +5,7 @@ import com.example.hadescoin.domain.model.WalletTransaction
 import com.example.hadescoin.domain.repository.WalletRepository
 
 class GetWalletDataUseCase(private val repository: WalletRepository) {
-    suspend operator fun invoke(documentNumber: String): Pair<AppUser?, List<WalletTransaction>> {
-        return repository.getWalletData(documentNumber)
+    suspend operator fun invoke(phoneNumber: String): Pair<AppUser?, List<WalletTransaction>> {
+        return repository.getWalletData(phoneNumber)
     }
 }

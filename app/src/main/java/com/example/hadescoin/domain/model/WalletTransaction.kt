@@ -4,6 +4,5 @@ data class WalletTransaction(
     val id: String = "",
     val amount: Double = 0.0,
     val type: String = "TRANSFER",
-    val createdAt: String = ""
+    val timestamp: String = ""
 )
-

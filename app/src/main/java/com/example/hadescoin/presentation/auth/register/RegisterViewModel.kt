@@ -63,7 +63,7 @@ class RegisterViewModel(
                 if (success) {
                     _registroExitoso.value = true
                 } else {
-                    _registroError.value = "No se pudo crear la cuenta. Intenta de nuevo."
+                    _registroError.value = "Ya existe una cuenta con ese número de teléfono"
                 }
             } catch (e: Exception) {
                 _registroError.value = "Error de conexión: ${e.message}"
@@ -87,5 +87,9 @@ class RegisterViewModel(
 
     private fun esPinValido(pin: String): Boolean {
         return pin.length == 4 && pin.all { it.isDigit() }
+    }
+
+    fun clearError() {
+        _registroError.value = null
     }
 }

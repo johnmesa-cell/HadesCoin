@@ -21,9 +21,9 @@ class LoginViewModel(
     private val _loginError = MutableLiveData<String?>()
     val loginError: LiveData<String?> = _loginError
 
-    fun login(documentNumber: String, pin: String) {
-        if (!esDocumentoValido(documentNumber)) {
-            _loginError.value = "El documento debe tener entre 5 y 10 dígitos y contener solo números"
+    fun login(phoneNumber: String, pin: String) {
+        if (!esTelefonoValido(phoneNumber)) {
+            _loginError.value = "El teléfono debe tener 10 dígitos y empezar por 3"
             return
         }
 
@@ -35,11 +35,11 @@ class LoginViewModel(
         viewModelScope.launch {
             _cargando.value = true
             try {
-                val success = loginUseCase(documentNumber, pin)
+                val success = loginUseCase(phoneNumber, pin)
                 if (success) {
-                    _loginExitoso.value = documentNumber
+                    _loginExitoso.value = phoneNumber
                 } else {
-                    _loginError.value = "Documento o PIN incorrectos"
+                    _loginError.value = "Teléfono o PIN incorrectos"
                 }
             } catch (e: Exception) {
                 _loginError.value = "Error de conexión: ${e.message}"
@@ -49,11 +49,15 @@ class LoginViewModel(
         }
     }
 
-    private fun esDocumentoValido(documentNumber: String): Boolean {
-        return documentNumber.length in 5..10 && documentNumber.all { it.isDigit() }
+    private fun esTelefonoValido(phoneNumber: String): Boolean {
+        return phoneNumber.length == 10 && phoneNumber.firstOrNull() == '3' && phoneNumber.all { it.isDigit() }
     }
 
     private fun esPinValido(pin: String): Boolean {
         return pin.length == 4 && pin.all { it.isDigit() }
+    }
+
+    fun clearError() {
+        _loginError.value = null
     }
 }

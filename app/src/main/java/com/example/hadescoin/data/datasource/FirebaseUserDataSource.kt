@@ -8,8 +8,8 @@ class FirebaseUserDataSource {
 
     private val database = FirebaseDatabase.getInstance().getReference("users")
 
-    suspend fun getUser(documentNumber: String): AppUser? {
-        val snapshot = database.child(documentNumber).get().await()
+    suspend fun getUserByPhoneNumber(phoneNumber: String): AppUser? {
+        val snapshot = database.child(phoneNumber).get().await()
         if (!snapshot.exists()) return null
         return AppUser(
             id             = snapshot.key ?: "",
@@ -22,9 +22,11 @@ class FirebaseUserDataSource {
         )
     }
 
-    suspend fun saveUser(documentNumber: String, userData: Map<String, Any>): Boolean {
+    suspend fun saveUser(phoneNumber: String, userData: Map<String, Any>): Boolean {
         return try {
-            database.child(documentNumber).setValue(userData).await()
+            val snapshot = database.child(phoneNumber).get().await()
+            if (snapshot.exists()) return false
+            database.child(phoneNumber).setValue(userData).await()
             true
         } catch (e: Exception) {
             false

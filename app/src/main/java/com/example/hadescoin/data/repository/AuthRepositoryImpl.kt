@@ -5,11 +5,11 @@ import com.example.hadescoin.domain.model.AppUser
 import com.example.hadescoin.domain.repository.AuthRepository
 
 class AuthRepositoryImpl(
-    private val dataSource: FirebaseUserDataSource = FirebaseUserDataSource()
+    private val dataSource: FirebaseUserDataSource
 ) : AuthRepository {
 
-    override suspend fun login(documentNumber: String, pin: String): Boolean {
-        val user = dataSource.getUser(documentNumber) ?: return false
+    override suspend fun login(phoneNumber: String, pin: String): Boolean {
+        val user = dataSource.getUserByPhoneNumber(phoneNumber) ?: return false
         return user.pin == pin
     }
 
@@ -19,8 +19,9 @@ class AuthRepositoryImpl(
             "phoneNumber"    to user.phoneNumber,
             "fullName"       to user.fullName,
             "pin"            to user.pin,
-            "balance"        to 0.0
+            "balance"        to 0.0,
+            "createdAt"      to java.time.Instant.now().toString()
         )
-        return dataSource.saveUser(user.documentNumber, userData)
+        return dataSource.saveUser(user.phoneNumber, userData)
     }
 }

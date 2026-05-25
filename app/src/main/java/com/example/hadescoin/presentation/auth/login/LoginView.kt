@@ -37,7 +37,7 @@ fun LoginView(
     navController: NavController,
     viewModel: LoginViewModel = viewModel()
 ) {
-    var documentNumber by remember { mutableStateOf("") }
+    var phoneNumber by remember { mutableStateOf("") }
     var pin         by remember { mutableStateOf("") }
 
     val cargando     by viewModel.cargando.observeAsState(false)
@@ -48,8 +48,8 @@ fun LoginView(
     var showError    by remember { mutableStateOf(false) }
 
     LaunchedEffect(loginExitoso) {
-        loginExitoso?.let { documentNumber ->
-            navController.navigate("home/$documentNumber") {
+        loginExitoso?.let { phoneNumber ->
+            navController.navigate("home/$phoneNumber") {
                 popUpTo("login") { inclusive = true }
             }
         }
@@ -63,12 +63,13 @@ fun LoginView(
     }
 
     LoginContent(
-        documentNumber = documentNumber,
+        phoneNumber = phoneNumber,
         pin           = pin,
         cargando      = cargando,
-        onDocumentNumberChange = { if (it.length <= 10 && it.all { char -> char.isDigit() }) documentNumber = it },
-        onPinChange   = { if (it.length <= 4 && it.all { char -> char.isDigit() }) pin = it },
-        onLoginClick  = { viewModel.login(documentNumber, pin) },
+        loginError    = loginError,
+        onPhoneChange = { if (it.length <= 10 && it.all { char -> char.isDigit() }) { phoneNumber = it; viewModel.clearError() } },
+        onPinChange   = { if (it.length <= 4 && it.all { char -> char.isDigit() }) { pin = it; viewModel.clearError() } },
+        onLoginClick  = { viewModel.login(phoneNumber, pin) },
         onRegisterClick = { navController.navigate("register") }
     )
 
@@ -88,10 +89,11 @@ fun LoginView(
 // ─────────────────────────────────────────────────────────────────────────
 @Composable
 fun LoginContent(
-    documentNumber: String,
+    phoneNumber: String,
     pin: String,
     cargando: Boolean,
-    onDocumentNumberChange: (String) -> Unit,
+    loginError: String?,
+    onPhoneChange: (String) -> Unit,
     onPinChange: (String) -> Unit,
     onLoginClick: () -> Unit,
     onRegisterClick: () -> Unit
@@ -195,13 +197,14 @@ fun LoginContent(
                     )
 
                     OutlinedTextField(
-                        value = documentNumber,
-                        onValueChange = onDocumentNumberChange,
-                        label = { Text("Número de documento") },
+                        value = phoneNumber,
+                        onValueChange = onPhoneChange,
+                        label = { Text("Número de teléfono") },
                         modifier = Modifier.fillMaxWidth(),
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                         singleLine = true,
-                        colors = fieldColors
+                        colors = fieldColors,
+                        isError = loginError != null && phoneNumber.isBlank()
                     )
 
                     OutlinedTextField(
@@ -212,7 +215,8 @@ fun LoginContent(
                         visualTransformation = PasswordVisualTransformation(),
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
                         singleLine = true,
-                        colors = fieldColors
+                        colors = fieldColors,
+                        isError = loginError != null && pin.length < 4
                     )
 
                     Spacer(modifier = Modifier.height(4.dp))
@@ -229,7 +233,7 @@ fun LoginContent(
                     ) {
                         Button(
                             onClick = onLoginClick,
-                            enabled = !cargando,
+                            enabled = !cargando && phoneNumber.length >= 5 && pin.length == 4,
                             modifier = Modifier.fillMaxSize(),
                             colors = ButtonDefaults.buttonColors(
                                 containerColor = Color.Transparent,
@@ -283,8 +287,8 @@ fun LoginContent(
 fun LoginViewPreview() {
     HadesCoinTheme {
         LoginContent(
-            documentNumber = "", pin = "", cargando = false,
-            onDocumentNumberChange = {}, onPinChange = {}, onLoginClick = {}, onRegisterClick = {}
+            phoneNumber = "", pin = "", cargando = false, loginError = null,
+            onPhoneChange = {}, onPinChange = {}, onLoginClick = {}, onRegisterClick = {}
         )
     }
 }
@@ -294,8 +298,8 @@ fun LoginViewPreview() {
 fun LoginViewFilledPreview() {
     HadesCoinTheme {
         LoginContent(
-            documentNumber = "1010101010", pin = "1234", cargando = false,
-            onDocumentNumberChange = {}, onPinChange = {}, onLoginClick = {}, onRegisterClick = {}
+            phoneNumber = "3001234567", pin = "1234", cargando = false, loginError = null,
+            onPhoneChange = {}, onPinChange = {}, onLoginClick = {}, onRegisterClick = {}
         )
     }
 }
@@ -305,8 +309,8 @@ fun LoginViewFilledPreview() {
 fun LoginViewLoadingPreview() {
     HadesCoinTheme {
         LoginContent(
-            documentNumber = "1010101010", pin = "1234", cargando = true,
-            onDocumentNumberChange = {}, onPinChange = {}, onLoginClick = {}, onRegisterClick = {}
+            phoneNumber = "3001234567", pin = "1234", cargando = true, loginError = null,
+            onPhoneChange = {}, onPinChange = {}, onLoginClick = {}, onRegisterClick = {}
         )
     }
 }
