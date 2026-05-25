@@ -68,7 +68,7 @@ fun RegisterScreen(
         phoneNumber            = phoneNumber,
         pin                    = pin,
         cargando               = cargando,
-        onFullNameChange       = { fullName = it },
+        onFullNameChange       = { if (it.all { char -> char.isLetter() || char.isWhitespace() }) fullName = it },
         onDocumentNumberChange = { if (it.length <= 10 && it.all { char -> char.isDigit() }) documentNumber = it },
         onPhoneChange          = { if (it.length <= 10 && it.all { char -> char.isDigit() } && (it.isEmpty() || it[0] == '3')) phoneNumber = it },
         onPinChange            = { if (it.length <= 4 && it.all { char -> char.isDigit() }) pin = it },

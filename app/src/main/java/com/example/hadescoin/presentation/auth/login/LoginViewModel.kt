@@ -22,8 +22,13 @@ class LoginViewModel(
     val loginError: LiveData<String?> = _loginError
 
     fun login(documentNumber: String, pin: String) {
-        if (documentNumber.isBlank() || pin.isBlank()) {
-            _loginError.value = "Por favor completa todos los campos"
+        if (!esDocumentoValido(documentNumber)) {
+            _loginError.value = "El documento debe tener entre 5 y 10 dígitos y contener solo números"
+            return
+        }
+
+        if (!esPinValido(pin)) {
+            _loginError.value = "El PIN debe tener exactamente 4 dígitos y contener solo números"
             return
         }
 
@@ -42,5 +47,13 @@ class LoginViewModel(
                 _cargando.value = false
             }
         }
+    }
+
+    private fun esDocumentoValido(documentNumber: String): Boolean {
+        return documentNumber.length in 5..10 && documentNumber.all { it.isDigit() }
+    }
+
+    private fun esPinValido(pin: String): Boolean {
+        return pin.length == 4 && pin.all { it.isDigit() }
     }
 }
