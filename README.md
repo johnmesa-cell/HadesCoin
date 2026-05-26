@@ -194,12 +194,28 @@ app/src/main/res/values/
 
 ## 👤 Autores
 
-**John Mesa**  
-[GitHub](https://github.com/johnmesa-cell)
-**Juan Jose Restrepo**
-[GitHub](https://github.com/joserestrepo1-ctrl)
-**Andres Felipe Yarce**
-[GitHub](https://github.com/AndresYarce)
+<table>
+  <tr>
+    <td align="center">
+      <a href="https://github.com/johnmesa-cell">
+        <img src="https://github.com/johnmesa-cell.png" width="80" style="border-radius:50%"/><br/>
+        <b>John Mesa</b>
+      </a>
+    </td>
+    <td align="center">
+      <a href="https://github.com/joserestrepo1-ctrl">
+        <img src="https://github.com/joserestrepo1-ctrl.png" width="80" style="border-radius:50%"/><br/>
+        <b>Juan José Restrepo</b>
+      </a>
+    </td>
+    <td align="center">
+      <a href="https://github.com/AndresYarce">
+        <img src="https://github.com/AndresYarce.png" width="80" style="border-radius:50%"/><br/>
+        <b>Andrés Felipe Yarce</b>
+      </a>
+    </td>
+  </tr>
+</table>
 
 ---
 
