@@ -138,6 +138,9 @@ fun TransferViewContent(
         && !exceedsBalance
         && pin.length == 4
 
+    // ← toggle local del saldo
+    var saldoVisible by remember { mutableStateOf(true) }
+
     HadesBackground {
         Column(
             modifier = Modifier
@@ -204,10 +207,11 @@ fun TransferViewContent(
                             color         = HadesOnDark.copy(alpha = 0.5f)
                         )
                         Spacer(modifier = Modifier.height(2.dp))
+                        // ← visible y onToggle ahora funcionales
                         HadesBalanceText(
                             balance  = senderBalance,
-                            visible  = true,
-                            onToggle = {}
+                            visible  = saldoVisible,
+                            onToggle = { saldoVisible = !saldoVisible }
                         )
                     }
                     Box(
@@ -267,7 +271,6 @@ fun TransferViewContent(
                     prefix        = { Text("$", color = if (exceedsBalance) HadesOrange else HadesCyan) }
                 )
 
-                // Alerta saldo insuficiente
                 AnimatedVisibility(visible = exceedsBalance) {
                     Text(
                         text       = "⚠ Saldo insuficiente para esta transferencia",
@@ -367,7 +370,6 @@ private fun ConfirmTransferSheet(
                 .padding(bottom = 40.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // Icono central
             Box(
                 modifier = Modifier
                     .size(64.dp)
@@ -404,7 +406,6 @@ private fun ConfirmTransferSheet(
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // Monto destacado
             Text(
                 text       = "$${String.format(Locale.US, "%,.2f", amount)}",
                 fontSize   = 36.sp,
@@ -414,7 +415,6 @@ private fun ConfirmTransferSheet(
 
             Spacer(modifier = Modifier.height(20.dp))
 
-            // Detalle origen → destino
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
