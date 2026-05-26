@@ -112,7 +112,7 @@ fun HomeViewContent(
         SpeedDialItem(
             label   = "DEPOSITAR",
             icon    = Icons.Filled.ArrowDownward,
-            color   = HadesGreen,
+            color   = HadesCyan,   // HadesGreen no existe en el tema
             onClick = {},
             enabled = false
         ),
