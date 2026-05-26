@@ -1,14 +1,24 @@
 <resources>
+
+    <!-- ══════════════════════════════════════════════
+         APP
+    ══════════════════════════════════════════════ -->
     <string name="app_name">HadesCoin</string>
 
-    <!-- General -->
+
+    <!-- ══════════════════════════════════════════════
+         GENERAL — Diálogos y estados compartidos
+    ══════════════════════════════════════════════ -->
     <string name="text_loading">Cargando...</string>
     <string name="btn_accept">Aceptar</string>
     <string name="dialog_error_title">Error</string>
     <string name="dialog_success_title">Éxito</string>
     <string name="label_records">%d registros</string>
 
-    <!-- Login -->
+
+    <!-- ══════════════════════════════════════════════
+         LOGIN — Pantalla de inicio de sesión
+    ══════════════════════════════════════════════ -->
     <string name="login_title">HADESCOIN</string>
     <string name="login_subtitle">// TU BILLETERA DEL FUTURO</string>
     <string name="login_section_header">&gt; INICIAR SESIÓN</string>
@@ -20,7 +30,10 @@
     <string name="btn_register_link">REGISTRARSE ›</string>
     <string name="error_login_failed">Teléfono o PIN incorrectos</string>
 
-    <!-- Register -->
+
+    <!-- ══════════════════════════════════════════════
+         REGISTER — Pantalla de registro de usuario
+    ══════════════════════════════════════════════ -->
     <string name="register_subtitle">// CREA TU CUENTA</string>
     <string name="register_section_header">&gt; NUEVO USUARIO</string>
     <string name="label_full_name">Nombre completo</string>
@@ -35,7 +48,10 @@
     <string name="error_register_failed">Ya existe una cuenta con ese número de teléfono</string>
     <string name="register_success_message">¡Cuenta creada con éxito!</string>
 
-    <!-- Home -->
+
+    <!-- ══════════════════════════════════════════════
+         HOME — Pantalla principal / billetera
+    ══════════════════════════════════════════════ -->
     <string name="home_app_label">HADESCOIN</string>
     <string name="home_greeting">Hola, %s</string>
     <string name="home_no_data">…</string>
@@ -52,13 +68,19 @@
     <string name="cd_logo">HadesCoin Logo</string>
     <string name="btn_logout">Cerrar sesión</string>
 
-    <!-- Speed Dial -->
+
+    <!-- ══════════════════════════════════════════════
+         HOME — Speed Dial (acciones rápidas)
+    ══════════════════════════════════════════════ -->
     <string name="action_transfer">TRANSFERIR</string>
     <string name="action_deposit">DEPOSITAR</string>
     <string name="action_withdraw">RETIRAR</string>
     <string name="action_pay">PAGAR</string>
 
-    <!-- Transfer -->
+
+    <!-- ══════════════════════════════════════════════
+         TRANSFER — Pantalla de transferencia
+    ══════════════════════════════════════════════ -->
     <string name="transfer_title">TRANSFERENCIA</string>
     <string name="transfer_subtitle">Envía dinero de forma segura</string>
     <string name="transfer_section_header">&gt; DATOS DE ENVÍO</string>
@@ -74,6 +96,11 @@
     <string name="label_remaining">QUEDARÁ</string>
     <string name="btn_review_transfer">[ REVISAR TRANSFERENCIA ]</string>
     <string name="cd_back">Atrás</string>
+
+
+    <!-- ══════════════════════════════════════════════
+         TRANSFER — Modal de confirmación
+    ══════════════════════════════════════════════ -->
     <string name="confirm_transfer_title">¿Confirmar transferencia?</string>
     <string name="confirm_transfer_subtitle">Esta acción no se puede deshacer</string>
     <string name="confirm_from">DESDE</string>
@@ -81,4 +108,5 @@
     <string name="btn_confirm_transfer">[ CONFIRMAR ENVÍO ]</string>
     <string name="btn_cancel">Cancelar</string>
     <string name="transfer_success_message">Transferencia de $%s enviada correctamente.</string>
+
 </resources>
