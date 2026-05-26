@@ -6,5 +6,6 @@ data class WalletTransaction(
     val receiverId: String = "",
     val amount: Double = 0.0,
     val type: String = "TRANSFER",
+    val direction: String = "OUT",
     val timestamp: String = ""
 )

@@ -17,13 +17,20 @@ class FirebaseTransactionDataSource {
             val receiverId = child.child("receiverId").getValue(String::class.java) ?: ""
 
             if (senderId == phoneNumber || receiverId == phoneNumber) {
+                val type      = child.child("type").getValue(String::class.java) ?: "TRANSFER"
+                val direction = when {
+                    type != "TRANSFER"          -> if (senderId == phoneNumber) "OUT" else "IN"
+                    senderId == phoneNumber     -> "OUT"
+                    else                        -> "IN"
+                }
                 result.add(
                     WalletTransaction(
                         id         = child.key ?: "",
                         senderId   = senderId,
                         receiverId = receiverId,
                         amount     = child.child("amount").getValue(Double::class.java) ?: 0.0,
-                        type       = child.child("type").getValue(String::class.java) ?: "TRANSFER",
+                        type       = type,
+                        direction  = direction,
                         timestamp  = child.child("timestamp").getValue(String::class.java) ?: ""
                     )
                 )
@@ -48,4 +55,3 @@ class FirebaseTransactionDataSource {
         }
     }
 }
-

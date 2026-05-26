@@ -123,8 +123,8 @@ fun HomeViewContent(
                 item {
                     Spacer(modifier = Modifier.height(40.dp))
                     HomeHeader(
-                        appUser     = appUser,
-                        onRefresh   = onRefresh,
+                        appUser       = appUser,
+                        onRefresh     = onRefresh,
                         onAvatarClick = { showUserPanel = true }
                     )
                     Spacer(modifier = Modifier.height(24.dp))
@@ -145,9 +145,9 @@ fun HomeViewContent(
 
                 item {
                     HadesFilterChipRow(
-                        opciones     = listOf("TODOS", "TRANSFER", "DEPOSIT", "WITHDRAW"),
-                        seleccionado = filtroActivo,
-                        onSeleccion  = { filtroActivo = it },
+                        opciones       = listOf("TODOS", "TRANSFER", "DEPOSIT", "WITHDRAW"),
+                        seleccionado   = filtroActivo,
+                        onSeleccion    = { filtroActivo = it },
                         labelTransform = { translateTransactionType(it) }
                     )
                     Spacer(modifier = Modifier.height(8.dp))
@@ -156,10 +156,10 @@ fun HomeViewContent(
                 item {
                     Spacer(modifier = Modifier.height(12.dp))
                     val totalIngresos = transactions
-                        .filter { it.type == "DEPOSIT" || it.type == "INCOME" }
+                        .filter { it.direction == "IN" }
                         .sumOf { it.amount }
                     val totalEgresos = transactions
-                        .filter { it.type == "WITHDRAW" || it.type == "TRANSFER" || it.type == "PAYMENT" }
+                        .filter { it.direction == "OUT" }
                         .sumOf { it.amount }
                     HadesSummaryRow(
                         items = listOf(
@@ -239,7 +239,7 @@ fun HomeViewContent(
 
         if (showUserPanel) {
             UserPanelSheet(
-                appUser  = appUser,
+                appUser   = appUser,
                 onDismiss = { showUserPanel = false },
                 onLogout  = onLogout
             )
@@ -390,7 +390,7 @@ private fun BalanceCard(
 
 @Composable
 private fun TransactionRow(tx: WalletTransaction) {
-    val isIncome    = tx.type == "INCOME" || tx.type == "DEPOSIT"
+    val isIncome    = tx.direction == "IN"
     val amountColor = if (isIncome) HadesCyan else HadesOrange
     val prefix      = if (isIncome) "+" else "-"
     val icon        = if (isIncome) Icons.Filled.ArrowDownward else Icons.Filled.ArrowUpward
@@ -598,11 +598,12 @@ fun HomeViewFilledPreview() {
                 documentNumber = "1010101010"
             ),
             transactions = listOf(
-                WalletTransaction(type = "DEPOSIT",  amount = 500.0,  timestamp = "2026-05-21T10:00:00Z"),
-                WalletTransaction(type = "WITHDRAW", amount = 50.25,  timestamp = "2026-05-20T08:00:00Z"),
-                WalletTransaction(type = "TRANSFER", amount = 200.0,  timestamp = "2026-05-19T15:00:00Z"),
-                WalletTransaction(type = "INCOME",   amount = 1000.0, timestamp = "2026-05-18T09:00:00Z"),
-                WalletTransaction(type = "PAYMENT",  amount = 75.0,   timestamp = "2026-05-17T12:00:00Z")
+                WalletTransaction(type = "DEPOSIT",  amount = 500.0,  direction = "IN",  timestamp = "2026-05-21T10:00:00Z"),
+                WalletTransaction(type = "WITHDRAW", amount = 50.25,  direction = "OUT", timestamp = "2026-05-20T08:00:00Z"),
+                WalletTransaction(type = "TRANSFER", amount = 200.0,  direction = "OUT", timestamp = "2026-05-19T15:00:00Z"),
+                WalletTransaction(type = "TRANSFER", amount = 150.0,  direction = "IN",  timestamp = "2026-05-18T11:00:00Z"),
+                WalletTransaction(type = "INCOME",   amount = 1000.0, direction = "IN",  timestamp = "2026-05-18T09:00:00Z"),
+                WalletTransaction(type = "PAYMENT",  amount = 75.0,   direction = "OUT", timestamp = "2026-05-17T12:00:00Z")
             ),
             cargando   = false,
             onRefresh  = {},
