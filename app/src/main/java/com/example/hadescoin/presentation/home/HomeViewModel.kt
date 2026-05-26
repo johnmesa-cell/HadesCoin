@@ -27,17 +27,14 @@ class HomeViewModel(
     val error: LiveData<String?> = _error
 
     private var phoneNumberCache: String = ""
-    private var isDataLoaded = false
 
     fun loadWalletData(phoneNumber: String) {
-        if (isDataLoaded) return
         phoneNumberCache = phoneNumber
         fetchData(phoneNumber)
     }
 
     fun refresh() {
         if (phoneNumberCache.isBlank()) return
-        isDataLoaded = false
         fetchData(phoneNumberCache)
     }
 
@@ -49,7 +46,6 @@ class HomeViewModel(
                 if (user != null) {
                     _appUser.value = user
                     _transactions.value = txList.sortedByDescending { it.timestamp }
-                    isDataLoaded = true
                 } else {
                     _error.value = "No se pudo cargar la información. Intenta de nuevo."
                 }

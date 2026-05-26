@@ -1,6 +1,6 @@
 package com.example.hadescoin.data.datasource
 
-import com.example.hadescoin.domain.model.AppUser
+import com.google.firebase.database.DataSnapshot
 import com.google.firebase.database.FirebaseDatabase
 import kotlinx.coroutines.tasks.await
 
@@ -8,18 +8,9 @@ class FirebaseUserDataSource {
 
     private val database = FirebaseDatabase.getInstance().getReference("users")
 
-    suspend fun getUserByPhoneNumber(phoneNumber: String): AppUser? {
+    suspend fun getUser(phoneNumber: String): DataSnapshot? {
         val snapshot = database.child(phoneNumber).get().await()
-        if (!snapshot.exists()) return null
-        return AppUser(
-            id             = snapshot.key ?: "",
-            documentNumber = snapshot.child("documentNumber").getValue(String::class.java) ?: "",
-            phoneNumber    = snapshot.child("phoneNumber").getValue(String::class.java) ?: "",
-            fullName       = snapshot.child("fullName").getValue(String::class.java) ?: "",
-            pin            = snapshot.child("pin").getValue(String::class.java) ?: "",
-            balance        = snapshot.child("balance").getValue(Double::class.java) ?: 0.0,
-            createdAt      = snapshot.child("createdAt").getValue(String::class.java) ?: ""
-        )
+        return if (snapshot.exists()) snapshot else null
     }
 
     suspend fun saveUser(phoneNumber: String, userData: Map<String, Any>): Boolean {
@@ -28,7 +19,16 @@ class FirebaseUserDataSource {
             if (snapshot.exists()) return false
             database.child(phoneNumber).setValue(userData).await()
             true
-        } catch (e: Exception) {
+        } catch (_: Exception) {
+            false
+        }
+    }
+
+    suspend fun updateBalance(phoneNumber: String, newBalance: Double): Boolean {
+        return try {
+            database.child(phoneNumber).child("balance").setValue(newBalance).await()
+            true
+        } catch (_: Exception) {
             false
         }
     }

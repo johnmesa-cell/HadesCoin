@@ -1,6 +1,6 @@
 package com.example.hadescoin.data.datasource
 
-import com.example.hadescoin.domain.model.WalletTransaction
+import com.google.firebase.database.DataSnapshot
 import com.google.firebase.database.FirebaseDatabase
 import kotlinx.coroutines.tasks.await
 
@@ -8,25 +8,39 @@ class FirebaseTransactionDataSource {
 
     private val database = FirebaseDatabase.getInstance().getReference("transactions")
 
-    suspend fun getTransactionsByPhone(phoneNumber: String): List<WalletTransaction> {
-        val snapshot = database.get().await()
-        val result = mutableListOf<WalletTransaction>()
+    suspend fun getTransactionsByPhone(phoneNumber: String): List<DataSnapshot> {
+        // Dos queries separadas porque Firebase Realtime Database no soporta OR nativo
+        val bySender = database
+            .orderByChild("senderId")
+            .equalTo(phoneNumber)
+            .get().await()
 
-        for (child in snapshot.children) {
-            val senderId   = child.child("senderId").getValue(String::class.java) ?: ""
-            val receiverId = child.child("receiverId").getValue(String::class.java) ?: ""
+        val byReceiver = database
+            .orderByChild("receiverId")
+            .equalTo(phoneNumber)
+            .get().await()
 
-            if (senderId == phoneNumber || receiverId == phoneNumber) {
-                result.add(
-                    WalletTransaction(
-                        id        = child.key ?: "",
-                        amount    = child.child("amount").getValue(Double::class.java) ?: 0.0,
-                        type      = child.child("type").getValue(String::class.java) ?: "TRANSFER",
-                        timestamp = child.child("timestamp").getValue(String::class.java) ?: ""
-                    )
-                )
-            }
+        val seen = mutableSetOf<String>()
+        val result = mutableListOf<DataSnapshot>()
+
+        for (child in bySender.children) {
+            val key = child.key ?: continue
+            if (seen.add(key)) result.add(child)
         }
+        for (child in byReceiver.children) {
+            val key = child.key ?: continue
+            if (seen.add(key)) result.add(child)
+        }
+
         return result
+    }
+
+    suspend fun saveTransaction(data: Map<String, Any>): Boolean {
+        return try {
+            database.push().setValue(data).await()
+            true
+        } catch (_: Exception) {
+            false
+        }
     }
 }

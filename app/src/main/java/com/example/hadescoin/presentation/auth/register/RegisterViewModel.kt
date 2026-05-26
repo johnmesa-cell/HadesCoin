@@ -22,9 +22,15 @@ class RegisterViewModel(
     private val _registroError = MutableLiveData<String?>()
     val registroError: LiveData<String?> = _registroError
 
-    fun register(fullName: String, documentNumber: String, phoneNumber: String, pin: String) {
+    fun register(
+        fullName: String,
+        documentNumber: String,
+        phoneNumber: String,
+        pin: String,
+        confirmPin: String
+    ) {
         if (fullName.isBlank() || documentNumber.isBlank() ||
-            phoneNumber.isBlank() || pin.isBlank()) {
+            phoneNumber.isBlank() || pin.isBlank() || confirmPin.isBlank()) {
             _registroError.value = "Por favor completa todos los campos"
             return
         }
@@ -49,10 +55,16 @@ class RegisterViewModel(
             return
         }
 
+        if (pin != confirmPin) {
+            _registroError.value = "Los PINs no coinciden"
+            return
+        }
+
         viewModelScope.launch {
             _cargando.value = true
             try {
                 val user = AppUser(
+                    id             = phoneNumber,
                     documentNumber = documentNumber,
                     phoneNumber    = phoneNumber,
                     fullName       = fullName,
