@@ -104,133 +104,144 @@ fun HomeViewContent(
     onTransfer: () -> Unit = {}
 ) {
     var showUserPanel by remember { mutableStateOf(false) }
-    var saldoVisible by remember { mutableStateOf(true) }
-    var filtroActivo by remember { mutableStateOf("TODOS") }
+    var saldoVisible  by remember { mutableStateOf(true) }
+    var filtroActivo  by remember { mutableStateOf("TODOS") }
 
     val transaccionesFiltradas = if (filtroActivo == "TODOS") transactions
         else transactions.filter { it.type.uppercase() == filtroActivo }
 
     HadesBackground {
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(horizontal = 24.dp),
-            verticalArrangement = Arrangement.spacedBy(0.dp)
-        ) {
+        Box(modifier = Modifier.fillMaxSize()) {
 
-            item {
-                Spacer(modifier = Modifier.height(40.dp))
-                HomeHeader(
-                    appUser = appUser,
-                    onRefresh = onRefresh,
-                    onAvatarClick = { showUserPanel = true }
-                )
-                Spacer(modifier = Modifier.height(24.dp))
-            }
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 24.dp),
+                verticalArrangement = Arrangement.spacedBy(0.dp)
+            ) {
 
-            item {
-                BalanceCard(
-                    appUser = appUser,
-                    saldoVisible = saldoVisible,
-                    onToggleSaldo = { saldoVisible = !saldoVisible }
-                )
-                Spacer(modifier = Modifier.height(16.dp))
-            }
-
-            item {
-                Spacer(modifier = Modifier.height(28.dp))
-            }
-
-            item {
-                HadesFilterChipRow(
-                    opciones = listOf("TODOS", "TRANSFER", "DEPOSIT", "WITHDRAW"),
-                    seleccionado = filtroActivo,
-                    onSeleccion = { filtroActivo = it },
-                    labelTransform = { translateTransactionType(it) }
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-            }
-
-            item {
-                Spacer(modifier = Modifier.height(12.dp))
-                val totalIngresos = transactions
-                    .filter { it.type == "DEPOSIT" || it.type == "INCOME" }
-                    .sumOf { it.amount }
-                val totalEgresos = transactions
-                    .filter { it.type == "WITHDRAW" || it.type == "TRANSFER" || it.type == "PAYMENT" }
-                    .sumOf { it.amount }
-                HadesSummaryRow(
-                    items = listOf(
-                        HadesSummaryItem("INGRESOS", totalIngresos, HadesCyan, "+ "),
-                        HadesSummaryItem("EGRESOS",  totalEgresos,  HadesOrange, "- ")
-                    )
-                )
-                Spacer(modifier = Modifier.height(16.dp))
-            }
-
-            item {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = "> MOVIMIENTOS",
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Bold,
-                        letterSpacing = 2.sp,
-                        color = HadesCyan
-                    )
-                    Text(
-                        text = "${transactions.size} registros",
-                        fontSize = 11.sp,
-                        color = HadesOnDark.copy(alpha = 0.4f)
-                    )
-                }
-                Spacer(modifier = Modifier.height(8.dp))
-            }
-
-            if (transaccionesFiltradas.isEmpty() && !cargando) {
                 item {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 48.dp),
-                        contentAlignment = Alignment.Center
+                    Spacer(modifier = Modifier.height(40.dp))
+                    HomeHeader(
+                        appUser     = appUser,
+                        onRefresh   = onRefresh,
+                        onAvatarClick = { showUserPanel = true }
+                    )
+                    Spacer(modifier = Modifier.height(24.dp))
+                }
+
+                item {
+                    BalanceCard(
+                        appUser       = appUser,
+                        saldoVisible  = saldoVisible,
+                        onToggleSaldo = { saldoVisible = !saldoVisible }
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                }
+
+                item {
+                    Spacer(modifier = Modifier.height(28.dp))
+                }
+
+                item {
+                    HadesFilterChipRow(
+                        opciones     = listOf("TODOS", "TRANSFER", "DEPOSIT", "WITHDRAW"),
+                        seleccionado = filtroActivo,
+                        onSeleccion  = { filtroActivo = it },
+                        labelTransform = { translateTransactionType(it) }
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                }
+
+                item {
+                    Spacer(modifier = Modifier.height(12.dp))
+                    val totalIngresos = transactions
+                        .filter { it.type == "DEPOSIT" || it.type == "INCOME" }
+                        .sumOf { it.amount }
+                    val totalEgresos = transactions
+                        .filter { it.type == "WITHDRAW" || it.type == "TRANSFER" || it.type == "PAYMENT" }
+                        .sumOf { it.amount }
+                    HadesSummaryRow(
+                        items = listOf(
+                            HadesSummaryItem("INGRESOS", totalIngresos, HadesCyan,   "+ "),
+                            HadesSummaryItem("EGRESOS",  totalEgresos,  HadesOrange, "- ")
+                        )
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                }
+
+                item {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text(
-                                text = "// SIN MOVIMIENTOS",
-                                color = HadesOnDark.copy(alpha = 0.3f),
-                                fontSize = 13.sp,
-                                fontWeight = FontWeight.Bold,
-                                letterSpacing = 2.sp
-                            )
-                            Spacer(modifier = Modifier.height(4.dp))
-                            Text(
-                                text = "No hay transacciones registradas",
-                                color = HadesOnDark.copy(alpha = 0.25f),
-                                fontSize = 12.sp,
-                                textAlign = TextAlign.Center
-                            )
+                        Text(
+                            text = "> MOVIMIENTOS",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold,
+                            letterSpacing = 2.sp,
+                            color = HadesCyan
+                        )
+                        Text(
+                            text = "${transactions.size} registros",
+                            fontSize = 11.sp,
+                            color = HadesOnDark.copy(alpha = 0.4f)
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(8.dp))
+                }
+
+                if (transaccionesFiltradas.isEmpty() && !cargando) {
+                    item {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 48.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Text(
+                                    text = "// SIN MOVIMIENTOS",
+                                    color = HadesOnDark.copy(alpha = 0.3f),
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    letterSpacing = 2.sp
+                                )
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text(
+                                    text = "No hay transacciones registradas",
+                                    color = HadesOnDark.copy(alpha = 0.25f),
+                                    fontSize = 12.sp,
+                                    textAlign = TextAlign.Center
+                                )
+                            }
                         }
                     }
                 }
+
+                items(transaccionesFiltradas) { tx ->
+                    TransactionRow(tx = tx)
+                    Spacer(modifier = Modifier.height(8.dp))
+                }
+
+                item { Spacer(modifier = Modifier.height(96.dp)) }
             }
 
-            items(transaccionesFiltradas) { tx ->
-                TransactionRow(tx = tx)
-                Spacer(modifier = Modifier.height(8.dp))
-            }
-
-            item { Spacer(modifier = Modifier.height(24.dp)) }
+            HadesButton(
+                text     = "[ TRANSFERIR ]",
+                onClick  = onTransfer,
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(horizontal = 24.dp, vertical = 24.dp)
+            )
         }
 
         if (showUserPanel) {
             UserPanelSheet(
-                appUser = appUser,
+                appUser  = appUser,
                 onDismiss = { showUserPanel = false },
-                onLogout = onLogout
+                onLogout  = onLogout
             )
         }
     }
@@ -326,8 +337,8 @@ private fun BalanceCard(
             )
             Spacer(modifier = Modifier.height(4.dp))
             HadesBalanceText(
-                balance = appUser?.balance ?: 0.0,
-                visible = saldoVisible,
+                balance  = appUser?.balance ?: 0.0,
+                visible  = saldoVisible,
                 onToggle = onToggleSaldo
             )
             Spacer(modifier = Modifier.height(16.dp))
@@ -593,9 +604,9 @@ fun HomeViewFilledPreview() {
                 WalletTransaction(type = "INCOME",   amount = 1000.0, timestamp = "2026-05-18T09:00:00Z"),
                 WalletTransaction(type = "PAYMENT",  amount = 75.0,   timestamp = "2026-05-17T12:00:00Z")
             ),
-            cargando  = false,
-            onRefresh = {},
-            onLogout  = {},
+            cargando   = false,
+            onRefresh  = {},
+            onLogout   = {},
             onTransfer = {}
         )
     }
@@ -615,4 +626,3 @@ fun HomeViewLoadingPreview() {
         )
     }
 }
-
