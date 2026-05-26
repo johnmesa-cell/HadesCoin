@@ -6,12 +6,13 @@ import com.example.hadescoin.domain.repository.AuthRepository
 import java.time.Instant
 
 class AuthRepositoryImpl(
-    private val dataSource: FirebaseUserDataSource
+    private val dataSource: FirebaseUserDataSource = FirebaseUserDataSource()
 ) : AuthRepository {
 
     override suspend fun login(phoneNumber: String, pin: String): Boolean {
-        val user = dataSource.getUserByPhoneNumber(phoneNumber) ?: return false
-        return user.pin == pin
+        val snapshot = dataSource.getUser(phoneNumber) ?: return false
+        val dbPin = snapshot.child("pin").getValue(String::class.java) ?: return false
+        return dbPin == pin
     }
 
     override suspend fun register(user: AppUser): Boolean {
