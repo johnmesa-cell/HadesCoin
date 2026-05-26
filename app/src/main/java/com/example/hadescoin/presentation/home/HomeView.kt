@@ -47,6 +47,15 @@ fun HomeView(
     var showError    by remember { mutableStateOf(false) }
     var mensajeError by remember { mutableStateOf("") }
 
+    // Estado del Speed Dial en HomeView para poder resetearlo al volver
+    var menuExpanded by remember { mutableStateOf(false) }
+
+    // Cierra el Speed Dial cada vez que esta pantalla vuelve a ser la activa
+    val currentEntry = navController.currentBackStackEntryAsState()
+    LaunchedEffect(currentEntry.value) {
+        menuExpanded = false
+    }
+
     LaunchedEffect(phoneNumber) {
         viewModel.loadWalletData(phoneNumber)
     }
@@ -59,16 +68,22 @@ fun HomeView(
     }
 
     HomeViewContent(
-        appUser      = appUser,
-        transactions = transactions,
-        cargando     = cargando,
-        onRefresh    = { viewModel.refresh() },
-        onLogout     = {
+        appUser        = appUser,
+        transactions   = transactions,
+        cargando       = cargando,
+        menuExpanded   = menuExpanded,
+        onMenuToggle   = { menuExpanded = !menuExpanded },
+        onMenuCollapse = { menuExpanded = false },
+        onRefresh      = { viewModel.refresh() },
+        onLogout       = {
             navController.navigate("login") {
                 popUpTo(0) { inclusive = true }
             }
         },
-        onTransfer   = { navController.navigate("transfer/$phoneNumber") }
+        onTransfer     = {
+            menuExpanded = false
+            navController.navigate("transfer/$phoneNumber")
+        }
     )
 
     if (cargando) ShowLoadingAlertDialog()
@@ -90,14 +105,16 @@ fun HomeViewContent(
     appUser: AppUser?,
     transactions: List<WalletTransaction>,
     cargando: Boolean,
+    menuExpanded: Boolean = false,
+    onMenuToggle: () -> Unit = {},
+    onMenuCollapse: () -> Unit = {},
     onRefresh: () -> Unit = {},
     onLogout: () -> Unit = {},
     onTransfer: () -> Unit = {}
 ) {
-    var showUserPanel  by remember { mutableStateOf(false) }
-    var saldoVisible   by remember { mutableStateOf(true) }
-    var filtroActivo   by remember { mutableStateOf("TODOS") }
-    var menuExpanded   by remember { mutableStateOf(false) }
+    var showUserPanel by remember { mutableStateOf(false) }
+    var saldoVisible  by remember { mutableStateOf(true) }
+    var filtroActivo  by remember { mutableStateOf("TODOS") }
 
     val transaccionesFiltradas = if (filtroActivo == "TODOS") transactions
         else transactions.filter { it.type.uppercase() == filtroActivo }
@@ -107,12 +124,12 @@ fun HomeViewContent(
             label   = "TRANSFERIR",
             icon    = Icons.Filled.SwapHoriz,
             color   = HadesCyan,
-            onClick = { menuExpanded = false; onTransfer() }
+            onClick = { onTransfer() }
         ),
         SpeedDialItem(
             label   = "DEPOSITAR",
             icon    = Icons.Filled.ArrowDownward,
-            color   = HadesCyan,   // HadesGreen no existe en el tema
+            color   = HadesCyan,
             onClick = {},
             enabled = false
         ),
@@ -141,7 +158,6 @@ fun HomeViewContent(
                     .padding(horizontal = 24.dp),
                 verticalArrangement = Arrangement.spacedBy(0.dp)
             ) {
-
                 item {
                     Spacer(modifier = Modifier.height(40.dp))
                     HomeHeader(
@@ -175,12 +191,8 @@ fun HomeViewContent(
 
                 item {
                     Spacer(modifier = Modifier.height(12.dp))
-                    val totalIngresos = transactions
-                        .filter { it.direction == "IN" }
-                        .sumOf { it.amount }
-                    val totalEgresos = transactions
-                        .filter { it.direction == "OUT" }
-                        .sumOf { it.amount }
+                    val totalIngresos = transactions.filter { it.direction == "IN" }.sumOf { it.amount }
+                    val totalEgresos  = transactions.filter { it.direction == "OUT" }.sumOf { it.amount }
                     HadesSummaryRow(
                         items = listOf(
                             HadesSummaryItem("INGRESOS", totalIngresos, HadesCyan,   "+ "),
@@ -248,20 +260,20 @@ fun HomeViewContent(
                 item { Spacer(modifier = Modifier.height(120.dp)) }
             }
 
-            // Overlay semitransparente al expandir el menú
+            // Overlay semitransparente — cerrar al tocar fuera
             if (menuExpanded) {
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
                         .background(HadesNavyDark.copy(alpha = 0.6f))
-                        .clickable { menuExpanded = false }
+                        .clickable { onMenuCollapse() }
                 )
             }
 
             // Speed Dial FAB
             HadesSpeedDial(
                 expanded = menuExpanded,
-                onToggle = { menuExpanded = !menuExpanded },
+                onToggle = onMenuToggle,
                 items    = speedDialItems,
                 modifier = Modifier.align(Alignment.BottomEnd)
             )
@@ -293,11 +305,7 @@ private fun HomeHeader(
                 modifier = Modifier
                     .size(46.dp)
                     .clip(CircleShape)
-                    .background(
-                        Brush.radialGradient(
-                            colors = listOf(HadesPurple, HadesNavyDark)
-                        )
-                    )
+                    .background(Brush.radialGradient(colors = listOf(HadesPurple, HadesNavyDark)))
                     .clickable { onAvatarClick() },
                 contentAlignment = Alignment.Center
             ) {
@@ -308,9 +316,7 @@ private fun HomeHeader(
                     color = HadesOnDark
                 )
             }
-
             Spacer(modifier = Modifier.width(12.dp))
-
             Column {
                 Text(
                     text = "HADESCOIN",
@@ -327,7 +333,6 @@ private fun HomeHeader(
                 )
             }
         }
-
         IconButton(onClick = onRefresh) {
             Icon(
                 imageVector = Icons.Filled.Refresh,
@@ -349,67 +354,24 @@ private fun BalanceCard(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(24.dp))
-            .background(
-                Brush.linearGradient(
-                    colors = listOf(HadesPurple, HadesPurpleGlow, HadesNavyDark)
-                )
-            )
+            .background(Brush.linearGradient(colors = listOf(HadesPurple, HadesPurpleGlow, HadesNavyDark)))
             .padding(24.dp)
     ) {
         Column {
-            Text(
-                text = "Saldo disponible",
-                fontSize = 12.sp,
-                letterSpacing = 1.sp,
-                color = HadesOnDark.copy(alpha = 0.7f)
-            )
+            Text(text = "Saldo disponible", fontSize = 12.sp, letterSpacing = 1.sp, color = HadesOnDark.copy(alpha = 0.7f))
             Spacer(modifier = Modifier.height(4.dp))
-            HadesBalanceText(
-                balance  = appUser?.balance ?: 0.0,
-                visible  = saldoVisible,
-                onToggle = onToggleSaldo
-            )
+            HadesBalanceText(balance = appUser?.balance ?: 0.0, visible = saldoVisible, onToggle = onToggleSaldo)
             Spacer(modifier = Modifier.height(16.dp))
-
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(1.dp)
-                    .background(HadesOnDark.copy(alpha = 0.15f))
-            )
+            Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(HadesOnDark.copy(alpha = 0.15f)))
             Spacer(modifier = Modifier.height(12.dp))
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                 Column {
-                    Text(
-                        text = "TELÉFONO",
-                        fontSize = 9.sp,
-                        letterSpacing = 1.sp,
-                        color = HadesOnDark.copy(alpha = 0.5f)
-                    )
-                    Text(
-                        text = appUser?.phoneNumber ?: "—",
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = HadesOnDark
-                    )
+                    Text(text = "TELÉFONO", fontSize = 9.sp, letterSpacing = 1.sp, color = HadesOnDark.copy(alpha = 0.5f))
+                    Text(text = appUser?.phoneNumber ?: "—", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = HadesOnDark)
                 }
                 Column(horizontalAlignment = Alignment.End) {
-                    Text(
-                        text = "DOCUMENTO",
-                        fontSize = 9.sp,
-                        letterSpacing = 1.sp,
-                        color = HadesOnDark.copy(alpha = 0.5f)
-                    )
-                    Text(
-                        text = appUser?.documentNumber ?: "—",
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = HadesOnDark
-                    )
+                    Text(text = "DOCUMENTO", fontSize = 9.sp, letterSpacing = 1.sp, color = HadesOnDark.copy(alpha = 0.5f))
+                    Text(text = appUser?.documentNumber ?: "—", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = HadesOnDark)
                 }
             }
         }
@@ -435,32 +397,15 @@ private fun TransactionRow(tx: WalletTransaction) {
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Box(
-                modifier = Modifier
-                    .size(36.dp)
-                    .clip(CircleShape)
-                    .background(amountColor.copy(alpha = 0.12f)),
+                modifier = Modifier.size(36.dp).clip(CircleShape).background(amountColor.copy(alpha = 0.12f)),
                 contentAlignment = Alignment.Center
             ) {
-                Icon(
-                    imageVector = icon,
-                    contentDescription = typeLabel,
-                    tint = amountColor,
-                    modifier = Modifier.size(18.dp)
-                )
+                Icon(imageVector = icon, contentDescription = typeLabel, tint = amountColor, modifier = Modifier.size(18.dp))
             }
             Spacer(modifier = Modifier.width(12.dp))
             Column {
-                Text(
-                    text = typeLabel,
-                    fontWeight = FontWeight.Bold,
-                    color = HadesOnDark,
-                    fontSize = 14.sp
-                )
-                Text(
-                    text = formatTimestamp(tx.timestamp),
-                    fontSize = 11.sp,
-                    color = HadesOnDark.copy(alpha = 0.45f)
-                )
+                Text(text = typeLabel, fontWeight = FontWeight.Bold, color = HadesOnDark, fontSize = 14.sp)
+                Text(text = formatTimestamp(tx.timestamp), fontSize = 11.sp, color = HadesOnDark.copy(alpha = 0.45f))
             }
         }
         Text(
@@ -474,60 +419,25 @@ private fun TransactionRow(tx: WalletTransaction) {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun UserPanelSheet(
-    appUser: AppUser?,
-    onDismiss: () -> Unit,
-    onLogout: () -> Unit
-) {
-    ModalBottomSheet(
-        onDismissRequest = onDismiss,
-        containerColor = HadesNavyDark
-    ) {
+fun UserPanelSheet(appUser: AppUser?, onDismiss: () -> Unit, onLogout: () -> Unit) {
+    ModalBottomSheet(onDismissRequest = onDismiss, containerColor = HadesNavyDark) {
         Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 24.dp)
-                .padding(bottom = 32.dp),
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp).padding(bottom = 32.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Box(
-                modifier = Modifier
-                    .size(72.dp)
-                    .clip(CircleShape)
-                    .background(
-                        Brush.radialGradient(
-                            colors = listOf(HadesPurple, HadesNavyDark)
-                        )
-                    ),
+                modifier = Modifier.size(72.dp).clip(CircleShape)
+                    .background(Brush.radialGradient(colors = listOf(HadesPurple, HadesNavyDark))),
                 contentAlignment = Alignment.Center
             ) {
-                Text(
-                    text = getInitials(appUser?.fullName),
-                    fontSize = 26.sp,
-                    fontWeight = FontWeight.Black,
-                    color = HadesOnDark
-                )
+                Text(text = getInitials(appUser?.fullName), fontSize = 26.sp, fontWeight = FontWeight.Black, color = HadesOnDark)
             }
             Spacer(modifier = Modifier.height(12.dp))
-            Text(
-                text = appUser?.fullName ?: "...",
-                fontSize = 20.sp,
-                fontWeight = FontWeight.Bold,
-                color = HadesOnDark
-            )
+            Text(text = appUser?.fullName ?: "...", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = HadesOnDark)
             Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                text = appUser?.phoneNumber ?: "—",
-                fontSize = 14.sp,
-                color = HadesOnDark.copy(alpha = 0.6f)
-            )
+            Text(text = appUser?.phoneNumber ?: "—", fontSize = 14.sp, color = HadesOnDark.copy(alpha = 0.6f))
             Spacer(modifier = Modifier.height(24.dp))
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(1.dp)
-                    .background(HadesOnDark.copy(alpha = 0.1f))
-            )
+            Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(HadesOnDark.copy(alpha = 0.1f)))
             Spacer(modifier = Modifier.height(20.dp))
             UserInfoRow(label = "DOCUMENTO", value = appUser?.documentNumber ?: "—")
             Spacer(modifier = Modifier.height(12.dp))
@@ -536,17 +446,10 @@ fun UserPanelSheet(
             Button(
                 onClick = { onDismiss(); onLogout() },
                 modifier = Modifier.fillMaxWidth(),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = HadesOrange.copy(alpha = 0.15f),
-                    contentColor   = HadesOrange
-                ),
+                colors = ButtonDefaults.buttonColors(containerColor = HadesOrange.copy(alpha = 0.15f), contentColor = HadesOrange),
                 shape = RoundedCornerShape(12.dp)
             ) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Filled.ExitToApp,
-                    contentDescription = "Salir",
-                    modifier = Modifier.size(18.dp)
-                )
+                Icon(imageVector = Icons.AutoMirrored.Filled.ExitToApp, contentDescription = "Salir", modifier = Modifier.size(18.dp))
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(text = "Cerrar sesión", fontWeight = FontWeight.Bold)
             }
@@ -556,11 +459,7 @@ fun UserPanelSheet(
 
 @Composable
 private fun UserInfoRow(label: String, value: String) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
+    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
         Text(text = label, fontSize = 10.sp, letterSpacing = 1.sp, color = HadesOnDark.copy(alpha = 0.45f))
         Text(text = value, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = HadesOnDark)
     }
@@ -570,11 +469,7 @@ private fun UserInfoRow(label: String, value: String) {
 @Composable
 fun HomeViewEmptyPreview() {
     HadesCoinTheme {
-        HomeViewContent(
-            appUser      = AppUser(fullName = "Juan Pérez", balance = 0.0, phoneNumber = "3001234567", documentNumber = "1010101010"),
-            transactions = emptyList(),
-            cargando     = false
-        )
+        HomeViewContent(appUser = AppUser(fullName = "Juan Pérez", balance = 0.0, phoneNumber = "3001234567", documentNumber = "1010101010"), transactions = emptyList(), cargando = false)
     }
 }
 
@@ -583,19 +478,12 @@ fun HomeViewEmptyPreview() {
 fun HomeViewFilledPreview() {
     HadesCoinTheme {
         HomeViewContent(
-            appUser = AppUser(
-                fullName = "Juan Pérez",
-                balance  = 1250.50,
-                phoneNumber    = "3001234567",
-                documentNumber = "1010101010"
-            ),
+            appUser = AppUser(fullName = "Juan Pérez", balance = 1250.50, phoneNumber = "3001234567", documentNumber = "1010101010"),
             transactions = listOf(
                 WalletTransaction(type = "DEPOSIT",  amount = 500.0,  direction = "IN",  timestamp = "2026-05-21T10:00:00Z"),
                 WalletTransaction(type = "WITHDRAW", amount = 50.25,  direction = "OUT", timestamp = "2026-05-20T08:00:00Z"),
                 WalletTransaction(type = "TRANSFER", amount = 200.0,  direction = "OUT", timestamp = "2026-05-19T15:00:00Z"),
-                WalletTransaction(type = "TRANSFER", amount = 150.0,  direction = "IN",  timestamp = "2026-05-18T11:00:00Z"),
-                WalletTransaction(type = "INCOME",   amount = 1000.0, direction = "IN",  timestamp = "2026-05-18T09:00:00Z"),
-                WalletTransaction(type = "PAYMENT",  amount = 75.0,   direction = "OUT", timestamp = "2026-05-17T12:00:00Z")
+                WalletTransaction(type = "TRANSFER", amount = 150.0,  direction = "IN",  timestamp = "2026-05-18T11:00:00Z")
             ),
             cargando = false
         )
@@ -605,11 +493,5 @@ fun HomeViewFilledPreview() {
 @Preview(showBackground = true, showSystemUi = true, name = "Home — cargando")
 @Composable
 fun HomeViewLoadingPreview() {
-    HadesCoinTheme {
-        HomeViewContent(
-            appUser      = null,
-            transactions = emptyList(),
-            cargando     = true
-        )
-    }
+    HadesCoinTheme { HomeViewContent(appUser = null, transactions = emptyList(), cargando = true) }
 }
