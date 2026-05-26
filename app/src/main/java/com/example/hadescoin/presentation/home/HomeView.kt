@@ -9,9 +9,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ExitToApp
-import androidx.compose.material.icons.filled.ArrowDownward
-import androidx.compose.material.icons.filled.ArrowUpward
-import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.livedata.observeAsState
@@ -28,14 +26,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.example.hadescoin.domain.model.AppUser
 import com.example.hadescoin.domain.model.WalletTransaction
-import com.example.hadescoin.presentation.components.HadesBackground
-import com.example.hadescoin.presentation.components.HadesBalanceText
-import com.example.hadescoin.presentation.components.HadesButton
-import com.example.hadescoin.presentation.components.HadesFilterChipRow
-import com.example.hadescoin.presentation.components.HadesSummaryItem
-import com.example.hadescoin.presentation.components.HadesSummaryRow
-import com.example.hadescoin.presentation.components.ShowLoadingAlertDialog
-import com.example.hadescoin.presentation.components.ShowMessageAlertDialog
+import com.example.hadescoin.presentation.components.*
 import com.example.hadescoin.presentation.utils.formatTimestamp
 import com.example.hadescoin.presentation.utils.getInitials
 import com.example.hadescoin.presentation.utils.translateTransactionType
@@ -103,12 +94,43 @@ fun HomeViewContent(
     onLogout: () -> Unit = {},
     onTransfer: () -> Unit = {}
 ) {
-    var showUserPanel by remember { mutableStateOf(false) }
-    var saldoVisible  by remember { mutableStateOf(true) }
-    var filtroActivo  by remember { mutableStateOf("TODOS") }
+    var showUserPanel  by remember { mutableStateOf(false) }
+    var saldoVisible   by remember { mutableStateOf(true) }
+    var filtroActivo   by remember { mutableStateOf("TODOS") }
+    var menuExpanded   by remember { mutableStateOf(false) }
 
     val transaccionesFiltradas = if (filtroActivo == "TODOS") transactions
         else transactions.filter { it.type.uppercase() == filtroActivo }
+
+    val speedDialItems = listOf(
+        SpeedDialItem(
+            label   = "TRANSFERIR",
+            icon    = Icons.Filled.SwapHoriz,
+            color   = HadesCyan,
+            onClick = { menuExpanded = false; onTransfer() }
+        ),
+        SpeedDialItem(
+            label   = "DEPOSITAR",
+            icon    = Icons.Filled.ArrowDownward,
+            color   = HadesGreen,
+            onClick = {},
+            enabled = false
+        ),
+        SpeedDialItem(
+            label   = "RETIRAR",
+            icon    = Icons.Filled.ArrowUpward,
+            color   = HadesOrange,
+            onClick = {},
+            enabled = false
+        ),
+        SpeedDialItem(
+            label   = "PAGAR",
+            icon    = Icons.Filled.CreditCard,
+            color   = HadesPurple,
+            onClick = {},
+            enabled = false
+        )
+    )
 
     HadesBackground {
         Box(modifier = Modifier.fillMaxSize()) {
@@ -139,9 +161,7 @@ fun HomeViewContent(
                     Spacer(modifier = Modifier.height(16.dp))
                 }
 
-                item {
-                    Spacer(modifier = Modifier.height(28.dp))
-                }
+                item { Spacer(modifier = Modifier.height(28.dp)) }
 
                 item {
                     HadesFilterChipRow(
@@ -225,15 +245,25 @@ fun HomeViewContent(
                     Spacer(modifier = Modifier.height(8.dp))
                 }
 
-                item { Spacer(modifier = Modifier.height(96.dp)) }
+                item { Spacer(modifier = Modifier.height(120.dp)) }
             }
 
-            HadesButton(
-                text     = "[ TRANSFERIR ]",
-                onClick  = onTransfer,
-                modifier = Modifier
-                    .align(Alignment.BottomCenter)
-                    .padding(horizontal = 24.dp, vertical = 24.dp)
+            // Overlay semitransparente al expandir el menú
+            if (menuExpanded) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(HadesNavyDark.copy(alpha = 0.6f))
+                        .clickable { menuExpanded = false }
+                )
+            }
+
+            // Speed Dial FAB
+            HadesSpeedDial(
+                expanded = menuExpanded,
+                onToggle = { menuExpanded = !menuExpanded },
+                items    = speedDialItems,
+                modifier = Modifier.align(Alignment.BottomEnd)
             )
         }
 
@@ -298,15 +328,13 @@ private fun HomeHeader(
             }
         }
 
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            IconButton(onClick = onRefresh) {
-                Icon(
-                    imageVector = Icons.Filled.Refresh,
-                    contentDescription = "Actualizar",
-                    tint = HadesCyan,
-                    modifier = Modifier.size(22.dp)
-                )
-            }
+        IconButton(onClick = onRefresh) {
+            Icon(
+                imageVector = Icons.Filled.Refresh,
+                contentDescription = "Actualizar",
+                tint = HadesCyan,
+                modifier = Modifier.size(22.dp)
+            )
         }
     }
 }
@@ -420,9 +448,7 @@ private fun TransactionRow(tx: WalletTransaction) {
                     modifier = Modifier.size(18.dp)
                 )
             }
-
             Spacer(modifier = Modifier.width(12.dp))
-
             Column {
                 Text(
                     text = typeLabel,
@@ -430,15 +456,13 @@ private fun TransactionRow(tx: WalletTransaction) {
                     color = HadesOnDark,
                     fontSize = 14.sp
                 )
-                val dateText = formatTimestamp(tx.timestamp)
                 Text(
-                    text = dateText,
+                    text = formatTimestamp(tx.timestamp),
                     fontSize = 11.sp,
                     color = HadesOnDark.copy(alpha = 0.45f)
                 )
             }
         }
-
         Text(
             text = "$prefix$ ${String.format(Locale.US, "%,.2f", tx.amount)}",
             fontWeight = FontWeight.Black,
@@ -447,7 +471,6 @@ private fun TransactionRow(tx: WalletTransaction) {
         )
     }
 }
-
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -485,52 +508,37 @@ fun UserPanelSheet(
                     color = HadesOnDark
                 )
             }
-
             Spacer(modifier = Modifier.height(12.dp))
-
             Text(
                 text = appUser?.fullName ?: "...",
                 fontSize = 20.sp,
                 fontWeight = FontWeight.Bold,
                 color = HadesOnDark
             )
-
             Spacer(modifier = Modifier.height(4.dp))
-
             Text(
                 text = appUser?.phoneNumber ?: "—",
                 fontSize = 14.sp,
                 color = HadesOnDark.copy(alpha = 0.6f)
             )
-
             Spacer(modifier = Modifier.height(24.dp))
-
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(1.dp)
                     .background(HadesOnDark.copy(alpha = 0.1f))
             )
-
             Spacer(modifier = Modifier.height(20.dp))
-
             UserInfoRow(label = "DOCUMENTO", value = appUser?.documentNumber ?: "—")
             Spacer(modifier = Modifier.height(12.dp))
-
-            val memberSince = appUser?.createdAt?.take(10) ?: "—"
-            UserInfoRow(label = "MIEMBRO DESDE", value = memberSince)
-
+            UserInfoRow(label = "MIEMBRO DESDE", value = appUser?.createdAt?.take(10) ?: "—")
             Spacer(modifier = Modifier.height(28.dp))
-
             Button(
-                onClick = {
-                    onDismiss()
-                    onLogout()
-                },
+                onClick = { onDismiss(); onLogout() },
                 modifier = Modifier.fillMaxWidth(),
                 colors = ButtonDefaults.buttonColors(
                     containerColor = HadesOrange.copy(alpha = 0.15f),
-                    contentColor = HadesOrange
+                    contentColor   = HadesOrange
                 ),
                 shape = RoundedCornerShape(12.dp)
             ) {
@@ -540,10 +548,7 @@ fun UserPanelSheet(
                     modifier = Modifier.size(18.dp)
                 )
                 Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    text = "Cerrar sesión",
-                    fontWeight = FontWeight.Bold
-                )
+                Text(text = "Cerrar sesión", fontWeight = FontWeight.Bold)
             }
         }
     }
@@ -556,18 +561,8 @@ private fun UserInfoRow(label: String, value: String) {
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Text(
-            text = label,
-            fontSize = 10.sp,
-            letterSpacing = 1.sp,
-            color = HadesOnDark.copy(alpha = 0.45f)
-        )
-        Text(
-            text = value,
-            fontSize = 14.sp,
-            fontWeight = FontWeight.Bold,
-            color = HadesOnDark
-        )
+        Text(text = label, fontSize = 10.sp, letterSpacing = 1.sp, color = HadesOnDark.copy(alpha = 0.45f))
+        Text(text = value, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = HadesOnDark)
     }
 }
 
@@ -578,10 +573,7 @@ fun HomeViewEmptyPreview() {
         HomeViewContent(
             appUser      = AppUser(fullName = "Juan Pérez", balance = 0.0, phoneNumber = "3001234567", documentNumber = "1010101010"),
             transactions = emptyList(),
-            cargando     = false,
-            onRefresh    = {},
-            onLogout     = {},
-            onTransfer   = {}
+            cargando     = false
         )
     }
 }
@@ -593,8 +585,8 @@ fun HomeViewFilledPreview() {
         HomeViewContent(
             appUser = AppUser(
                 fullName = "Juan Pérez",
-                balance = 1250.50,
-                phoneNumber = "3001234567",
+                balance  = 1250.50,
+                phoneNumber    = "3001234567",
                 documentNumber = "1010101010"
             ),
             transactions = listOf(
@@ -605,10 +597,7 @@ fun HomeViewFilledPreview() {
                 WalletTransaction(type = "INCOME",   amount = 1000.0, direction = "IN",  timestamp = "2026-05-18T09:00:00Z"),
                 WalletTransaction(type = "PAYMENT",  amount = 75.0,   direction = "OUT", timestamp = "2026-05-17T12:00:00Z")
             ),
-            cargando   = false,
-            onRefresh  = {},
-            onLogout   = {},
-            onTransfer = {}
+            cargando = false
         )
     }
 }
@@ -620,10 +609,7 @@ fun HomeViewLoadingPreview() {
         HomeViewContent(
             appUser      = null,
             transactions = emptyList(),
-            cargando     = true,
-            onRefresh    = {},
-            onLogout     = {},
-            onTransfer   = {}
+            cargando     = true
         )
     }
 }
