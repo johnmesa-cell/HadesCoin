@@ -37,11 +37,10 @@ fun HadesSummaryRow(
         modifier = modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        repeat(items.size) { index ->
-            val item = items[index]
+        items.forEach { item ->
             Box(
                 modifier = Modifier
-                    .fillMaxWidth(1f / items.size)
+                    .weight(1f)
                     .clip(RoundedCornerShape(16.dp))
                     .background(item.color.copy(alpha = 0.08f))
                     .padding(horizontal = 16.dp, vertical = 12.dp)
