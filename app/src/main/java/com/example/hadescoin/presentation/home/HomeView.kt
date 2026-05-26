@@ -29,9 +29,16 @@ import androidx.navigation.NavController
 import com.example.hadescoin.domain.model.AppUser
 import com.example.hadescoin.domain.model.WalletTransaction
 import com.example.hadescoin.presentation.components.HadesBackground
+import com.example.hadescoin.presentation.components.HadesBalanceText
 import com.example.hadescoin.presentation.components.HadesButton
+import com.example.hadescoin.presentation.components.HadesFilterChipRow
+import com.example.hadescoin.presentation.components.HadesSummaryItem
+import com.example.hadescoin.presentation.components.HadesSummaryRow
 import com.example.hadescoin.presentation.components.ShowLoadingAlertDialog
 import com.example.hadescoin.presentation.components.ShowMessageAlertDialog
+import com.example.hadescoin.presentation.utils.formatTimestamp
+import com.example.hadescoin.presentation.utils.getInitials
+import com.example.hadescoin.presentation.utils.translateTransactionType
 import com.example.hadescoin.ui.theme.*
 import java.util.Locale
 
@@ -97,6 +104,11 @@ fun HomeViewContent(
     onTransfer: () -> Unit = {}
 ) {
     var showUserPanel by remember { mutableStateOf(false) }
+    var saldoVisible by remember { mutableStateOf(true) }
+    var filtroActivo by remember { mutableStateOf("TODOS") }
+
+    val transaccionesFiltradas = if (filtroActivo == "TODOS") transactions
+        else transactions.filter { it.type.uppercase() == filtroActivo }
 
     HadesBackground {
         LazyColumn(
@@ -117,18 +129,43 @@ fun HomeViewContent(
             }
 
             item {
-                BalanceCard(appUser = appUser)
+                BalanceCard(
+                    appUser = appUser,
+                    saldoVisible = saldoVisible,
+                    onToggleSaldo = { saldoVisible = !saldoVisible }
+                )
                 Spacer(modifier = Modifier.height(16.dp))
             }
 
             item {
-                HadesButton(
-                    text = "[ ENVIAR DINERO ]",
-                    onClick = onTransfer,
-                    modifier = Modifier.height(48.dp),
-                    cargando = false
-                )
                 Spacer(modifier = Modifier.height(28.dp))
+            }
+
+            item {
+                HadesFilterChipRow(
+                    opciones = listOf("TODOS", "TRANSFER", "DEPOSIT", "WITHDRAW"),
+                    seleccionado = filtroActivo,
+                    onSeleccion = { filtroActivo = it },
+                    labelTransform = { translateTransactionType(it) }
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+            }
+
+            item {
+                Spacer(modifier = Modifier.height(12.dp))
+                val totalIngresos = transactions
+                    .filter { it.type == "DEPOSIT" || it.type == "INCOME" }
+                    .sumOf { it.amount }
+                val totalEgresos = transactions
+                    .filter { it.type == "WITHDRAW" || it.type == "TRANSFER" || it.type == "PAYMENT" }
+                    .sumOf { it.amount }
+                HadesSummaryRow(
+                    items = listOf(
+                        HadesSummaryItem("INGRESOS", totalIngresos, HadesCyan, "+ "),
+                        HadesSummaryItem("EGRESOS",  totalEgresos,  HadesOrange, "- ")
+                    )
+                )
+                Spacer(modifier = Modifier.height(16.dp))
             }
 
             item {
@@ -153,7 +190,7 @@ fun HomeViewContent(
                 Spacer(modifier = Modifier.height(8.dp))
             }
 
-            if (transactions.isEmpty() && !cargando) {
+            if (transaccionesFiltradas.isEmpty() && !cargando) {
                 item {
                     Box(
                         modifier = Modifier
@@ -181,7 +218,7 @@ fun HomeViewContent(
                 }
             }
 
-            items(transactions) { tx ->
+            items(transaccionesFiltradas) { tx ->
                 TransactionRow(tx = tx)
                 Spacer(modifier = Modifier.height(8.dp))
             }
@@ -264,7 +301,11 @@ private fun HomeHeader(
 }
 
 @Composable
-private fun BalanceCard(appUser: AppUser?) {
+private fun BalanceCard(
+    appUser: AppUser?,
+    saldoVisible: Boolean,
+    onToggleSaldo: () -> Unit
+) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -284,11 +325,10 @@ private fun BalanceCard(appUser: AppUser?) {
                 color = HadesOnDark.copy(alpha = 0.7f)
             )
             Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                text = "$ ${String.format(Locale.US, "%,.2f", appUser?.balance ?: 0.0)}",
-                fontSize = 36.sp,
-                fontWeight = FontWeight.Black,
-                color = HadesOnDark
+            HadesBalanceText(
+                balance = appUser?.balance ?: 0.0,
+                visible = saldoVisible,
+                onToggle = onToggleSaldo
             )
             Spacer(modifier = Modifier.height(16.dp))
 
@@ -379,7 +419,7 @@ private fun TransactionRow(tx: WalletTransaction) {
                     color = HadesOnDark,
                     fontSize = 14.sp
                 )
-                val dateText = if (tx.timestamp.length >= 10) tx.timestamp.take(10) else tx.timestamp
+                val dateText = formatTimestamp(tx.timestamp)
                 Text(
                     text = dateText,
                     fontSize = 11.sp,
@@ -397,26 +437,6 @@ private fun TransactionRow(tx: WalletTransaction) {
     }
 }
 
-private fun getInitials(fullName: String?): String {
-    if (fullName.isNullOrBlank()) return "?"
-    val parts = fullName.trim().split(" ").filter { it.isNotBlank() }
-    return when {
-        parts.size >= 2 -> (parts[0].take(1) + parts[1].take(1)).uppercase(Locale.getDefault())
-        parts.size == 1 -> parts[0].take(2).uppercase(Locale.getDefault())
-        else -> "?"
-    }
-}
-
-private fun translateTransactionType(type: String): String {
-    return when (type.uppercase()) {
-        "DEPOSIT"  -> "Depósito"
-        "WITHDRAW" -> "Retiro"
-        "TRANSFER" -> "Transferencia"
-        "INCOME"   -> "Ingreso"
-        "PAYMENT"  -> "Pago"
-        else       -> type
-    }
-}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
