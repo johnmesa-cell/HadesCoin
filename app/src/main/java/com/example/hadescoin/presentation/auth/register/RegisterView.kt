@@ -31,11 +31,8 @@ import com.example.hadescoin.presentation.components.ShowLoadingAlertDialog
 import com.example.hadescoin.presentation.components.ShowMessageAlertDialog
 import com.example.hadescoin.ui.theme.*
 
-// ─────────────────────────────────────────────────────────────────────────
-// VISTA REAL
-// ─────────────────────────────────────────────────────────────────────────
 @Composable
-fun RegisterScreen(
+fun RegisterView(
     navController: NavController,
     viewModel: RegisterViewModel = viewModel()
 ) {
@@ -43,6 +40,7 @@ fun RegisterScreen(
     var documentNumber by remember { mutableStateOf("") }
     var phoneNumber    by remember { mutableStateOf("") }
     var pin            by remember { mutableStateOf("") }
+    var confirmPin     by remember { mutableStateOf("") }
 
     val cargando        by viewModel.cargando.observeAsState(false)
     val registroExitoso by viewModel.registroExitoso.observeAsState()
@@ -62,17 +60,19 @@ fun RegisterScreen(
         }
     }
 
-    RegisterContent(
+    RegisterViewContent(
         fullName               = fullName,
         documentNumber         = documentNumber,
         phoneNumber            = phoneNumber,
         pin                    = pin,
+        confirmPin             = confirmPin,
         cargando               = cargando,
         onFullNameChange       = { if (it.all { char -> char.isLetter() || char.isWhitespace() }) { fullName = it; viewModel.clearError() } },
         onDocumentNumberChange = { if (it.length <= 10 && it.all { char -> char.isDigit() }) { documentNumber = it; viewModel.clearError() } },
         onPhoneChange          = { if (it.length <= 10 && it.all { char -> char.isDigit() } && (it.isEmpty() || it[0] == '3')) { phoneNumber = it; viewModel.clearError() } },
         onPinChange            = { if (it.length <= 4 && it.all { char -> char.isDigit() }) { pin = it; viewModel.clearError() } },
-        onRegisterClick        = { viewModel.register(fullName, documentNumber, phoneNumber, pin) },
+        onConfirmPinChange     = { if (it.length <= 4 && it.all { char -> char.isDigit() }) { confirmPin = it; viewModel.clearError() } },
+        onRegisterClick        = { viewModel.register(fullName, documentNumber, phoneNumber, pin, confirmPin) },
         onBackToLoginClick     = { navController.popBackStack() }
     )
 
@@ -87,20 +87,19 @@ fun RegisterScreen(
     }
 }
 
-// ─────────────────────────────────────────────────────────────────────────
-// CONTENIDO VISUAL PURO (apto para @Preview)
-// ─────────────────────────────────────────────────────────────────────────
 @Composable
-fun RegisterContent(
+fun RegisterViewContent(
     fullName: String,
     documentNumber: String,
     phoneNumber: String,
     pin: String,
+    confirmPin: String,
     cargando: Boolean,
     onFullNameChange: (String) -> Unit,
     onDocumentNumberChange: (String) -> Unit,
     onPhoneChange: (String) -> Unit,
     onPinChange: (String) -> Unit,
+    onConfirmPinChange: (String) -> Unit,
     onRegisterClick: () -> Unit,
     onBackToLoginClick: () -> Unit
 ) {
@@ -242,6 +241,27 @@ fun RegisterContent(
                         colors = fieldColors
                     )
 
+                    OutlinedTextField(
+                        value = confirmPin,
+                        onValueChange = onConfirmPinChange,
+                        label = { Text("Confirmar PIN") },
+                        modifier = Modifier.fillMaxWidth(),
+                        visualTransformation = PasswordVisualTransformation(),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
+                        singleLine = true,
+                        colors = fieldColors,
+                        isError = confirmPin.isNotEmpty() && pin != confirmPin,
+                        supportingText = {
+                            if (confirmPin.isNotEmpty() && pin != confirmPin) {
+                                Text(
+                                    text = "Los PINs no coinciden",
+                                    color = androidx.compose.material3.MaterialTheme.colorScheme.error,
+                                    fontSize = 11.sp
+                                )
+                            }
+                        }
+                    )
+
                     Spacer(modifier = Modifier.height(4.dp))
 
                     Box(
@@ -250,13 +270,13 @@ fun RegisterContent(
                             .height(52.dp)
                             .clip(RoundedCornerShape(12.dp))
                             .background(
-                                if (!cargando) buttonGradient
+                                if (!cargando && pin.length == 4 && confirmPin.length == 4 && pin == confirmPin) buttonGradient
                                 else Brush.horizontalGradient(listOf(Color.Gray, Color.DarkGray))
                             )
                     ) {
                         Button(
                             onClick = onRegisterClick,
-                            enabled = !cargando,
+                            enabled = !cargando && pin.length == 4 && confirmPin.length == 4 && pin == confirmPin,
                             modifier = Modifier.fillMaxSize(),
                             colors = ButtonDefaults.buttonColors(
                                 containerColor = Color.Transparent,
@@ -302,43 +322,41 @@ fun RegisterContent(
     }
 }
 
-// ─────────────────────────────────────────────────────────────────────────
-// PREVIEWS
-// ─────────────────────────────────────────────────────────────────────────
 @Preview(showBackground = true, showSystemUi = true, name = "Register — vacío")
 @Composable
-fun RegisterScreenPreview() {
+fun RegisterViewPreview() {
     HadesCoinTheme {
-        RegisterContent(
-            fullName = "", documentNumber = "", phoneNumber = "", pin = "", cargando = false,
+        RegisterViewContent(
+            fullName = "", documentNumber = "", phoneNumber = "", pin = "", confirmPin = "", cargando = false,
             onFullNameChange = {}, onDocumentNumberChange = {}, onPhoneChange = {},
-            onPinChange = {}, onRegisterClick = {}, onBackToLoginClick = {}
+            onPinChange = {}, onConfirmPinChange = {}, onRegisterClick = {}, onBackToLoginClick = {}
         )
     }
 }
 
 @Preview(showBackground = true, showSystemUi = true, name = "Register — con datos")
 @Composable
-fun RegisterScreenFilledPreview() {
+fun RegisterViewFilledPreview() {
     HadesCoinTheme {
-        RegisterContent(
+        RegisterViewContent(
             fullName = "Juan Pérez", documentNumber = "1010101010",
-            phoneNumber = "3001234567", pin = "1234", cargando = false,
+            phoneNumber = "3001234567", pin = "1234", confirmPin = "1234", cargando = false,
             onFullNameChange = {}, onDocumentNumberChange = {}, onPhoneChange = {},
-            onPinChange = {}, onRegisterClick = {}, onBackToLoginClick = {}
+            onPinChange = {}, onConfirmPinChange = {}, onRegisterClick = {}, onBackToLoginClick = {}
         )
     }
 }
 
 @Preview(showBackground = true, showSystemUi = true, name = "Register — cargando")
 @Composable
-fun RegisterScreenLoadingPreview() {
+fun RegisterViewLoadingPreview() {
     HadesCoinTheme {
-        RegisterContent(
+        RegisterViewContent(
             fullName = "Juan Pérez", documentNumber = "1010101010",
-            phoneNumber = "3001234567", pin = "1234", cargando = true,
+            phoneNumber = "3001234567", pin = "1234", confirmPin = "1234", cargando = true,
             onFullNameChange = {}, onDocumentNumberChange = {}, onPhoneChange = {},
-            onPinChange = {}, onRegisterClick = {}, onBackToLoginClick = {}
+            onPinChange = {}, onConfirmPinChange = {}, onRegisterClick = {}, onBackToLoginClick = {}
         )
     }
 }
+

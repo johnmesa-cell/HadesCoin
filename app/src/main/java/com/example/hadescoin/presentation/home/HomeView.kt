@@ -1,15 +1,16 @@
 package com.example.hadescoin.presentation.home
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.filled.ArrowDownward
 import androidx.compose.material.icons.filled.ArrowUpward
-import androidx.compose.material.icons.filled.ExitToApp
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -18,6 +19,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
@@ -32,11 +34,8 @@ import com.example.hadescoin.presentation.components.ShowMessageAlertDialog
 import com.example.hadescoin.ui.theme.*
 import java.util.Locale
 
-// ─────────────────────────────────────────────────────────────────────────
-// VISTA REAL
-// ─────────────────────────────────────────────────────────────────────────
 @Composable
-fun HomeScreen(
+fun HomeView(
     phoneNumber: String,
     navController: NavController,
     viewModel: HomeViewModel = viewModel()
@@ -60,7 +59,7 @@ fun HomeScreen(
         }
     }
 
-    HomeContent(
+    HomeViewContent(
         appUser      = appUser,
         transactions = transactions,
         cargando     = cargando,
@@ -69,7 +68,8 @@ fun HomeScreen(
             navController.navigate("login") {
                 popUpTo(0) { inclusive = true }
             }
-        }
+        },
+        onTransfer   = { navController.navigate("transfer/$phoneNumber") }
     )
 
     if (cargando) ShowLoadingAlertDialog()
@@ -86,17 +86,16 @@ fun HomeScreen(
     }
 }
 
-// ─────────────────────────────────────────────────────────────────────────
-// CONTENIDO VISUAL PURO (apto para @Preview)
-// ─────────────────────────────────────────────────────────────────────────
 @Composable
-fun HomeContent(
+fun HomeViewContent(
     appUser: AppUser?,
     transactions: List<WalletTransaction>,
     cargando: Boolean,
     onRefresh: () -> Unit = {},
-    onLogout: () -> Unit = {}
+    onLogout: () -> Unit = {},
+    onTransfer: () -> Unit = {}
 ) {
+    var showUserPanel by remember { mutableStateOf(false) }
     val backgroundGradient = Brush.verticalGradient(
         colors = listOf(HadesBlack, HadesNavyDark, HadesBlack)
     )
@@ -113,20 +112,54 @@ fun HomeContent(
             verticalArrangement = Arrangement.spacedBy(0.dp)
         ) {
 
-            // ── HEADER ──────────────────────────────────────────────────
             item {
                 Spacer(modifier = Modifier.height(40.dp))
-                HomeHeader(appUser = appUser, onRefresh = onRefresh, onLogout = onLogout)
+                HomeHeader(
+                    appUser = appUser,
+                    onRefresh = onRefresh,
+                    onAvatarClick = { showUserPanel = true }
+                )
                 Spacer(modifier = Modifier.height(24.dp))
             }
 
-            // ── TARJETA DE SALDO ─────────────────────────────────────────
             item {
                 BalanceCard(appUser = appUser)
+                Spacer(modifier = Modifier.height(16.dp))
+            }
+
+            item {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(48.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(
+                            Brush.horizontalGradient(
+                                colors = listOf(HadesOrange, HadesPurpleGlow)
+                            )
+                        )
+                ) {
+                    Button(
+                        onClick = onTransfer,
+                        modifier = Modifier.fillMaxSize(),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = Color.Transparent
+                        ),
+                        shape = RoundedCornerShape(12.dp),
+                        elevation = ButtonDefaults.buttonElevation(0.dp)
+                    ) {
+                        Text(
+                            text = "[ ENVIAR DINERO ]",
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Black,
+                            letterSpacing = 2.sp,
+                            color = Color.White
+                        )
+                    }
+                }
                 Spacer(modifier = Modifier.height(28.dp))
             }
 
-            // ── TÍTULO MOVIMIENTOS ───────────────────────────────────────
             item {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -149,7 +182,6 @@ fun HomeContent(
                 Spacer(modifier = Modifier.height(8.dp))
             }
 
-            // ── LISTA VACÍA ──────────────────────────────────────────────
             if (transactions.isEmpty() && !cargando) {
                 item {
                     Box(
@@ -178,7 +210,6 @@ fun HomeContent(
                 }
             }
 
-            // ── FILAS DE TRANSACCIONES ───────────────────────────────────
             items(transactions) { tx ->
                 TransactionRow(tx = tx)
                 Spacer(modifier = Modifier.height(8.dp))
@@ -186,17 +217,22 @@ fun HomeContent(
 
             item { Spacer(modifier = Modifier.height(24.dp)) }
         }
+
+        if (showUserPanel) {
+            UserPanelSheet(
+                appUser = appUser,
+                onDismiss = { showUserPanel = false },
+                onLogout = onLogout
+            )
+        }
     }
 }
 
-// ─────────────────────────────────────────────────────────────────────────
-// HEADER CON INICIALES Y BOTÓN REFRESH
-// ─────────────────────────────────────────────────────────────────────────
 @Composable
 private fun HomeHeader(
     appUser: AppUser?,
     onRefresh: () -> Unit,
-    onLogout: () -> Unit
+    onAvatarClick: () -> Unit
 ) {
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -204,7 +240,6 @@ private fun HomeHeader(
         verticalAlignment = Alignment.CenterVertically
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            // Círculo con iniciales
             Box(
                 modifier = Modifier
                     .size(46.dp)
@@ -213,7 +248,8 @@ private fun HomeHeader(
                         Brush.radialGradient(
                             colors = listOf(HadesPurple, HadesNavyDark)
                         )
-                    ),
+                    )
+                    .clickable { onAvatarClick() },
                 contentAlignment = Alignment.Center
             ) {
                 Text(
@@ -243,7 +279,6 @@ private fun HomeHeader(
             }
         }
 
-        // Botones refresh y logout
         Row(verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = onRefresh) {
                 Icon(
@@ -253,21 +288,10 @@ private fun HomeHeader(
                     modifier = Modifier.size(22.dp)
                 )
             }
-            IconButton(onClick = onLogout) {
-                Icon(
-                    imageVector = Icons.Filled.ExitToApp,
-                    contentDescription = "Salir",
-                    tint = HadesOrange,
-                    modifier = Modifier.size(22.dp)
-                )
-            }
         }
     }
 }
 
-// ─────────────────────────────────────────────────────────────────────────
-// TARJETA DE SALDO CON TELÉFONO
-// ─────────────────────────────────────────────────────────────────────────
 @Composable
 private fun BalanceCard(appUser: AppUser?) {
     Box(
@@ -297,7 +321,6 @@ private fun BalanceCard(appUser: AppUser?) {
             )
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Separador
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -343,9 +366,6 @@ private fun BalanceCard(appUser: AppUser?) {
     }
 }
 
-// ─────────────────────────────────────────────────────────────────────────
-// FILA DE TRANSACCIÓN CON ÍCONO
-// ─────────────────────────────────────────────────────────────────────────
 @Composable
 private fun TransactionRow(tx: WalletTransaction) {
     val isIncome    = tx.type == "INCOME" || tx.type == "DEPOSIT"
@@ -364,7 +384,6 @@ private fun TransactionRow(tx: WalletTransaction) {
         verticalAlignment = Alignment.CenterVertically
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            // Ícono de dirección
             Box(
                 modifier = Modifier
                     .size(36.dp)
@@ -407,15 +426,12 @@ private fun TransactionRow(tx: WalletTransaction) {
     }
 }
 
-// ─────────────────────────────────────────────────────────────────────────
-// HELPERS
-// ─────────────────────────────────────────────────────────────────────────
 private fun getInitials(fullName: String?): String {
     if (fullName.isNullOrBlank()) return "?"
     val parts = fullName.trim().split(" ").filter { it.isNotBlank() }
     return when {
-        parts.size >= 2 -> (parts[0].take(1) + parts[1].take(1)).uppercase(java.util.Locale.getDefault())
-        parts.size == 1 -> parts[0].take(2).uppercase(java.util.Locale.getDefault())
+        parts.size >= 2 -> (parts[0].take(1) + parts[1].take(1)).uppercase(Locale.getDefault())
+        parts.size == 1 -> parts[0].take(2).uppercase(Locale.getDefault())
         else -> "?"
     }
 }
@@ -431,28 +447,148 @@ private fun translateTransactionType(type: String): String {
     }
 }
 
-// ─────────────────────────────────────────────────────────────────────────
-// PREVIEWS
-// ─────────────────────────────────────────────────────────────────────────
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun UserPanelSheet(
+    appUser: AppUser?,
+    onDismiss: () -> Unit,
+    onLogout: () -> Unit
+) {
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        containerColor = HadesNavyDark
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 24.dp)
+                .padding(bottom = 32.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(72.dp)
+                    .clip(CircleShape)
+                    .background(
+                        Brush.radialGradient(
+                            colors = listOf(HadesPurple, HadesNavyDark)
+                        )
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = getInitials(appUser?.fullName),
+                    fontSize = 26.sp,
+                    fontWeight = FontWeight.Black,
+                    color = HadesOnDark
+                )
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            Text(
+                text = appUser?.fullName ?: "...",
+                fontSize = 20.sp,
+                fontWeight = FontWeight.Bold,
+                color = HadesOnDark
+            )
+
+            Spacer(modifier = Modifier.height(4.dp))
+
+            Text(
+                text = appUser?.phoneNumber ?: "—",
+                fontSize = 14.sp,
+                color = HadesOnDark.copy(alpha = 0.6f)
+            )
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(1.dp)
+                    .background(HadesOnDark.copy(alpha = 0.1f))
+            )
+
+            Spacer(modifier = Modifier.height(20.dp))
+
+            UserInfoRow(label = "DOCUMENTO", value = appUser?.documentNumber ?: "—")
+            Spacer(modifier = Modifier.height(12.dp))
+
+            val memberSince = appUser?.createdAt?.take(10) ?: "—"
+            UserInfoRow(label = "MIEMBRO DESDE", value = memberSince)
+
+            Spacer(modifier = Modifier.height(28.dp))
+
+            Button(
+                onClick = {
+                    onDismiss()
+                    onLogout()
+                },
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = HadesOrange.copy(alpha = 0.15f),
+                    contentColor = HadesOrange
+                ),
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.ExitToApp,
+                    contentDescription = "Salir",
+                    modifier = Modifier.size(18.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = "Cerrar sesión",
+                    fontWeight = FontWeight.Bold
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun UserInfoRow(label: String, value: String) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = label,
+            fontSize = 10.sp,
+            letterSpacing = 1.sp,
+            color = HadesOnDark.copy(alpha = 0.45f)
+        )
+        Text(
+            text = value,
+            fontSize = 14.sp,
+            fontWeight = FontWeight.Bold,
+            color = HadesOnDark
+        )
+    }
+}
+
 @Preview(showBackground = true, showSystemUi = true, name = "Home — vacío")
 @Composable
-fun HomeScreenEmptyPreview() {
+fun HomeViewEmptyPreview() {
     HadesCoinTheme {
-        HomeContent(
+        HomeViewContent(
             appUser      = AppUser(fullName = "Juan Pérez", balance = 0.0, phoneNumber = "3001234567", documentNumber = "1010101010"),
             transactions = emptyList(),
             cargando     = false,
             onRefresh    = {},
-            onLogout     = {}
+            onLogout     = {},
+            onTransfer   = {}
         )
     }
 }
 
 @Preview(showBackground = true, showSystemUi = true, name = "Home — con datos")
 @Composable
-fun HomeScreenFilledPreview() {
+fun HomeViewFilledPreview() {
     HadesCoinTheme {
-        HomeContent(
+        HomeViewContent(
             appUser = AppUser(
                 fullName = "Juan Pérez",
                 balance = 1250.50,
@@ -468,21 +604,24 @@ fun HomeScreenFilledPreview() {
             ),
             cargando  = false,
             onRefresh = {},
-            onLogout  = {}
+            onLogout  = {},
+            onTransfer = {}
         )
     }
 }
 
 @Preview(showBackground = true, showSystemUi = true, name = "Home — cargando")
 @Composable
-fun HomeScreenLoadingPreview() {
+fun HomeViewLoadingPreview() {
     HadesCoinTheme {
-        HomeContent(
+        HomeViewContent(
             appUser      = null,
             transactions = emptyList(),
             cargando     = true,
             onRefresh    = {},
-            onLogout     = {}
+            onLogout     = {},
+            onTransfer   = {}
         )
     }
 }
+

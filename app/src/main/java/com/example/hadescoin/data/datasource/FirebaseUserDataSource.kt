@@ -11,6 +11,7 @@ class FirebaseUserDataSource {
     suspend fun getUserByPhoneNumber(phoneNumber: String): AppUser? {
         val snapshot = database.child(phoneNumber).get().await()
         if (!snapshot.exists()) return null
+
         return AppUser(
             id             = snapshot.key ?: "",
             documentNumber = snapshot.child("documentNumber").getValue(String::class.java) ?: "",
@@ -26,9 +27,19 @@ class FirebaseUserDataSource {
         return try {
             val snapshot = database.child(phoneNumber).get().await()
             if (snapshot.exists()) return false
+
             database.child(phoneNumber).setValue(userData).await()
             true
-        } catch (e: Exception) {
+        } catch (_: Exception) {
+            false
+        }
+    }
+
+    suspend fun updateBalance(phoneNumber: String, newBalance: Double): Boolean {
+        return try {
+            database.child(phoneNumber).child("balance").setValue(newBalance).await()
+            true
+        } catch (_: Exception) {
             false
         }
     }

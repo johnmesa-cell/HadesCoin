@@ -3,6 +3,7 @@ package com.example.hadescoin.data.repository
 import com.example.hadescoin.data.datasource.FirebaseUserDataSource
 import com.example.hadescoin.domain.model.AppUser
 import com.example.hadescoin.domain.repository.AuthRepository
+import java.time.Instant
 
 class AuthRepositoryImpl(
     private val dataSource: FirebaseUserDataSource
@@ -20,7 +21,7 @@ class AuthRepositoryImpl(
             "fullName"       to user.fullName,
             "pin"            to user.pin,
             "balance"        to 0.0,
-            "createdAt"      to java.time.Instant.now().toString()
+            "createdAt"      to Instant.now().toString()
         )
         return dataSource.saveUser(user.phoneNumber, userData)
     }
