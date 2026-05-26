@@ -46,14 +46,17 @@ fun HomeView(
 
     var showError    by remember { mutableStateOf(false) }
     var mensajeError by remember { mutableStateOf("") }
-
-    // Estado del Speed Dial en HomeView para poder resetearlo al volver
     var menuExpanded by remember { mutableStateOf(false) }
 
-    // Cierra el Speed Dial cada vez que esta pantalla vuelve a ser la activa
-    val currentEntry = navController.currentBackStackEntryAsState()
-    LaunchedEffect(currentEntry.value) {
-        menuExpanded = false
+    // Cierra el Speed Dial cada vez que HomeView vuelve a ser el destino activo
+    DisposableEffect(navController) {
+        val listener = NavController.OnDestinationChangedListener { _, destination, _ ->
+            if (destination.route?.startsWith("home") == true) {
+                menuExpanded = false
+            }
+        }
+        navController.addOnDestinationChangedListener(listener)
+        onDispose { navController.removeOnDestinationChangedListener(listener) }
     }
 
     LaunchedEffect(phoneNumber) {
@@ -260,7 +263,6 @@ fun HomeViewContent(
                 item { Spacer(modifier = Modifier.height(120.dp)) }
             }
 
-            // Overlay semitransparente — cerrar al tocar fuera
             if (menuExpanded) {
                 Box(
                     modifier = Modifier
@@ -270,7 +272,6 @@ fun HomeViewContent(
                 )
             }
 
-            // Speed Dial FAB
             HadesSpeedDial(
                 expanded = menuExpanded,
                 onToggle = onMenuToggle,
