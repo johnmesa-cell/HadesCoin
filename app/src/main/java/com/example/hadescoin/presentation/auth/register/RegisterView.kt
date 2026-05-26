@@ -2,24 +2,20 @@ package com.example.hadescoin.presentation.auth.register
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -27,6 +23,10 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.example.hadescoin.R
+import com.example.hadescoin.presentation.components.HadesBackground
+import com.example.hadescoin.presentation.components.HadesButton
+import com.example.hadescoin.presentation.components.HadesCardBox
+import com.example.hadescoin.presentation.components.HadesTextField
 import com.example.hadescoin.presentation.components.ShowLoadingAlertDialog
 import com.example.hadescoin.presentation.components.ShowMessageAlertDialog
 import com.example.hadescoin.ui.theme.*
@@ -103,18 +103,7 @@ fun RegisterViewContent(
     onRegisterClick: () -> Unit,
     onBackToLoginClick: () -> Unit
 ) {
-    val backgroundGradient = Brush.verticalGradient(
-        colors = listOf(HadesBlack, HadesNavyDark, HadesBlack)
-    )
-    val buttonGradient = Brush.horizontalGradient(
-        colors = listOf(HadesOrange, HadesPurpleGlow)
-    )
-
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(brush = backgroundGradient)
-    ) {
+    HadesBackground {
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -163,138 +152,71 @@ fun RegisterViewContent(
 
             Spacer(modifier = Modifier.height(28.dp))
 
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(20.dp))
-                    .border(
-                        width = 1.dp,
-                        brush = Brush.verticalGradient(
-                            colors = listOf(HadesPurple, HadesCyan.copy(alpha = 0.5f))
-                        ),
-                        shape = RoundedCornerShape(20.dp)
-                    )
-                    .background(
-                        Brush.verticalGradient(
-                            colors = listOf(HadesNavyDark, HadesNavy)
-                        )
-                    )
-                    .padding(24.dp)
-            ) {
-                Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+            HadesCardBox {
 
-                    Text(
-                        text = "> NUEVO USUARIO",
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Bold,
-                        letterSpacing = 2.sp,
-                        color = HadesCyan
-                    )
+                Text(
+                    text = "> NUEVO USUARIO",
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Bold,
+                    letterSpacing = 2.sp,
+                    color = HadesCyan
+                )
 
-                    val fieldColors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor   = HadesCyan,
-                        unfocusedBorderColor = HadesPurple.copy(alpha = 0.5f),
-                        focusedLabelColor    = HadesCyan,
-                        unfocusedLabelColor  = HadesOnDark.copy(alpha = 0.5f),
-                        cursorColor          = HadesCyan,
-                        focusedTextColor     = HadesOnDark,
-                        unfocusedTextColor   = HadesOnDark
-                    )
+                HadesTextField(
+                    value = fullName,
+                    onValueChange = onFullNameChange,
+                    label = "Nombre completo"
+                )
 
-                    OutlinedTextField(
-                        value = fullName,
-                        onValueChange = onFullNameChange,
-                        label = { Text("Nombre completo") },
-                        modifier = Modifier.fillMaxWidth(),
-                        singleLine = true,
-                        colors = fieldColors
-                    )
+                HadesTextField(
+                    value = documentNumber,
+                    onValueChange = onDocumentNumberChange,
+                    label = "Número de Documento",
+                    keyboardType = KeyboardType.Number
+                )
 
-                    OutlinedTextField(
-                        value = documentNumber,
-                        onValueChange = onDocumentNumberChange,
-                        label = { Text("Número de Documento") },
-                        modifier = Modifier.fillMaxWidth(),
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                        singleLine = true,
-                        colors = fieldColors
-                    )
+                HadesTextField(
+                    value = phoneNumber,
+                    onValueChange = onPhoneChange,
+                    label = "Número de Teléfono",
+                    keyboardType = KeyboardType.Phone
+                )
 
-                    OutlinedTextField(
-                        value = phoneNumber,
-                        onValueChange = onPhoneChange,
-                        label = { Text("Número de Teléfono") },
-                        modifier = Modifier.fillMaxWidth(),
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
-                        singleLine = true,
-                        colors = fieldColors
-                    )
+                HadesTextField(
+                    value = pin,
+                    onValueChange = onPinChange,
+                    label = "PIN de 4 dígitos",
+                    isPassword = true,
+                    keyboardType = KeyboardType.NumberPassword
+                )
 
-                    OutlinedTextField(
-                        value = pin,
-                        onValueChange = onPinChange,
-                        label = { Text("PIN de 4 dígitos") },
-                        modifier = Modifier.fillMaxWidth(),
-                        visualTransformation = PasswordVisualTransformation(),
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
-                        singleLine = true,
-                        colors = fieldColors
-                    )
-
-                    OutlinedTextField(
-                        value = confirmPin,
-                        onValueChange = onConfirmPinChange,
-                        label = { Text("Confirmar PIN") },
-                        modifier = Modifier.fillMaxWidth(),
-                        visualTransformation = PasswordVisualTransformation(),
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
-                        singleLine = true,
-                        colors = fieldColors,
-                        isError = confirmPin.isNotEmpty() && pin != confirmPin,
-                        supportingText = {
-                            if (confirmPin.isNotEmpty() && pin != confirmPin) {
-                                Text(
-                                    text = "Los PINs no coinciden",
-                                    color = androidx.compose.material3.MaterialTheme.colorScheme.error,
-                                    fontSize = 11.sp
-                                )
-                            }
-                        }
-                    )
-
-                    Spacer(modifier = Modifier.height(4.dp))
-
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(52.dp)
-                            .clip(RoundedCornerShape(12.dp))
-                            .background(
-                                if (!cargando && pin.length == 4 && confirmPin.length == 4 && pin == confirmPin) buttonGradient
-                                else Brush.horizontalGradient(listOf(Color.Gray, Color.DarkGray))
-                            )
-                    ) {
-                        Button(
-                            onClick = onRegisterClick,
-                            enabled = !cargando && pin.length == 4 && confirmPin.length == 4 && pin == confirmPin,
-                            modifier = Modifier.fillMaxSize(),
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = Color.Transparent,
-                                disabledContainerColor = Color.Transparent
-                            ),
-                            shape = RoundedCornerShape(12.dp),
-                            elevation = ButtonDefaults.buttonElevation(0.dp)
-                        ) {
+                HadesTextField(
+                    value = confirmPin,
+                    onValueChange = onConfirmPinChange,
+                    label = "Confirmar PIN",
+                    isPassword = true,
+                    keyboardType = KeyboardType.NumberPassword,
+                    isError = confirmPin.isNotEmpty() && pin != confirmPin,
+                    supportingText = {
+                        if (confirmPin.isNotEmpty() && pin != confirmPin) {
                             Text(
-                                text = if (cargando) "PROCESANDO..." else "[ CREAR CUENTA ]",
-                                fontSize = 14.sp,
-                                fontWeight = FontWeight.Black,
-                                letterSpacing = 3.sp,
-                                color = Color.White
+                                text = "Los PINs no coinciden",
+                                color = androidx.compose.material3.MaterialTheme.colorScheme.error,
+                                fontSize = 11.sp
                             )
                         }
                     }
-                }
+                )
+
+                Spacer(modifier = Modifier.height(4.dp))
+
+                HadesButton(
+                    text = "[ CREAR CUENTA ]",
+                    textCargando = "PROCESANDO...",
+                    onClick = onRegisterClick,
+                    enabled = pin.length == 4 && confirmPin.length == 4 && pin == confirmPin,
+                    cargando = cargando
+                )
             }
 
             Spacer(modifier = Modifier.height(20.dp))

@@ -19,7 +19,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
@@ -29,6 +28,8 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.example.hadescoin.domain.model.AppUser
 import com.example.hadescoin.domain.model.WalletTransaction
+import com.example.hadescoin.presentation.components.HadesBackground
+import com.example.hadescoin.presentation.components.HadesButton
 import com.example.hadescoin.presentation.components.ShowLoadingAlertDialog
 import com.example.hadescoin.presentation.components.ShowMessageAlertDialog
 import com.example.hadescoin.ui.theme.*
@@ -96,15 +97,8 @@ fun HomeViewContent(
     onTransfer: () -> Unit = {}
 ) {
     var showUserPanel by remember { mutableStateOf(false) }
-    val backgroundGradient = Brush.verticalGradient(
-        colors = listOf(HadesBlack, HadesNavyDark, HadesBlack)
-    )
 
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(backgroundGradient)
-    ) {
+    HadesBackground {
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
@@ -128,35 +122,12 @@ fun HomeViewContent(
             }
 
             item {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(48.dp)
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(
-                            Brush.horizontalGradient(
-                                colors = listOf(HadesOrange, HadesPurpleGlow)
-                            )
-                        )
-                ) {
-                    Button(
-                        onClick = onTransfer,
-                        modifier = Modifier.fillMaxSize(),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = Color.Transparent
-                        ),
-                        shape = RoundedCornerShape(12.dp),
-                        elevation = ButtonDefaults.buttonElevation(0.dp)
-                    ) {
-                        Text(
-                            text = "[ ENVIAR DINERO ]",
-                            fontSize = 13.sp,
-                            fontWeight = FontWeight.Black,
-                            letterSpacing = 2.sp,
-                            color = Color.White
-                        )
-                    }
-                }
+                HadesButton(
+                    text = "[ ENVIAR DINERO ]",
+                    onClick = onTransfer,
+                    modifier = Modifier.height(48.dp),
+                    cargando = false
+                )
                 Spacer(modifier = Modifier.height(28.dp))
             }
 
