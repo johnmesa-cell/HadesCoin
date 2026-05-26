@@ -138,7 +138,6 @@ fun TransferViewContent(
         && !exceedsBalance
         && pin.length == 4
 
-    // ← toggle local del saldo
     var saldoVisible by remember { mutableStateOf(true) }
 
     HadesBackground {
@@ -166,16 +165,16 @@ fun TransferViewContent(
                 Spacer(modifier = Modifier.width(8.dp))
                 Column {
                     Text(
-                        text         = "TRANSFERENCIA",
-                        fontSize     = 18.sp,
-                        fontWeight   = FontWeight.Black,
+                        text          = "TRANSFERENCIA",
+                        fontSize      = 18.sp,
+                        fontWeight    = FontWeight.Black,
                         letterSpacing = 3.sp,
-                        color        = HadesPurple
+                        color         = HadesPurple
                     )
                     Text(
-                        text      = "Envía dinero de forma segura",
-                        fontSize  = 12.sp,
-                        color     = HadesOnDark.copy(alpha = 0.45f)
+                        text     = "Envía dinero de forma segura",
+                        fontSize = 12.sp,
+                        color    = HadesOnDark.copy(alpha = 0.45f)
                     )
                 }
             }
@@ -207,7 +206,6 @@ fun TransferViewContent(
                             color         = HadesOnDark.copy(alpha = 0.5f)
                         )
                         Spacer(modifier = Modifier.height(2.dp))
-                        // ← visible y onToggle ahora funcionales
                         HadesBalanceText(
                             balance  = senderBalance,
                             visible  = saldoVisible,
@@ -259,8 +257,8 @@ fun TransferViewContent(
                             (it.isEmpty() || it[0] == '3')
                         ) onReceiverChange(it)
                     },
-                    label         = "Teléfono destinatario",
-                    keyboardType  = KeyboardType.Phone
+                    label        = "Teléfono destinatario",
+                    keyboardType = KeyboardType.Phone
                 )
 
                 HadesTextField(
@@ -309,16 +307,16 @@ fun TransferViewContent(
                     HadesSummaryRow(
                         items = listOf(
                             HadesSummaryItem(
-                                label  = "A ENVIAR",
-                                amount = parsedAmount,
-                                color  = HadesOrange,
-                                prefix = "- "
+                                label   = "A ENVIAR",
+                                valor   = parsedAmount,
+                                color   = HadesOrange,
+                                prefijo = "- "
                             ),
                             HadesSummaryItem(
-                                label  = "QUEDARÁ",
-                                amount = remaining.coerceAtLeast(0.0),
-                                color  = HadesCyan,
-                                prefix = "  "
+                                label   = "QUEDARÁ",
+                                valor   = remaining.coerceAtLeast(0.0),
+                                color   = HadesCyan,
+                                prefijo = "  "
                             )
                         )
                     )
@@ -457,9 +455,9 @@ private fun ConfirmTransferSheet(
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Text(
-                    text      = "Cancelar",
-                    color     = HadesOnDark.copy(alpha = 0.45f),
-                    fontSize  = 14.sp
+                    text     = "Cancelar",
+                    color    = HadesOnDark.copy(alpha = 0.45f),
+                    fontSize = 14.sp
                 )
             }
         }
