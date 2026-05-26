@@ -1,5 +1,7 @@
 <div align="center">
 
+<img src="docs/ic_hadescoin_logo.png" width="120" alt="HadesCoin Logo"/>
+
 # 🪙 HadesCoin
 
 **Billetera digital móvil con estética cyberpunk**  
@@ -190,10 +192,14 @@ app/src/main/res/values/
 
 ---
 
-## 👤 Autor
+## 👤 Autores
 
 **John Mesa**  
 [GitHub](https://github.com/johnmesa-cell)
+**Juan Jose Restrepo**
+[GitHub](https://github.com/joserestrepo1-ctrl)
+**Andres Felipe Yarce**
+[GitHub](https://github.com/AndresYarce)
 
 ---
 
