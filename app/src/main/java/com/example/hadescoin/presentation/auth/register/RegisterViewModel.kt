@@ -64,6 +64,7 @@ class RegisterViewModel(
             _cargando.value = true
             try {
                 val user = AppUser(
+                    id             = phoneNumber,
                     documentNumber = documentNumber,
                     phoneNumber    = phoneNumber,
                     fullName       = fullName,

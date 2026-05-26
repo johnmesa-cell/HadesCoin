@@ -4,12 +4,14 @@ import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.hadescoin.data.repository.WalletRepositoryImpl
-import com.example.hadescoin.domain.repository.WalletRepository
+import com.example.hadescoin.di.ServiceLocator
+import com.example.hadescoin.domain.usecase.GetWalletDataUseCase
+import com.example.hadescoin.domain.usecase.TransferUseCase
 import kotlinx.coroutines.launch
 
 class TransferViewModel(
-    private val repository: WalletRepository = WalletRepositoryImpl()
+    private val transferUseCase: TransferUseCase = ServiceLocator.provideTransferUseCase(),
+    private val getWalletDataUseCase: GetWalletDataUseCase = ServiceLocator.provideGetWalletDataUseCase()
 ) : ViewModel() {
 
     private val _cargando        = MutableLiveData(false)
@@ -27,7 +29,7 @@ class TransferViewModel(
     fun loadSenderBalance(phoneNumber: String) {
         viewModelScope.launch {
             try {
-                val user = repository.getUserByPhone(phoneNumber)
+                val (user, _) = getWalletDataUseCase(phoneNumber)
                 _senderBalance.value = user?.balance ?: 0.0
             } catch (_: Exception) {
                 _senderBalance.value = 0.0
@@ -43,10 +45,10 @@ class TransferViewModel(
 
         viewModelScope.launch {
             _cargando.value = true
-            val result = repository.transferFunds(senderPhone, receiverPhone, amount, pin)
+            val result = transferUseCase(senderPhone, receiverPhone, amount, pin)
             result.fold(
                 onSuccess = {
-                    val updatedUser = repository.getUserByPhone(senderPhone)
+                    val (updatedUser, _) = getWalletDataUseCase(senderPhone)
                     _senderBalance.value   = updatedUser?.balance ?: 0.0
                     _transferExitosa.value = true
                 },

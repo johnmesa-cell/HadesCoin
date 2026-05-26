@@ -9,12 +9,30 @@ class FirebaseTransactionDataSource {
     private val database = FirebaseDatabase.getInstance().getReference("transactions")
 
     suspend fun getTransactionsByPhone(phoneNumber: String): List<DataSnapshot> {
-        val snapshot = database.get().await()
-        return snapshot.children.filter { child ->
-            val senderId   = child.child("senderId").getValue(String::class.java) ?: ""
-            val receiverId = child.child("receiverId").getValue(String::class.java) ?: ""
-            senderId == phoneNumber || receiverId == phoneNumber
+        // Dos queries separadas porque Firebase Realtime Database no soporta OR nativo
+        val bySender = database
+            .orderByChild("senderId")
+            .equalTo(phoneNumber)
+            .get().await()
+
+        val byReceiver = database
+            .orderByChild("receiverId")
+            .equalTo(phoneNumber)
+            .get().await()
+
+        val seen = mutableSetOf<String>()
+        val result = mutableListOf<DataSnapshot>()
+
+        for (child in bySender.children) {
+            val key = child.key ?: continue
+            if (seen.add(key)) result.add(child)
         }
+        for (child in byReceiver.children) {
+            val key = child.key ?: continue
+            if (seen.add(key)) result.add(child)
+        }
+
+        return result
     }
 
     suspend fun saveTransaction(data: Map<String, Any>): Boolean {
