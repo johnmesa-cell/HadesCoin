@@ -17,6 +17,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
@@ -24,6 +25,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
+import com.example.hadescoin.R
 import com.example.hadescoin.domain.model.AppUser
 import com.example.hadescoin.domain.model.WalletTransaction
 import com.example.hadescoin.presentation.components.*
@@ -48,12 +50,9 @@ fun HomeView(
     var mensajeError by remember { mutableStateOf("") }
     var menuExpanded by remember { mutableStateOf(false) }
 
-    // Cierra el Speed Dial cada vez que HomeView vuelve a ser el destino activo
     DisposableEffect(navController) {
         val listener = NavController.OnDestinationChangedListener { _, destination, _ ->
-            if (destination.route?.startsWith("home") == true) {
-                menuExpanded = false
-            }
+            if (destination.route?.startsWith("home") == true) menuExpanded = false
         }
         navController.addOnDestinationChangedListener(listener)
         onDispose { navController.removeOnDestinationChangedListener(listener) }
@@ -79,9 +78,7 @@ fun HomeView(
         onMenuCollapse = { menuExpanded = false },
         onRefresh      = { viewModel.refresh() },
         onLogout       = {
-            navController.navigate("login") {
-                popUpTo(0) { inclusive = true }
-            }
+            navController.navigate("login") { popUpTo(0) { inclusive = true } }
         },
         onTransfer     = {
             menuExpanded = false
@@ -93,12 +90,9 @@ fun HomeView(
 
     if (showError) {
         ShowMessageAlertDialog(
-            onConfirmation = {
-                viewModel.clearError()
-                showError = false
-            },
-            dialogTitle = "Error",
-            dialogText  = mensajeError
+            onConfirmation = { viewModel.clearError(); showError = false },
+            dialogTitle    = stringResource(R.string.dialog_error_title),
+            dialogText     = mensajeError
         )
     }
 }
@@ -124,27 +118,27 @@ fun HomeViewContent(
 
     val speedDialItems = listOf(
         SpeedDialItem(
-            label   = "TRANSFERIR",
+            label   = stringResource(R.string.action_transfer),
             icon    = Icons.Filled.SwapHoriz,
             color   = HadesCyan,
             onClick = { onTransfer() }
         ),
         SpeedDialItem(
-            label   = "DEPOSITAR",
+            label   = stringResource(R.string.action_deposit),
             icon    = Icons.Filled.ArrowDownward,
             color   = HadesCyan,
             onClick = {},
             enabled = false
         ),
         SpeedDialItem(
-            label   = "RETIRAR",
+            label   = stringResource(R.string.action_withdraw),
             icon    = Icons.Filled.ArrowUpward,
             color   = HadesOrange,
             onClick = {},
             enabled = false
         ),
         SpeedDialItem(
-            label   = "PAGAR",
+            label   = stringResource(R.string.action_pay),
             icon    = Icons.Filled.CreditCard,
             color   = HadesPurple,
             onClick = {},
@@ -198,8 +192,8 @@ fun HomeViewContent(
                     val totalEgresos  = transactions.filter { it.direction == "OUT" }.sumOf { it.amount }
                     HadesSummaryRow(
                         items = listOf(
-                            HadesSummaryItem("INGRESOS", totalIngresos, HadesCyan,   "+ "),
-                            HadesSummaryItem("EGRESOS",  totalEgresos,  HadesOrange, "- ")
+                            HadesSummaryItem(stringResource(R.string.label_incomes), totalIngresos, HadesCyan,   "+ "),
+                            HadesSummaryItem(stringResource(R.string.label_expenses), totalEgresos,  HadesOrange, "- ")
                         )
                     )
                     Spacer(modifier = Modifier.height(16.dp))
@@ -207,21 +201,21 @@ fun HomeViewContent(
 
                 item {
                     Row(
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier              = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
+                        verticalAlignment     = Alignment.CenterVertically
                     ) {
                         Text(
-                            text = "> MOVIMIENTOS",
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Bold,
+                            text          = stringResource(R.string.home_movements_header),
+                            fontSize      = 12.sp,
+                            fontWeight    = FontWeight.Bold,
                             letterSpacing = 2.sp,
-                            color = HadesCyan
+                            color         = HadesCyan
                         )
                         Text(
-                            text = "${transactions.size} registros",
+                            text     = stringResource(R.string.label_records, transactions.size),
                             fontSize = 11.sp,
-                            color = HadesOnDark.copy(alpha = 0.4f)
+                            color    = HadesOnDark.copy(alpha = 0.4f)
                         )
                     }
                     Spacer(modifier = Modifier.height(8.dp))
@@ -230,24 +224,24 @@ fun HomeViewContent(
                 if (transaccionesFiltradas.isEmpty() && !cargando) {
                     item {
                         Box(
-                            modifier = Modifier
+                            modifier        = Modifier
                                 .fillMaxWidth()
                                 .padding(vertical = 48.dp),
                             contentAlignment = Alignment.Center
                         ) {
                             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                 Text(
-                                    text = "// SIN MOVIMIENTOS",
-                                    color = HadesOnDark.copy(alpha = 0.3f),
-                                    fontSize = 13.sp,
-                                    fontWeight = FontWeight.Bold,
+                                    text          = stringResource(R.string.home_empty_title),
+                                    color         = HadesOnDark.copy(alpha = 0.3f),
+                                    fontSize      = 13.sp,
+                                    fontWeight    = FontWeight.Bold,
                                     letterSpacing = 2.sp
                                 )
                                 Spacer(modifier = Modifier.height(4.dp))
                                 Text(
-                                    text = "No hay transacciones registradas",
-                                    color = HadesOnDark.copy(alpha = 0.25f),
-                                    fontSize = 12.sp,
+                                    text      = stringResource(R.string.home_empty_subtitle),
+                                    color     = HadesOnDark.copy(alpha = 0.25f),
+                                    fontSize  = 12.sp,
                                     textAlign = TextAlign.Center
                                 )
                             }
@@ -297,7 +291,7 @@ private fun HomeHeader(
     onAvatarClick: () -> Unit
 ) {
     Row(
-        modifier = Modifier.fillMaxWidth(),
+        modifier          = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -311,35 +305,35 @@ private fun HomeHeader(
                 contentAlignment = Alignment.Center
             ) {
                 Text(
-                    text = getInitials(appUser?.fullName),
-                    fontSize = 16.sp,
+                    text       = getInitials(appUser?.fullName),
+                    fontSize   = 16.sp,
                     fontWeight = FontWeight.Black,
-                    color = HadesOnDark
+                    color      = HadesOnDark
                 )
             }
             Spacer(modifier = Modifier.width(12.dp))
             Column {
                 Text(
-                    text = "HADESCOIN",
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.Black,
+                    text          = stringResource(R.string.home_app_label),
+                    fontSize      = 11.sp,
+                    fontWeight    = FontWeight.Black,
                     letterSpacing = 4.sp,
-                    color = HadesPurple
+                    color         = HadesPurple
                 )
                 Text(
-                    text = "Hola, ${appUser?.fullName ?: "..."}",
-                    fontSize = 14.sp,
+                    text       = stringResource(R.string.home_greeting, appUser?.fullName ?: stringResource(R.string.home_no_data)),
+                    fontSize   = 14.sp,
                     fontWeight = FontWeight.Medium,
-                    color = HadesOnDark.copy(alpha = 0.8f)
+                    color      = HadesOnDark.copy(alpha = 0.8f)
                 )
             }
         }
         IconButton(onClick = onRefresh) {
             Icon(
-                imageVector = Icons.Filled.Refresh,
-                contentDescription = "Actualizar",
-                tint = HadesCyan,
-                modifier = Modifier.size(22.dp)
+                imageVector        = Icons.Filled.Refresh,
+                contentDescription = stringResource(R.string.cd_refresh),
+                tint               = HadesCyan,
+                modifier           = Modifier.size(22.dp)
             )
         }
     }
@@ -359,20 +353,28 @@ private fun BalanceCard(
             .padding(24.dp)
     ) {
         Column {
-            Text(text = "Saldo disponible", fontSize = 12.sp, letterSpacing = 1.sp, color = HadesOnDark.copy(alpha = 0.7f))
+            Text(
+                text          = stringResource(R.string.label_available_balance),
+                fontSize      = 12.sp,
+                letterSpacing = 1.sp,
+                color         = HadesOnDark.copy(alpha = 0.7f)
+            )
             Spacer(modifier = Modifier.height(4.dp))
             HadesBalanceText(balance = appUser?.balance ?: 0.0, visible = saldoVisible, onToggle = onToggleSaldo)
             Spacer(modifier = Modifier.height(16.dp))
             Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(HadesOnDark.copy(alpha = 0.15f)))
             Spacer(modifier = Modifier.height(12.dp))
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+            Row(
+                modifier              = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
                 Column {
-                    Text(text = "TELÉFONO", fontSize = 9.sp, letterSpacing = 1.sp, color = HadesOnDark.copy(alpha = 0.5f))
-                    Text(text = appUser?.phoneNumber ?: "—", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = HadesOnDark)
+                    Text(text = stringResource(R.string.label_phone),    fontSize = 9.sp,  letterSpacing = 1.sp, color = HadesOnDark.copy(alpha = 0.5f))
+                    Text(text = appUser?.phoneNumber    ?: "—",           fontSize = 13.sp, fontWeight = FontWeight.Bold, color = HadesOnDark)
                 }
                 Column(horizontalAlignment = Alignment.End) {
-                    Text(text = "DOCUMENTO", fontSize = 9.sp, letterSpacing = 1.sp, color = HadesOnDark.copy(alpha = 0.5f))
-                    Text(text = appUser?.documentNumber ?: "—", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = HadesOnDark)
+                    Text(text = stringResource(R.string.label_document), fontSize = 9.sp,  letterSpacing = 1.sp, color = HadesOnDark.copy(alpha = 0.5f))
+                    Text(text = appUser?.documentNumber ?: "—",           fontSize = 13.sp, fontWeight = FontWeight.Bold, color = HadesOnDark)
                 }
             }
         }
@@ -394,26 +396,26 @@ private fun TransactionRow(tx: WalletTransaction) {
             .background(HadesNavyDark)
             .padding(horizontal = 16.dp, vertical = 14.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
+        verticalAlignment     = Alignment.CenterVertically
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Box(
-                modifier = Modifier.size(36.dp).clip(CircleShape).background(amountColor.copy(alpha = 0.12f)),
+                modifier         = Modifier.size(36.dp).clip(CircleShape).background(amountColor.copy(alpha = 0.12f)),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(imageVector = icon, contentDescription = typeLabel, tint = amountColor, modifier = Modifier.size(18.dp))
             }
             Spacer(modifier = Modifier.width(12.dp))
             Column {
-                Text(text = typeLabel, fontWeight = FontWeight.Bold, color = HadesOnDark, fontSize = 14.sp)
+                Text(text = typeLabel,                fontSize = 14.sp, fontWeight = FontWeight.Bold,  color = HadesOnDark)
                 Text(text = formatTimestamp(tx.timestamp), fontSize = 11.sp, color = HadesOnDark.copy(alpha = 0.45f))
             }
         }
         Text(
-            text = "$prefix$ ${String.format(Locale.US, "%,.2f", tx.amount)}",
+            text       = "$prefix$ ${String.format(Locale.US, "%,.2f", tx.amount)}",
             fontWeight = FontWeight.Black,
-            color = amountColor,
-            fontSize = 15.sp
+            color      = amountColor,
+            fontSize   = 15.sp
         )
     }
 }
@@ -423,36 +425,36 @@ private fun TransactionRow(tx: WalletTransaction) {
 fun UserPanelSheet(appUser: AppUser?, onDismiss: () -> Unit, onLogout: () -> Unit) {
     ModalBottomSheet(onDismissRequest = onDismiss, containerColor = HadesNavyDark) {
         Column(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp).padding(bottom = 32.dp),
+            modifier            = Modifier.fillMaxWidth().padding(horizontal = 24.dp).padding(bottom = 32.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Box(
-                modifier = Modifier.size(72.dp).clip(CircleShape)
+                modifier         = Modifier.size(72.dp).clip(CircleShape)
                     .background(Brush.radialGradient(colors = listOf(HadesPurple, HadesNavyDark))),
                 contentAlignment = Alignment.Center
             ) {
                 Text(text = getInitials(appUser?.fullName), fontSize = 26.sp, fontWeight = FontWeight.Black, color = HadesOnDark)
             }
             Spacer(modifier = Modifier.height(12.dp))
-            Text(text = appUser?.fullName ?: "...", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = HadesOnDark)
+            Text(text = appUser?.fullName   ?: "...", fontSize = 20.sp, fontWeight = FontWeight.Bold,  color = HadesOnDark)
             Spacer(modifier = Modifier.height(4.dp))
-            Text(text = appUser?.phoneNumber ?: "—", fontSize = 14.sp, color = HadesOnDark.copy(alpha = 0.6f))
+            Text(text = appUser?.phoneNumber ?: "—",  fontSize = 14.sp, color = HadesOnDark.copy(alpha = 0.6f))
             Spacer(modifier = Modifier.height(24.dp))
             Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(HadesOnDark.copy(alpha = 0.1f)))
             Spacer(modifier = Modifier.height(20.dp))
-            UserInfoRow(label = "DOCUMENTO", value = appUser?.documentNumber ?: "—")
+            UserInfoRow(label = stringResource(R.string.label_document),     value = appUser?.documentNumber ?: "—")
             Spacer(modifier = Modifier.height(12.dp))
-            UserInfoRow(label = "MIEMBRO DESDE", value = appUser?.createdAt?.take(10) ?: "—")
+            UserInfoRow(label = stringResource(R.string.label_member_since), value = appUser?.createdAt?.take(10) ?: "—")
             Spacer(modifier = Modifier.height(28.dp))
             Button(
-                onClick = { onDismiss(); onLogout() },
+                onClick  = { onDismiss(); onLogout() },
                 modifier = Modifier.fillMaxWidth(),
-                colors = ButtonDefaults.buttonColors(containerColor = HadesOrange.copy(alpha = 0.15f), contentColor = HadesOrange),
-                shape = RoundedCornerShape(12.dp)
+                colors   = ButtonDefaults.buttonColors(containerColor = HadesOrange.copy(alpha = 0.15f), contentColor = HadesOrange),
+                shape    = RoundedCornerShape(12.dp)
             ) {
-                Icon(imageVector = Icons.AutoMirrored.Filled.ExitToApp, contentDescription = "Salir", modifier = Modifier.size(18.dp))
+                Icon(imageVector = Icons.AutoMirrored.Filled.ExitToApp, contentDescription = null, modifier = Modifier.size(18.dp))
                 Spacer(modifier = Modifier.width(8.dp))
-                Text(text = "Cerrar sesión", fontWeight = FontWeight.Bold)
+                Text(text = stringResource(R.string.btn_logout), fontWeight = FontWeight.Bold)
             }
         }
     }
@@ -460,7 +462,11 @@ fun UserPanelSheet(appUser: AppUser?, onDismiss: () -> Unit, onLogout: () -> Uni
 
 @Composable
 private fun UserInfoRow(label: String, value: String) {
-    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+    Row(
+        modifier              = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment     = Alignment.CenterVertically
+    ) {
         Text(text = label, fontSize = 10.sp, letterSpacing = 1.sp, color = HadesOnDark.copy(alpha = 0.45f))
         Text(text = value, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = HadesOnDark)
     }
@@ -470,7 +476,11 @@ private fun UserInfoRow(label: String, value: String) {
 @Composable
 fun HomeViewEmptyPreview() {
     HadesCoinTheme {
-        HomeViewContent(appUser = AppUser(fullName = "Juan Pérez", balance = 0.0, phoneNumber = "3001234567", documentNumber = "1010101010"), transactions = emptyList(), cargando = false)
+        HomeViewContent(
+            appUser      = AppUser(fullName = "Juan Pérez", balance = 0.0, phoneNumber = "3001234567", documentNumber = "1010101010"),
+            transactions = emptyList(),
+            cargando     = false
+        )
     }
 }
 

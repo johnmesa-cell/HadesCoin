@@ -4,7 +4,6 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -14,6 +13,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
@@ -23,12 +23,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.example.hadescoin.R
-import com.example.hadescoin.presentation.components.HadesBackground
-import com.example.hadescoin.presentation.components.HadesButton
-import com.example.hadescoin.presentation.components.HadesCardBox
-import com.example.hadescoin.presentation.components.HadesTextField
-import com.example.hadescoin.presentation.components.ShowLoadingAlertDialog
-import com.example.hadescoin.presentation.components.ShowMessageAlertDialog
+import com.example.hadescoin.presentation.components.*
 import com.example.hadescoin.ui.theme.*
 
 @Composable
@@ -67,11 +62,11 @@ fun RegisterView(
         pin                    = pin,
         confirmPin             = confirmPin,
         cargando               = cargando,
-        onFullNameChange       = { if (it.all { char -> char.isLetter() || char.isWhitespace() }) { fullName = it; viewModel.clearError() } },
-        onDocumentNumberChange = { if (it.length <= 10 && it.all { char -> char.isDigit() }) { documentNumber = it; viewModel.clearError() } },
-        onPhoneChange          = { if (it.length <= 10 && it.all { char -> char.isDigit() } && (it.isEmpty() || it[0] == '3')) { phoneNumber = it; viewModel.clearError() } },
-        onPinChange            = { if (it.length <= 4 && it.all { char -> char.isDigit() }) { pin = it; viewModel.clearError() } },
-        onConfirmPinChange     = { if (it.length <= 4 && it.all { char -> char.isDigit() }) { confirmPin = it; viewModel.clearError() } },
+        onFullNameChange       = { if (it.all { c -> c.isLetter() || c.isWhitespace() }) { fullName = it; viewModel.clearError() } },
+        onDocumentNumberChange = { if (it.length <= 10 && it.all { c -> c.isDigit() }) { documentNumber = it; viewModel.clearError() } },
+        onPhoneChange          = { if (it.length <= 10 && it.all { c -> c.isDigit() } && (it.isEmpty() || it[0] == '3')) { phoneNumber = it; viewModel.clearError() } },
+        onPinChange            = { if (it.length <= 4 && it.all { c -> c.isDigit() }) { pin = it; viewModel.clearError() } },
+        onConfirmPinChange     = { if (it.length <= 4 && it.all { c -> c.isDigit() }) { confirmPin = it; viewModel.clearError() } },
         onRegisterClick        = { viewModel.register(fullName, documentNumber, phoneNumber, pin, confirmPin) },
         onBackToLoginClick     = { navController.popBackStack() }
     )
@@ -81,7 +76,7 @@ fun RegisterView(
     if (showError) {
         ShowMessageAlertDialog(
             onConfirmation = { showError = false },
-            dialogTitle    = "Error",
+            dialogTitle    = stringResource(R.string.dialog_error_title),
             dialogText     = mensajeError
         )
     }
@@ -112,20 +107,20 @@ fun RegisterViewContent(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Image(
-                painter = painterResource(id = R.drawable.ic_hadescoin_logo),
-                contentDescription = "HadesCoin Logo",
-                modifier = Modifier.size(110.dp)
+                painter            = painterResource(id = R.drawable.ic_hadescoin_logo),
+                contentDescription = stringResource(R.string.cd_logo),
+                modifier           = Modifier.size(110.dp)
             )
 
             Spacer(modifier = Modifier.height(12.dp))
 
             Text(
-                text = "HADESCOIN",
-                fontSize = 34.sp,
-                fontWeight = FontWeight.Black,
+                text          = stringResource(R.string.login_title),
+                fontSize      = 34.sp,
+                fontWeight    = FontWeight.Black,
                 letterSpacing = 6.sp,
-                color = HadesPurple,
-                textAlign = TextAlign.Center
+                color         = HadesPurple,
+                textAlign     = TextAlign.Center
             )
 
             Spacer(modifier = Modifier.height(6.dp))
@@ -142,66 +137,65 @@ fun RegisterViewContent(
             Spacer(modifier = Modifier.height(6.dp))
 
             Text(
-                text = "// CREA TU CUENTA",
-                fontSize = 11.sp,
-                fontWeight = FontWeight.Medium,
+                text          = stringResource(R.string.register_subtitle),
+                fontSize      = 11.sp,
+                fontWeight    = FontWeight.Medium,
                 letterSpacing = 2.sp,
-                color = HadesCyan.copy(alpha = 0.7f),
-                textAlign = TextAlign.Center
+                color         = HadesCyan.copy(alpha = 0.7f),
+                textAlign     = TextAlign.Center
             )
 
             Spacer(modifier = Modifier.height(28.dp))
 
             HadesCardBox {
-
                 Text(
-                    text = "> NUEVO USUARIO",
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Bold,
+                    text          = stringResource(R.string.register_section_header),
+                    fontSize      = 12.sp,
+                    fontWeight    = FontWeight.Bold,
                     letterSpacing = 2.sp,
-                    color = HadesCyan
+                    color         = HadesCyan
                 )
 
                 HadesTextField(
-                    value = fullName,
+                    value         = fullName,
                     onValueChange = onFullNameChange,
-                    label = "Nombre completo"
+                    label         = stringResource(R.string.label_full_name)
                 )
 
                 HadesTextField(
-                    value = documentNumber,
+                    value         = documentNumber,
                     onValueChange = onDocumentNumberChange,
-                    label = "Número de Documento",
-                    keyboardType = KeyboardType.Number
+                    label         = stringResource(R.string.label_document_number),
+                    keyboardType  = KeyboardType.Number
                 )
 
                 HadesTextField(
-                    value = phoneNumber,
+                    value         = phoneNumber,
                     onValueChange = onPhoneChange,
-                    label = "Número de Teléfono",
-                    keyboardType = KeyboardType.Phone
+                    label         = stringResource(R.string.label_phone_number_register),
+                    keyboardType  = KeyboardType.Phone
                 )
 
                 HadesTextField(
-                    value = pin,
+                    value         = pin,
                     onValueChange = onPinChange,
-                    label = "PIN de 4 dígitos",
-                    isPassword = true,
-                    keyboardType = KeyboardType.NumberPassword
+                    label         = stringResource(R.string.label_pin),
+                    isPassword    = true,
+                    keyboardType  = KeyboardType.NumberPassword
                 )
 
                 HadesTextField(
-                    value = confirmPin,
+                    value         = confirmPin,
                     onValueChange = onConfirmPinChange,
-                    label = "Confirmar PIN",
-                    isPassword = true,
-                    keyboardType = KeyboardType.NumberPassword,
-                    isError = confirmPin.isNotEmpty() && pin != confirmPin,
+                    label         = stringResource(R.string.label_confirm_pin),
+                    isPassword    = true,
+                    keyboardType  = KeyboardType.NumberPassword,
+                    isError       = confirmPin.isNotEmpty() && pin != confirmPin,
                     supportingText = {
                         if (confirmPin.isNotEmpty() && pin != confirmPin) {
                             Text(
-                                text = "Los PINs no coinciden",
-                                color = androidx.compose.material3.MaterialTheme.colorScheme.error,
+                                text     = stringResource(R.string.error_pins_no_match),
+                                color    = MaterialTheme.colorScheme.error,
                                 fontSize = 11.sp
                             )
                         }
@@ -211,11 +205,11 @@ fun RegisterViewContent(
                 Spacer(modifier = Modifier.height(4.dp))
 
                 HadesButton(
-                    text = "[ CREAR CUENTA ]",
-                    textCargando = "PROCESANDO...",
-                    onClick = onRegisterClick,
-                    enabled = pin.length == 4 && confirmPin.length == 4 && pin == confirmPin,
-                    cargando = cargando
+                    text         = stringResource(R.string.btn_register),
+                    textCargando = stringResource(R.string.btn_register_loading),
+                    onClick      = onRegisterClick,
+                    enabled      = pin.length == 4 && confirmPin.length == 4 && pin == confirmPin,
+                    cargando     = cargando
                 )
             }
 
@@ -223,20 +217,20 @@ fun RegisterViewContent(
 
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
-                    text = "¿Ya tienes cuenta? ",
+                    text     = stringResource(R.string.text_has_account),
                     fontSize = 13.sp,
-                    color = HadesOnDark.copy(alpha = 0.5f)
+                    color    = HadesOnDark.copy(alpha = 0.5f)
                 )
                 TextButton(
-                    onClick = onBackToLoginClick,
+                    onClick        = onBackToLoginClick,
                     contentPadding = PaddingValues(horizontal = 4.dp)
                 ) {
                     Text(
-                        text = "INICIAR SESIÓN ›",
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.Bold,
+                        text          = stringResource(R.string.btn_login_link),
+                        fontSize      = 13.sp,
+                        fontWeight    = FontWeight.Bold,
                         letterSpacing = 1.sp,
-                        color = HadesOrange
+                        color         = HadesOrange
                     )
                 }
             }
@@ -249,7 +243,8 @@ fun RegisterViewContent(
 fun RegisterViewPreview() {
     HadesCoinTheme {
         RegisterViewContent(
-            fullName = "", documentNumber = "", phoneNumber = "", pin = "", confirmPin = "", cargando = false,
+            fullName = "", documentNumber = "", phoneNumber = "", pin = "", confirmPin = "",
+            cargando = false,
             onFullNameChange = {}, onDocumentNumberChange = {}, onPhoneChange = {},
             onPinChange = {}, onConfirmPinChange = {}, onRegisterClick = {}, onBackToLoginClick = {}
         )
@@ -262,7 +257,8 @@ fun RegisterViewFilledPreview() {
     HadesCoinTheme {
         RegisterViewContent(
             fullName = "Juan Pérez", documentNumber = "1010101010",
-            phoneNumber = "3001234567", pin = "1234", confirmPin = "1234", cargando = false,
+            phoneNumber = "3001234567", pin = "1234", confirmPin = "1234",
+            cargando = false,
             onFullNameChange = {}, onDocumentNumberChange = {}, onPhoneChange = {},
             onPinChange = {}, onConfirmPinChange = {}, onRegisterClick = {}, onBackToLoginClick = {}
         )
@@ -275,10 +271,10 @@ fun RegisterViewLoadingPreview() {
     HadesCoinTheme {
         RegisterViewContent(
             fullName = "Juan Pérez", documentNumber = "1010101010",
-            phoneNumber = "3001234567", pin = "1234", confirmPin = "1234", cargando = true,
+            phoneNumber = "3001234567", pin = "1234", confirmPin = "1234",
+            cargando = true,
             onFullNameChange = {}, onDocumentNumberChange = {}, onPhoneChange = {},
             onPinChange = {}, onConfirmPinChange = {}, onRegisterClick = {}, onBackToLoginClick = {}
         )
     }
 }
-

@@ -17,6 +17,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
@@ -24,6 +25,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
+import com.example.hadescoin.R
 import com.example.hadescoin.presentation.components.*
 import com.example.hadescoin.ui.theme.*
 import java.util.Locale
@@ -68,46 +70,43 @@ fun TransferView(
     }
 
     TransferViewContent(
-        senderPhone      = senderPhone,
-        senderBalance    = senderBalance,
-        receiverPhone    = receiverPhone,
-        amount           = amount,
-        pin              = pin,
-        cargando         = cargando,
-        showConfirm      = showConfirm,
-        onReceiverChange = { receiverPhone = it },
-        onAmountChange   = { amount = it },
-        onPinChange      = { pin = it },
-        onReviewClick    = { showConfirm = true },
+        senderPhone       = senderPhone,
+        senderBalance     = senderBalance,
+        receiverPhone     = receiverPhone,
+        amount            = amount,
+        pin               = pin,
+        cargando          = cargando,
+        showConfirm       = showConfirm,
+        onReceiverChange  = { receiverPhone = it },
+        onAmountChange    = { amount = it },
+        onPinChange       = { pin = it },
+        onReviewClick     = { showConfirm = true },
         onConfirmTransfer = {
             val parsedAmount = amount.toDoubleOrNull() ?: 0.0
             viewModel.transfer(senderPhone, receiverPhone, parsedAmount, pin)
         },
-        onDismissConfirm = { showConfirm = false },
-        onBackClick      = { navController.popBackStack() }
+        onDismissConfirm  = { showConfirm = false },
+        onBackClick       = { navController.popBackStack() }
     )
 
     if (cargando) ShowLoadingAlertDialog()
 
     if (showExito) {
         ShowMessageAlertDialog(
-            onConfirmation = {
-                showExito = false
-                navController.popBackStack()
-            },
-            dialogTitle = "Éxito",
-            dialogText  = "Transferencia de $${ String.format(Locale.US, "%,.2f", amount.toDoubleOrNull() ?: 0.0) } enviada correctamente."
+            onConfirmation = { showExito = false; navController.popBackStack() },
+            dialogTitle    = stringResource(R.string.dialog_success_title),
+            dialogText     = stringResource(
+                R.string.transfer_success_message,
+                String.format(Locale.US, "%,.2f", amount.toDoubleOrNull() ?: 0.0)
+            )
         )
     }
 
     if (showError) {
         ShowMessageAlertDialog(
-            onConfirmation = {
-                showError = false
-                viewModel.clearError()
-            },
-            dialogTitle = "Error",
-            dialogText  = mensajeError
+            onConfirmation = { showError = false; viewModel.clearError() },
+            dialogTitle    = stringResource(R.string.dialog_error_title),
+            dialogText     = mensajeError
         )
     }
 }
@@ -149,15 +148,14 @@ fun TransferViewContent(
         ) {
             Spacer(modifier = Modifier.height(40.dp))
 
-            // ── Header ─────────────────────────────────────────────────
             Row(
-                modifier = Modifier.fillMaxWidth(),
+                modifier          = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 IconButton(onClick = onBackClick) {
                     Icon(
                         imageVector        = Icons.AutoMirrored.Filled.ArrowBack,
-                        contentDescription = "Atrás",
+                        contentDescription = stringResource(R.string.cd_back),
                         tint               = HadesCyan,
                         modifier           = Modifier.size(24.dp)
                     )
@@ -165,14 +163,14 @@ fun TransferViewContent(
                 Spacer(modifier = Modifier.width(8.dp))
                 Column {
                     Text(
-                        text          = "TRANSFERENCIA",
+                        text          = stringResource(R.string.transfer_title),
                         fontSize      = 18.sp,
                         fontWeight    = FontWeight.Black,
                         letterSpacing = 3.sp,
                         color         = HadesPurple
                     )
                     Text(
-                        text     = "Envía dinero de forma segura",
+                        text     = stringResource(R.string.transfer_subtitle),
                         fontSize = 12.sp,
                         color    = HadesOnDark.copy(alpha = 0.45f)
                     )
@@ -181,7 +179,6 @@ fun TransferViewContent(
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // ── Saldo disponible ───────────────────────────────────────
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -194,13 +191,13 @@ fun TransferViewContent(
                     .padding(horizontal = 20.dp, vertical = 16.dp)
             ) {
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier              = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+                    verticalAlignment     = Alignment.CenterVertically
                 ) {
                     Column {
                         Text(
-                            text          = "SALDO DISPONIBLE",
+                            text          = stringResource(R.string.label_balance_available),
                             fontSize      = 9.sp,
                             letterSpacing = 1.sp,
                             color         = HadesOnDark.copy(alpha = 0.5f)
@@ -213,7 +210,7 @@ fun TransferViewContent(
                         )
                     }
                     Box(
-                        modifier = Modifier
+                        modifier         = Modifier
                             .size(40.dp)
                             .clip(CircleShape)
                             .background(HadesCyan.copy(alpha = 0.15f)),
@@ -231,10 +228,9 @@ fun TransferViewContent(
 
             Spacer(modifier = Modifier.height(20.dp))
 
-            // ── Formulario ─────────────────────────────────────────────
             HadesCardBox {
                 Text(
-                    text          = "> DATOS DE ENVÍO",
+                    text          = stringResource(R.string.transfer_section_header),
                     fontSize      = 11.sp,
                     fontWeight    = FontWeight.Bold,
                     letterSpacing = 2.sp,
@@ -246,7 +242,7 @@ fun TransferViewContent(
                 HadesTextField(
                     value         = senderPhone,
                     onValueChange = {},
-                    label         = "Desde (tu teléfono)",
+                    label         = stringResource(R.string.label_from_phone),
                     enabled       = false
                 )
 
@@ -257,21 +253,22 @@ fun TransferViewContent(
                             (it.isEmpty() || it[0] == '3')
                         ) onReceiverChange(it)
                     },
-                    label        = "Teléfono destinatario",
+                    label        = stringResource(R.string.label_receiver_phone),
                     keyboardType = KeyboardType.Phone
                 )
 
                 HadesTextField(
                     value         = amount,
                     onValueChange = { if (it.length <= 12) onAmountChange(it) },
-                    label         = if (exceedsBalance) "Monto (insuficiente)" else "Monto a enviar",
+                    label         = if (exceedsBalance) stringResource(R.string.label_amount_insufficient)
+                                    else stringResource(R.string.label_amount),
                     keyboardType  = KeyboardType.Decimal,
                     prefix        = { Text("$", color = if (exceedsBalance) HadesOrange else HadesCyan) }
                 )
 
                 AnimatedVisibility(visible = exceedsBalance) {
                     Text(
-                        text       = "⚠ Saldo insuficiente para esta transferencia",
+                        text       = stringResource(R.string.warning_insufficient_balance),
                         fontSize   = 11.sp,
                         color      = HadesOrange,
                         fontWeight = FontWeight.Medium,
@@ -282,13 +279,12 @@ fun TransferViewContent(
                 HadesTextField(
                     value         = pin,
                     onValueChange = { if (it.length <= 4 && it.all { c -> c.isDigit() }) onPinChange(it) },
-                    label         = "PIN de confirmación (4 dígitos)",
+                    label         = stringResource(R.string.label_pin_confirm),
                     isPassword    = true,
                     keyboardType  = KeyboardType.NumberPassword
                 )
             }
 
-            // ── Resumen previo al envío ────────────────────────────────
             AnimatedVisibility(
                 visible = parsedAmount > 0.0 && !exceedsBalance,
                 enter   = fadeIn() + expandVertically(),
@@ -297,7 +293,7 @@ fun TransferViewContent(
                 Column {
                     Spacer(modifier = Modifier.height(16.dp))
                     Text(
-                        text          = "> RESUMEN",
+                        text          = stringResource(R.string.transfer_summary_header),
                         fontSize      = 11.sp,
                         fontWeight    = FontWeight.Bold,
                         letterSpacing = 2.sp,
@@ -307,13 +303,13 @@ fun TransferViewContent(
                     HadesSummaryRow(
                         items = listOf(
                             HadesSummaryItem(
-                                label   = "A ENVIAR",
+                                label   = stringResource(R.string.label_to_send),
                                 valor   = parsedAmount,
                                 color   = HadesOrange,
                                 prefijo = "- "
                             ),
                             HadesSummaryItem(
-                                label   = "QUEDARÁ",
+                                label   = stringResource(R.string.label_remaining),
                                 valor   = remaining.coerceAtLeast(0.0),
                                 color   = HadesCyan,
                                 prefijo = "  "
@@ -326,7 +322,7 @@ fun TransferViewContent(
             Spacer(modifier = Modifier.height(24.dp))
 
             HadesButton(
-                text     = "[ REVISAR TRANSFERENCIA ]",
+                text     = stringResource(R.string.btn_review_transfer),
                 onClick  = onReviewClick,
                 enabled  = isFormValid,
                 cargando = cargando
@@ -335,7 +331,6 @@ fun TransferViewContent(
             Spacer(modifier = Modifier.height(40.dp))
         }
 
-        // ── Modal de confirmación ──────────────────────────────────────
         if (showConfirm) {
             ConfirmTransferSheet(
                 senderPhone   = senderPhone,
@@ -362,14 +357,14 @@ private fun ConfirmTransferSheet(
         containerColor   = HadesNavyDark
     ) {
         Column(
-            modifier = Modifier
+            modifier            = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 24.dp)
                 .padding(bottom = 40.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Box(
-                modifier = Modifier
+                modifier         = Modifier
                     .size(64.dp)
                     .clip(CircleShape)
                     .background(HadesOrange.copy(alpha = 0.15f)),
@@ -386,7 +381,7 @@ private fun ConfirmTransferSheet(
             Spacer(modifier = Modifier.height(16.dp))
 
             Text(
-                text       = "¿Confirmar transferencia?",
+                text       = stringResource(R.string.confirm_transfer_title),
                 fontSize   = 18.sp,
                 fontWeight = FontWeight.Black,
                 color      = HadesOnDark,
@@ -396,7 +391,7 @@ private fun ConfirmTransferSheet(
             Spacer(modifier = Modifier.height(4.dp))
 
             Text(
-                text      = "Esta acción no se puede deshacer",
+                text      = stringResource(R.string.confirm_transfer_subtitle),
                 fontSize  = 12.sp,
                 color     = HadesOnDark.copy(alpha = 0.45f),
                 textAlign = TextAlign.Center
@@ -421,12 +416,12 @@ private fun ConfirmTransferSheet(
                     .padding(16.dp)
             ) {
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier              = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     Column(horizontalAlignment = Alignment.Start) {
-                        Text(text = "DESDE", fontSize = 9.sp, letterSpacing = 1.sp, color = HadesOnDark.copy(alpha = 0.45f))
-                        Text(text = senderPhone, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = HadesOnDark)
+                        Text(text = stringResource(R.string.confirm_from), fontSize = 9.sp,  letterSpacing = 1.sp, color = HadesOnDark.copy(alpha = 0.45f))
+                        Text(text = senderPhone,                           fontSize = 14.sp, fontWeight = FontWeight.Bold, color = HadesOnDark)
                     }
                     Icon(
                         imageVector        = Icons.Filled.SwapHoriz,
@@ -435,8 +430,8 @@ private fun ConfirmTransferSheet(
                         modifier           = Modifier.size(20.dp).align(Alignment.CenterVertically)
                     )
                     Column(horizontalAlignment = Alignment.End) {
-                        Text(text = "HACIA", fontSize = 9.sp, letterSpacing = 1.sp, color = HadesOnDark.copy(alpha = 0.45f))
-                        Text(text = receiverPhone, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = HadesOnDark)
+                        Text(text = stringResource(R.string.confirm_to), fontSize = 9.sp,  letterSpacing = 1.sp, color = HadesOnDark.copy(alpha = 0.45f))
+                        Text(text = receiverPhone,                       fontSize = 14.sp, fontWeight = FontWeight.Bold, color = HadesOnDark)
                     }
                 }
             }
@@ -444,7 +439,7 @@ private fun ConfirmTransferSheet(
             Spacer(modifier = Modifier.height(24.dp))
 
             HadesButton(
-                text    = "[ CONFIRMAR ENVIO ]",
+                text    = stringResource(R.string.btn_confirm_transfer),
                 onClick = onConfirm
             )
 
@@ -455,7 +450,7 @@ private fun ConfirmTransferSheet(
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Text(
-                    text     = "Cancelar",
+                    text     = stringResource(R.string.btn_cancel),
                     color    = HadesOnDark.copy(alpha = 0.45f),
                     fontSize = 14.sp
                 )
