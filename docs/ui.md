@@ -1,3 +1,10 @@
+# Paquete: ui
+
+## Responsabilidad
+Contiene el sistema de diseño visual de la aplicación. Define la paleta de colores, la tipografía y el tema global que le dan la estética cyberpunk oscura a HadesCoin. Es consumido por todas las pantallas de la capa `presentation`.
+
+## Archivos
+
 ### Color.kt
 - **Qué es:** Archivo de definición cromática global de la interfaz de usuario.
 - **Qué hace:** Centraliza las constantes de color hexadecimales que componen la estética cyberpunk oscura del proyecto, configurando tonos clave como `HadesNavy`, `HadesOrange`, `HadesPurple` y destellos de `HadesCyan`.

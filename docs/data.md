@@ -1,24 +1,29 @@
 # Paquete: data
 
 ## Responsabilidad
-Este paquete conforma la capa de datos de la aplicación. Es responsable de implementar las interfaces definidas en el dominio, manejar las fuentes de datos (como Firebase Realtime Database o Firestore) y mapear los modelos de datos de la red a las entidades del dominio.
+Este paquete conforma la capa de datos de la aplicación. Es responsable de implementar las interfaces definidas en el dominio, manejar las fuentes de datos (Firebase Realtime Database) y mapear los modelos de datos de la red a las entidades del dominio.
 
 ## Archivos
 
-### FirebaseDataSource.kt
-- **Qué es:** La fuente de datos remota.
-- **Qué hace:** Ejecuta las consultas y operaciones directas contra Firebase (ej. leer saldo, registrar usuario).
-- **Interactúa con:** La base de datos de Firebase y el Repositorio.
+### FirebaseUserDataSource.kt
+- **Qué es:** La fuente de datos remota para usuarios.
+- **Qué hace:** Ejecuta las consultas y operaciones directas contra Firebase para registro, login y búsqueda de usuarios.
+- **Interactúa con:** La base de datos de Firebase y los repositorios.
 
-### UserRepositoryImpl.kt
-- **Qué es:** Implementación concreta del repositorio de usuarios.
-- **Qué hace:** Orquesta la obtención de datos de los usuarios, gestionando si la información viene del DataSource.
-- **Interactúa con:** `FirebaseDataSource.kt` y la interfaz `UserRepository` del dominio.
+### FirebaseTransactionDataSource.kt
+- **Qué es:** La fuente de datos remota para transacciones.
+- **Qué hace:** Ejecuta las consultas contra Firebase para registrar y consultar transferencias de dinero.
+- **Interactúa con:** La base de datos de Firebase y `WalletRepositoryImpl`.
 
-### TransactionDto.kt
-- **Qué es:** Data Transfer Object (Modelo de datos).
-- **Qué hace:** Representa la estructura exacta de la transacción tal cual viene de Firebase.
-- **Interactúa con:** Los mappers para convertirse en entidades de dominio.
+### FirebaseAuthRepositoryImpl.kt
+- **Qué es:** Implementación concreta del repositorio de autenticación.
+- **Qué hace:** Orquesta las operaciones de login y registro delegando a `FirebaseUserDataSource`.
+- **Interactúa con:** `FirebaseUserDataSource` y la interfaz `AuthRepository` del dominio.
 
-## Diagrama de dependencias (opcional)
-Firebase (BBDD) -> data (DataSource -> RepositoryImpl) -> domain
+### WalletRepositoryImpl.kt
+- **Qué es:** Implementación concreta del repositorio principal de la billetera.
+- **Qué hace:** Orquesta la obtención del saldo, historial de transacciones y transferencias de fondos.
+- **Interactúa con:** `FirebaseUserDataSource`, `FirebaseTransactionDataSource` y la interfaz `WalletRepository` del dominio.
+
+## Diagrama de dependencias
+Firebase (BBDD) → data (DataSource → RepositoryImpl) → domain

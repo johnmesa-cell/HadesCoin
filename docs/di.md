@@ -1,19 +1,14 @@
 # Paquete: di
 
 ## Responsabilidad
-Contiene los módulos de Inyección de Dependencias utilizando Hilt/Dagger. Su rol es proveer las instancias necesarias (repositorios, casos de uso, instancias de Firebase) para que la aplicación funcione sin instanciarlas manualmente.
+Contiene el mecanismo de Inyección de Dependencias manual del proyecto mediante un **ServiceLocator**. Su rol es proveer las instancias necesarias (repositorios, casos de uso, fuentes de datos de Firebase) de forma centralizada, sin necesidad de librerías externas como Hilt o Dagger.
 
 ## Archivos
 
-### AppModule.kt
-- **Qué es:** Módulo global de Hilt.
-- **Qué hace:** Provee las dependencias que tienen un ciclo de vida global (Singleton), como la instancia de Firebase Database o FirebaseAuth.
-- **Interactúa con:** Frameworks externos y repositorios.
+### ServiceLocator.kt
+- **Qué es:** Objeto singleton que actúa como contenedor de dependencias.
+- **Qué hace:** Instancia de forma lazy (perezosa) todas las dependencias de la aplicación: `FirebaseUserDataSource`, `FirebaseTransactionDataSource`, los repositorios y los casos de uso. Expone métodos `provide*` que son consumidos por los ViewModels.
+- **Interactúa con:** Todas las capas: `data` (DataSources y Repositorios), `domain` (Casos de uso) y `presentation` (ViewModels).
 
-### RepositoryModule.kt
-- **Qué es:** Módulo de binding.
-- **Qué hace:** Le indica a Hilt qué implementación concreta (`data`) debe inyectar cuando se solicite una interfaz del (`domain`). (ej. une `UserRepository` con `UserRepositoryImpl`).
-- **Interactúa con:** Capas `data` y `domain`.
-
-## Diagrama de dependencias (opcional)
-di -> Inyecta dependencias en data, domain, y presentation
+## Diagrama de dependencias
+ServiceLocator → Instancia y provee dependencias a presentation (ViewModels) desde data y domain

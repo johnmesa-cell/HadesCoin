@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="docs/ic_hadescoin_logo.png" width="120" alt="HadesCoin Logo"/>
+<img src="docs/ic_hadescoin_logo.png" style="width:120px" alt="HadesCoin Logo"/>
 
 # 🪙 HadesCoin
 
@@ -49,21 +49,23 @@ com.example.hadescoin/
 │   ├── repository/         # Interfaces de repositorios
 │   └── usecase/            # Casos de uso (Login, Register, Transfer, GetTransactions)
 ├── presentation/           # Capa de presentación
-│   └── viewmodel/          # ViewModels (AuthViewModel, HomeViewModel, TransferViewModel)
+│   ├── auth/               # LoginViewModel, RegisterViewModel
+│   ├── home/               # HomeViewModel
+│   └── transfer/           # TransferViewModel
 ├── ui/                     # Capa de UI
 │   ├── screens/            # Pantallas (LoginView, RegisterView, HomeView, TransferView)
 │   └── theme/              # Tema de la app (Color.kt, Type.kt, Theme.kt)
-├── di/                     # Inyección de dependencias (Hilt)
+├── di/                     # Inyección de dependencias (ServiceLocator)
 └── MainActivity.kt         # Entry point + Navegación
 ```
 
 ### Principios aplicados
 
 | Principio | Implementación |
-|---|---|
+|-----------|----------------|
 | Clean Architecture | Separación en capas `data / domain / presentation / ui` |
 | MVVM | `ViewModel` + `StateFlow` para manejo de estado |
-| Inyección de dependencias | Hilt |
+| Inyección de dependencias | ServiceLocator manual |
 | Repositorio | Interfaz en `domain`, implementación en `data` |
 | Casos de uso | Un caso de uso por acción de negocio |
 
@@ -72,11 +74,11 @@ com.example.hadescoin/
 ## 🛠️ Stack tecnológico
 
 | Tecnología | Versión | Uso |
-|---|---|---|
+|------------|---------|-----|
 | Kotlin | 2.0+ | Lenguaje principal |
 | Jetpack Compose | BOM 2024 | UI declarativa |
 | Firebase Realtime Database | Latest | Base de datos en tiempo real |
-| Hilt | 2.51+ | Inyección de dependencias |
+| ServiceLocator | — | Inyección de dependencias manual |
 | Navigation Compose | 2.7+ | Navegación entre pantallas |
 | Kotlin Coroutines | 1.8+ | Programación asíncrona |
 | StateFlow | — | Manejo de estado reactivo |
@@ -181,10 +183,22 @@ app/src/main/res/values/
 
 ---
 
+## 📚 Documentación técnica
+
+| Módulo | Descripción |
+|--------|-------------|
+| [data](docs/data.md) | Capa de datos y Firebase |
+| [domain](docs/domain.md) | Entidades y casos de uso |
+| [presentation](docs/presentation.md) | ViewModels y pantallas |
+| [di](docs/di.md) | Inyección de dependencias |
+| [ui](docs/ui.md) | Sistema de diseño y tema |
+
+---
+
 ## 📱 Pantallas
 
 | Pantalla | Descripción |
-|---|---|
+|----------|-------------|
 | **Login** | Inicio de sesión con teléfono y PIN |
 | **Register** | Registro de nuevo usuario |
 | **Home** | Dashboard principal con saldo, resumen y movimientos |
@@ -222,4 +236,3 @@ app/src/main/res/values/
 ## 📄 Licencia
 
 Este proyecto fue desarrollado con fines académicos.
-
