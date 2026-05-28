@@ -1,46 +1,46 @@
 # Paquete: domain
 
 ## Responsabilidad
-Es la capa central de la Clean Architecture y contiene el núcleo de la aplicación. Aquí residen las reglas de negocio, las entidades puras y las abstracciones (interfaces) de los repositorios. Es totalmente independiente de Android, Firebase o cualquier otro framework externo.
+Es la capa central (el núcleo) de la Clean Architecture. Aquí residen las reglas de negocio de la billetera, las entidades puras y las abstracciones (interfaces) de los repositorios. Este paquete es totalmente independiente de Android, de Firebase o de cualquier otro framework externo.
 
 ## Archivos
 
 ### AppUser.kt
-- **Qué es:** Entidad de negocio que representa a un usuario del sistema.
-- **Qué hace:** Define la estructura de datos pura de un usuario (ID, documento, teléfono, nombre, PIN, saldo y fecha).
+- **Qué es:** Entidad de negocio (modelo de datos puro).
+- **Qué hace:** Define la estructura fundamental de un usuario en el sistema (ID, documento, teléfono, nombre, PIN, saldo y fecha de creación).
 - **Interactúa con:** Las interfaces de los repositorios y los Casos de Uso.
 
 ### WalletTransaction.kt
-- **Qué es:** Entidad de negocio que representa un movimiento financiero.
-- **Qué hace:** Modela los datos fundamentales de una transferencia (emisor, receptor, monto, tipo y dirección).
-- **Interactúa con:** La interfaz `WalletRepository` y el Caso de Uso de obtención de datos.
+- **Qué es:** Entidad de negocio.
+- **Qué hace:** Modela los datos de una transferencia o movimiento financiero (emisor, receptor, monto, tipo y dirección).
+- **Interactúa con:** La interfaz `WalletRepository` y los Casos de Uso transaccionales.
 
 ### AuthRepository.kt
-- **Qué es:** Interfaz que define el contrato abstracto del repositorio de autenticación.
-- **Qué hace:** Establece los métodos obligatorios para iniciar sesión (`login`) y registrar un nuevo usuario (`register`).
-- **Interactúa con:** La entidad `AppUser` y es consumida por `LoginUseCase` y `RegisterUseCase`.
+- **Qué es:** Interfaz que define el contrato del repositorio de autenticación.
+- **Qué hace:** Establece los métodos obligatorios para iniciar sesión (`login`) y registrar usuarios (`register`), sin importar qué base de datos se use por debajo.
+- **Interactúa con:** La entidad `AppUser`. Es consumida por los Casos de Uso de autenticación e implementada en la capa `data`.
 
 ### WalletRepository.kt
 - **Qué es:** Interfaz que define el contrato del repositorio principal de la billetera.
-- **Qué hace:** Establece los métodos necesarios para obtener el resumen de la cuenta (`getWalletData`), buscar usuarios y realizar transferencias (`transferFunds`).
-- **Interactúa con:** Las entidades `AppUser` y `WalletTransaction`, y es consumida por `GetWalletDataUseCase` y `TransferUseCase`.
+- **Qué hace:** Establece los métodos necesarios para obtener el resumen de la cuenta (`getWalletData`), buscar usuarios por teléfono y realizar transferencias de dinero (`transferFunds`).
+- **Interactúa con:** `AppUser` y `WalletTransaction`. Es consumida por los Casos de Uso transaccionales e implementada en la capa `data`.
+
+### RegisterUseCase.kt
+- **Qué es:** Caso de uso responsable del registro de usuarios.
+- **Qué hace:** Recibe los datos de un usuario nuevo a través de la entidad `AppUser` y orquesta la operación de guardado en el sistema delegándola al repositorio.
+- **Interactúa con:** La entidad `AppUser` y la interfaz `AuthRepository`.
 
 ### GetWalletDataUseCase.kt
-- **Qué es:** Caso de uso encargado de obtener la información principal de la billetera.
-- **Qué hace:** Ejecuta la acción de recuperar los datos del usuario y su historial de transacciones a partir de su número de teléfono.
+- **Qué es:** Caso de uso específico de lectura de datos.
+- **Qué hace:** Ejecuta la acción de recuperar la información principal de la billetera del usuario y su historial de transacciones utilizando su número de teléfono.
 - **Interactúa con:** La interfaz `WalletRepository`.
 
 ### LoginUseCase.kt
-- **Qué es:** Caso de uso que gestiona el inicio de sesión.
-- **Qué hace:** Valida las credenciales del usuario (teléfono y PIN) delegando la acción al repositorio.
+- **Qué es:** Caso de uso para el inicio de sesión.
+- **Qué hace:** Valida las credenciales del usuario (teléfono y PIN) delegando la verificación al repositorio de autenticación.
 - **Interactúa con:** La interfaz `AuthRepository`.
 
-### RegisterUseCase.kt
-- **Qué es:** Caso de uso responsable del registro de nuevos usuarios.
-- **Qué hace:** Toma los datos de un usuario nuevo y ejecuta la operación de guardado en el sistema.
-- **Interactúa con:** La entidad `AppUser` y la interfaz `AuthRepository`.
-
 ### TransferUseCase.kt
-- **Qué es:** Caso de uso que maneja la lógica de las transferencias de dinero.
-- **Qué hace:** Orquesta el envío de fondos entre dos usuarios, validando el monto y el PIN de seguridad.
+- **Qué es:** Caso de uso que maneja las transferencias de fondos.
+- **Qué hace:** Ejecuta la lógica para enviar dinero entre usuarios, validando el monto a transferir y el PIN de seguridad.
 - **Interactúa con:** La interfaz `WalletRepository`.
