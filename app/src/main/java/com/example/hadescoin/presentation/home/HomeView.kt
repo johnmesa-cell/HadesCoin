@@ -261,13 +261,11 @@ fun HomeViewContent(
 
                 item {
                     Spacer(modifier = Modifier.height(12.dp))
-                    HadesSummaryRow(
-                        items = listOf(
-                            HadesSummaryItem(stringResource(R.string.label_incomes),  totalIngresos, HadesCyan,   "+ "),
-                            HadesSummaryItem(stringResource(R.string.label_expenses), totalEgresos,  HadesOrange, "- ")
-                        )
+                    HadesFinancialChart(
+                        ingresos = totalIngresos,
+                        egresos = totalEgresos
                     )
-                    Spacer(modifier = Modifier.height(16.dp))
+                    Spacer(modifier = Modifier.height(24.dp))
                 }
 
                 item {
