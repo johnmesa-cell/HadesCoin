@@ -56,7 +56,6 @@ fun RegisterView(
     var currentStep       by remember { mutableStateOf(RegisterStep.FORMULARIO) }
     var showPermRationale by remember { mutableStateOf(false) }
 
-    // Tipo explicito () -> Unit para evitar inferencia erronea de () -> Boolean
     val goToLogin: () -> Unit = { navController.popBackStack(); Unit }
 
     val cameraPermLauncher = rememberLauncherForActivityResult(
@@ -291,25 +290,8 @@ fun RegisterViewContent(
 
             Spacer(modifier = Modifier.height(20.dp))
 
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    text     = stringResource(R.string.text_has_account),
-                    fontSize = 13.sp,
-                    color    = HadesOnDark.copy(alpha = 0.5f)
-                )
-                TextButton(
-                    onClick        = onBackToLoginClick,
-                    contentPadding = PaddingValues(horizontal = 4.dp)
-                ) {
-                    Text(
-                        text          = stringResource(R.string.btn_login_link),
-                        fontSize      = 13.sp,
-                        fontWeight    = FontWeight.Bold,
-                        letterSpacing = 1.sp,
-                        color         = HadesOrange
-                    )
-                }
-            }
+            // Paso 1 — mismo Row estandar
+            LoginRow(onBackToLoginClick)
         }
     }
 }
@@ -384,19 +366,38 @@ fun RegisterConfirmacionView(
                 )
             }
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(8.dp))
 
             TextButton(onClick = onBack) {
                 Text(text = "\u2190 Volver a tomar fotos", color = HadesOrange, fontSize = 13.sp)
             }
 
-            TextButton(onClick = onBackToLogin) {
-                Text(
-                    text     = "Ya tengo cuenta. Iniciar sesi\u00f3n",
-                    color    = HadesOnDark.copy(alpha = 0.5f),
-                    fontSize = 12.sp
-                )
-            }
+            // Paso 4 — mismo Row estandar
+            LoginRow(onBackToLogin)
+        }
+    }
+}
+
+// ─── Componente reutilizable: enlace "Ya tienes cuenta" ──────────────────────
+@Composable
+fun LoginRow(onBackToLoginClick: () -> Unit) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Text(
+            text     = "¿Ya tienes cuenta? ",
+            fontSize = 13.sp,
+                color    = HadesOnDark.copy(alpha = 0.5f)
+        )
+        TextButton(
+            onClick        = onBackToLoginClick,
+            contentPadding = PaddingValues(horizontal = 4.dp)
+        ) {
+            Text(
+                text          = "Iniciar sesi\u00f3n",
+                fontSize      = 13.sp,
+                fontWeight    = FontWeight.Bold,
+                letterSpacing = 1.sp,
+                color         = HadesOrange
+            )
         }
     }
 }

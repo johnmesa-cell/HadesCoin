@@ -66,7 +66,6 @@ fun CameraCaptureView(
                 .padding(horizontal = 24.dp, vertical = 32.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // totalSteps = 4 estandarizado
             StepIndicator(currentStep = stepNumber, totalSteps = 4)
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -181,7 +180,7 @@ fun CameraCaptureView(
                     )
                     Spacer(modifier = Modifier.height(10.dp))
                     Text(
-                        text       = "$sideLabel capturada ✅",
+                        text       = "$sideLabel capturada",
                         color      = HadesCyan,
                         fontWeight = FontWeight.Bold,
                         fontSize   = 15.sp,
@@ -239,14 +238,29 @@ fun CameraCaptureView(
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            // Volver al paso anterior
             TextButton(onClick = onBack) {
                 Text(text = "← Volver al paso anterior", color = HadesOrange, fontSize = 13.sp)
             }
 
-            // Volver a inicio de sesion (disponible en cualquier punto)
-            TextButton(onClick = onBackToLogin) {
-                Text(text = "Ya tengo cuenta. Iniciar sesión", color = HadesOnDark.copy(alpha = 0.5f), fontSize = 12.sp)
+            // Mismo formato que paso 1: texto gris + enlace naranja en negrita
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text     = "¿Ya tienes cuenta? ",
+                    fontSize = 13.sp,
+                    color    = HadesOnDark.copy(alpha = 0.5f)
+                )
+                TextButton(
+                    onClick        = onBackToLogin,
+                    contentPadding = PaddingValues(horizontal = 4.dp)
+                ) {
+                    Text(
+                        text          = "Iniciar sesión",
+                        fontSize      = 13.sp,
+                        fontWeight    = FontWeight.Bold,
+                        letterSpacing = 1.sp,
+                        color         = HadesOrange
+                    )
+                }
             }
         }
     }
