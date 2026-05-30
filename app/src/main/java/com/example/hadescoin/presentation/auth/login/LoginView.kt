@@ -13,6 +13,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -29,12 +30,17 @@ import com.example.hadescoin.ui.theme.*
 
 @Composable
 fun LoginView(
-    navController: NavController,
-    viewModel: LoginViewModel = viewModel()
+    navController: NavController
 ) {
-    val haySession      by viewModel.haySessionGuardada.collectAsState()
-    val telefonoLocal   by viewModel.telefonoGuardado.collectAsState()
-    val nombreLocal     by viewModel.nombreGuardado.collectAsState()
+    val context = LocalContext.current
+    // Factory suministra todas las dependencias; Compose no necesita conocer nada mas
+    val viewModel: LoginViewModel = viewModel(
+        factory = LoginViewModel.factory(context.applicationContext as android.app.Application)
+    )
+
+    val haySession    by viewModel.haySessionGuardada.collectAsState()
+    val telefonoLocal by viewModel.telefonoGuardado.collectAsState()
+    val nombreLocal   by viewModel.nombreGuardado.collectAsState()
 
     var phoneNumber by remember { mutableStateOf("") }
     var pin         by remember { mutableStateOf("") }
@@ -45,31 +51,29 @@ fun LoginView(
     val pinRecuperado     by viewModel.pinRecuperado.observeAsState()
     val errorRecuperacion by viewModel.errorRecuperacion.observeAsState()
 
-    var mensajeError       by remember { mutableStateOf("") }
-    var showError          by remember { mutableStateOf(false) }
-    var showRecoverDialog  by remember { mutableStateOf(false) }
-    var showResetDialog    by remember { mutableStateOf(false) }
-    var recoveredPinMsg    by remember { mutableStateOf<String?>(null) }
-    var phoneForReset      by remember { mutableStateOf("") }
+    var mensajeError      by remember { mutableStateOf("") }
+    var showError         by remember { mutableStateOf(false) }
+    var showRecoverDialog by remember { mutableStateOf(false) }
+    var showResetDialog   by remember { mutableStateOf(false) }
+    var recoveredPinMsg   by remember { mutableStateOf<String?>(null) }
+    var phoneForReset     by remember { mutableStateOf("") }
 
-    // Cuando hay sesión guardada, precargamos el teléfono en el campo
+    // Precarga el telefono cuando hay sesion guardada
     LaunchedEffect(haySession, telefonoLocal) {
         if (haySession && telefonoLocal.isNotBlank()) phoneNumber = telefonoLocal
     }
 
     LaunchedEffect(loginExitoso) {
         loginExitoso?.let { phone ->
-            navController.navigate("home/$phone") {
-                popUpTo("login") { inclusive = true }
-            }
+            navController.navigate("home/$phone") { popUpTo("login") { inclusive = true } }
         }
     }
-    LaunchedEffect(loginError) { loginError?.let { mensajeError = it; showError = true } }
-    LaunchedEffect(pinRecuperado) { pinRecuperado?.let { recoveredPinMsg = "Tu PIN es: $it"; showRecoverDialog = false } }
+    LaunchedEffect(loginError)        { loginError?.let        { mensajeError = it; showError = true } }
+    LaunchedEffect(pinRecuperado)     { pinRecuperado?.let     { recoveredPinMsg = "Tu PIN es: $it"; showRecoverDialog = false } }
     LaunchedEffect(errorRecuperacion) { errorRecuperacion?.let { mensajeError = it; showError = true } }
 
+    // Seleccion de modo segun estado DataStore
     if (haySession && telefonoLocal.isNotBlank()) {
-        // Modo inteligente — sesión guardada
         LoginInteligenteContent(
             nombre             = nombreLocal,
             telefonoPrecargado = telefonoLocal,
@@ -81,18 +85,17 @@ fun LoginView(
             onForgotPin        = { showRecoverDialog = true }
         )
     } else {
-        // Modo normal — sin sesión guardada
         LoginContent(
-            phoneNumber   = phoneNumber,
-            pin           = pin,
-            cargando      = cargando,
-            loginError    = loginError,
-            onPhoneChange = { value ->
+            phoneNumber          = phoneNumber,
+            pin                  = pin,
+            cargando             = cargando,
+            loginError           = loginError,
+            onPhoneChange        = { value ->
                 if (value.length <= 10 && value.all { c -> c.isDigit() } && (value.isEmpty() || value[0] == '3')) {
                     phoneNumber = value; viewModel.clearError()
                 }
             },
-            onPinChange   = { value ->
+            onPinChange          = { value ->
                 if (value.length <= 4 && value.all { c -> c.isDigit() }) { pin = value; viewModel.clearError() }
             },
             onLoginClick         = { viewModel.login(phoneNumber, pin) },
@@ -101,6 +104,7 @@ fun LoginView(
         )
     }
 
+    // --- Dialogs -----------------------------------------------------------------
     if (cargando) ShowLoadingAlertDialog()
 
     if (showError) {
@@ -151,7 +155,7 @@ fun LoginView(
     }
 }
 
-// ─── Pantalla inteligente (sesión guardada) ────────────────────────────────
+// ─── Pantalla inteligente (sesion guardada) ──────────────────────────────────
 @Composable
 fun LoginInteligenteContent(
     nombre: String,
@@ -165,26 +169,21 @@ fun LoginInteligenteContent(
 ) {
     HadesBackground {
         Column(
-            modifier            = Modifier
-                .fillMaxSize()
-                .padding(horizontal = 28.dp),
-            verticalArrangement   = Arrangement.Center,
-            horizontalAlignment   = Alignment.CenterHorizontally
+            modifier            = Modifier.fillMaxSize().padding(horizontal = 28.dp),
+            verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Image(
                 painter            = painterResource(id = R.drawable.ic_hadescoin_logo),
                 contentDescription = stringResource(R.string.cd_logo),
                 modifier           = Modifier.size(100.dp)
             )
-
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Avatar + saludo
             Box(
                 modifier = Modifier
                     .size(64.dp)
-                    .background(HadesPurple.copy(alpha = 0.15f), RoundedCornerShape(50))
-                    .then(Modifier.background(Color.Transparent)),
+                    .background(HadesPurple.copy(alpha = 0.15f), RoundedCornerShape(50)),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
@@ -194,13 +193,11 @@ fun LoginInteligenteContent(
                     modifier           = Modifier.size(38.dp)
                 )
             }
-
             Spacer(modifier = Modifier.height(8.dp))
-
             Text(
-                text       = "¡Bienvenido de nuevo!",
-                fontSize   = 13.sp,
-                color      = HadesCyan.copy(alpha = 0.7f),
+                text          = "¡Bienvenido de nuevo!",
+                fontSize      = 13.sp,
+                color         = HadesCyan.copy(alpha = 0.7f),
                 letterSpacing = 1.sp
             )
             Text(
@@ -210,23 +207,19 @@ fun LoginInteligenteContent(
                 color      = HadesPurple,
                 textAlign  = TextAlign.Center
             )
-
             Spacer(modifier = Modifier.height(4.dp))
-
-            // Teléfono precargado (solo lectura)
             Box(
                 modifier = Modifier
                     .background(HadesNavyDark, RoundedCornerShape(8.dp))
                     .padding(horizontal = 16.dp, vertical = 8.dp)
             ) {
                 Text(
-                    text      = telefonoPrecargado,
-                    fontSize  = 15.sp,
-                    color     = HadesOnDark.copy(alpha = 0.6f),
+                    text       = telefonoPrecargado,
+                    fontSize   = 15.sp,
+                    color      = HadesOnDark.copy(alpha = 0.6f),
                     fontWeight = FontWeight.Medium
                 )
             }
-
             Spacer(modifier = Modifier.height(24.dp))
 
             HadesCardBox {
@@ -237,7 +230,6 @@ fun LoginInteligenteContent(
                     letterSpacing = 2.sp,
                     color         = HadesCyan
                 )
-
                 HadesTextField(
                     value         = pin,
                     onValueChange = onPinChange,
@@ -245,9 +237,7 @@ fun LoginInteligenteContent(
                     isPassword    = true,
                     keyboardType  = KeyboardType.NumberPassword
                 )
-
                 Spacer(modifier = Modifier.height(4.dp))
-
                 HadesButton(
                     text         = stringResource(R.string.btn_login),
                     textCargando = stringResource(R.string.btn_login_loading),
@@ -255,23 +245,16 @@ fun LoginInteligenteContent(
                     enabled      = pin.length == 4,
                     cargando     = cargando
                 )
-
                 TextButton(
                     onClick  = onForgotPin,
                     modifier = Modifier.align(Alignment.End)
                 ) {
-                    Text(
-                        text      = "¿Olvidaste tu PIN?",
-                        color     = HadesCyan,
-                        fontSize  = 12.sp,
-                        fontWeight = FontWeight.Medium
-                    )
+                    Text("¿Olvidaste tu PIN?", color = HadesCyan, fontSize = 12.sp, fontWeight = FontWeight.Medium)
                 }
             }
 
             Spacer(modifier = Modifier.height(20.dp))
 
-            // Botón secundario — otro usuario
             OutlinedButton(
                 onClick  = onOtroUsuario,
                 colors   = ButtonDefaults.outlinedButtonColors(contentColor = HadesOnDark.copy(alpha = 0.6f)),
@@ -279,16 +262,13 @@ fun LoginInteligenteContent(
                 shape    = RoundedCornerShape(10.dp),
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Text(
-                    text     = "Iniciar sesión como otro usuario",
-                    fontSize = 13.sp
-                )
+                Text("Iniciar sesión como otro usuario", fontSize = 13.sp)
             }
         }
     }
 }
 
-// ─── Pantalla normal (sin sesión guardada) ─────────────────────────────────
+// ─── Pantalla normal (sin sesion guardada) ───────────────────────────────────
 @Composable
 fun LoginContent(
     phoneNumber: String,
@@ -324,8 +304,7 @@ fun LoginContent(
             Spacer(modifier = Modifier.height(6.dp))
             Box(
                 modifier = Modifier
-                    .width(180.dp)
-                    .height(2.dp)
+                    .width(180.dp).height(2.dp)
                     .background(Brush.horizontalGradient(listOf(Color.Transparent, HadesCyan, HadesOrange, Color.Transparent)))
             )
             Spacer(modifier = Modifier.height(6.dp))
@@ -403,7 +382,7 @@ fun LoginContent(
     }
 }
 
-// ─── Diálogos de recuperación ────────────────────────────────────────────────
+// ─── Dialogos de recuperacion de PIN ───────────────────────────────────────
 @Composable
 fun ResetPinDialog(onDismiss: () -> Unit, onReset: (String) -> Unit) {
     var nuevoPin     by remember { mutableStateOf("") }
@@ -415,11 +394,13 @@ fun ResetPinDialog(onDismiss: () -> Unit, onReset: (String) -> Unit) {
         text  = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 HadesTextField(
-                    value = nuevoPin, onValueChange = { if (it.length <= 4 && it.all { c -> c.isDigit() }) nuevoPin = it },
+                    value = nuevoPin,
+                    onValueChange = { if (it.length <= 4 && it.all { c -> c.isDigit() }) nuevoPin = it },
                     label = "Ingresa tu nuevo PIN", isPassword = true, keyboardType = KeyboardType.NumberPassword
                 )
                 HadesTextField(
-                    value = confirmacion, onValueChange = { if (it.length <= 4 && it.all { c -> c.isDigit() }) confirmacion = it },
+                    value = confirmacion,
+                    onValueChange = { if (it.length <= 4 && it.all { c -> c.isDigit() }) confirmacion = it },
                     label = "Confirma tu nuevo PIN", isPassword = true, keyboardType = KeyboardType.NumberPassword
                 )
             }
@@ -445,11 +426,13 @@ fun RecoverPinDialog(onDismiss: () -> Unit, onRecover: (String, String) -> Unit)
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text("Ingresa tus datos para recuperar el PIN", color = HadesOnDark, fontSize = 14.sp)
                 HadesTextField(
-                    value = phone, onValueChange = { if (it.length <= 10 && it.all { c -> c.isDigit() }) phone = it },
+                    value = phone,
+                    onValueChange = { if (it.length <= 10 && it.all { c -> c.isDigit() }) phone = it },
                     label = "Teléfono", keyboardType = KeyboardType.Number
                 )
                 HadesTextField(
-                    value = doc, onValueChange = { if (it.all { c -> c.isDigit() }) doc = it },
+                    value = doc,
+                    onValueChange = { if (it.all { c -> c.isDigit() }) doc = it },
                     label = "Número de Documento", keyboardType = KeyboardType.Number
                 )
             }
@@ -459,7 +442,7 @@ fun RecoverPinDialog(onDismiss: () -> Unit, onRecover: (String, String) -> Unit)
     )
 }
 
-// ─── Previews ──────────────────────────────────────────────────────────────────
+// ─── Previews ───────────────────────────────────────────────────────────────────
 @Preview(showBackground = true, showSystemUi = true, name = "Login — normal")
 @Composable
 fun LoginViewPreview() {
