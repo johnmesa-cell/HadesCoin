@@ -83,6 +83,9 @@ fun HomeView(
         onTransfer     = {
             menuExpanded = false
             navController.navigate("transfer/$phoneNumber")
+        },
+        onProfile      = {
+            navController.navigate("profile/$phoneNumber")
         }
     )
 
@@ -107,7 +110,8 @@ fun HomeViewContent(
     onMenuCollapse: () -> Unit = {},
     onRefresh: () -> Unit = {},
     onLogout: () -> Unit = {},
-    onTransfer: () -> Unit = {}
+    onTransfer: () -> Unit = {},
+    onProfile: () -> Unit = {}
 ) {
     var showUserPanel by remember { mutableStateOf(false) }
     var saldoVisible  by remember { mutableStateOf(true) }
@@ -278,7 +282,11 @@ fun HomeViewContent(
             UserPanelSheet(
                 appUser   = appUser,
                 onDismiss = { showUserPanel = false },
-                onLogout  = onLogout
+                onLogout  = onLogout,
+                onProfile = {
+                    showUserPanel = false
+                    onProfile()
+                }
             )
         }
     }
@@ -291,9 +299,9 @@ private fun HomeHeader(
     onAvatarClick: () -> Unit
 ) {
     Row(
-        modifier          = Modifier.fillMaxWidth(),
+        modifier              = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
+        verticalAlignment     = Alignment.CenterVertically
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Box(
@@ -407,7 +415,7 @@ private fun TransactionRow(tx: WalletTransaction) {
             }
             Spacer(modifier = Modifier.width(12.dp))
             Column {
-                Text(text = typeLabel,                fontSize = 14.sp, fontWeight = FontWeight.Bold,  color = HadesOnDark)
+                Text(text = typeLabel,                    fontSize = 14.sp, fontWeight = FontWeight.Bold,  color = HadesOnDark)
                 Text(text = formatTimestamp(tx.timestamp), fontSize = 11.sp, color = HadesOnDark.copy(alpha = 0.45f))
             }
         }
@@ -422,23 +430,38 @@ private fun TransactionRow(tx: WalletTransaction) {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun UserPanelSheet(appUser: AppUser?, onDismiss: () -> Unit, onLogout: () -> Unit) {
+fun UserPanelSheet(
+    appUser: AppUser?,
+    onDismiss: () -> Unit,
+    onLogout: () -> Unit,
+    onProfile: () -> Unit = {}
+) {
     ModalBottomSheet(onDismissRequest = onDismiss, containerColor = HadesNavyDark) {
         Column(
-            modifier            = Modifier.fillMaxWidth().padding(horizontal = 24.dp).padding(bottom = 32.dp),
+            modifier            = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 24.dp)
+                .padding(bottom = 32.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Box(
-                modifier         = Modifier.size(72.dp).clip(CircleShape)
+                modifier         = Modifier
+                    .size(72.dp)
+                    .clip(CircleShape)
                     .background(Brush.radialGradient(colors = listOf(HadesPurple, HadesNavyDark))),
                 contentAlignment = Alignment.Center
             ) {
-                Text(text = getInitials(appUser?.fullName), fontSize = 26.sp, fontWeight = FontWeight.Black, color = HadesOnDark)
+                Text(
+                    text       = getInitials(appUser?.fullName),
+                    fontSize   = 26.sp,
+                    fontWeight = FontWeight.Black,
+                    color      = HadesOnDark
+                )
             }
             Spacer(modifier = Modifier.height(12.dp))
-            Text(text = appUser?.fullName   ?: "...", fontSize = 20.sp, fontWeight = FontWeight.Bold,  color = HadesOnDark)
+            Text(text = appUser?.fullName    ?: "...", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = HadesOnDark)
             Spacer(modifier = Modifier.height(4.dp))
-            Text(text = appUser?.phoneNumber ?: "—",  fontSize = 14.sp, color = HadesOnDark.copy(alpha = 0.6f))
+            Text(text = appUser?.phoneNumber ?: "—",   fontSize = 14.sp, color = HadesOnDark.copy(alpha = 0.6f))
             Spacer(modifier = Modifier.height(24.dp))
             Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(HadesOnDark.copy(alpha = 0.1f)))
             Spacer(modifier = Modifier.height(20.dp))
@@ -446,13 +469,42 @@ fun UserPanelSheet(appUser: AppUser?, onDismiss: () -> Unit, onLogout: () -> Uni
             Spacer(modifier = Modifier.height(12.dp))
             UserInfoRow(label = stringResource(R.string.label_member_since), value = appUser?.createdAt?.take(10) ?: "—")
             Spacer(modifier = Modifier.height(28.dp))
+
+            // Boton Ver perfil completo
+            Button(
+                onClick  = onProfile,
+                modifier = Modifier.fillMaxWidth(),
+                colors   = ButtonDefaults.buttonColors(
+                    containerColor = HadesPurple.copy(alpha = 0.15f),
+                    contentColor   = HadesPurple
+                ),
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Icon(
+                    imageVector        = Icons.Filled.Person,
+                    contentDescription = null,
+                    modifier           = Modifier.size(18.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(text = "Ver perfil completo", fontWeight = FontWeight.Bold)
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
             Button(
                 onClick  = { onDismiss(); onLogout() },
                 modifier = Modifier.fillMaxWidth(),
-                colors   = ButtonDefaults.buttonColors(containerColor = HadesOrange.copy(alpha = 0.15f), contentColor = HadesOrange),
-                shape    = RoundedCornerShape(12.dp)
+                colors   = ButtonDefaults.buttonColors(
+                    containerColor = HadesOrange.copy(alpha = 0.15f),
+                    contentColor   = HadesOrange
+                ),
+                shape = RoundedCornerShape(12.dp)
             ) {
-                Icon(imageVector = Icons.AutoMirrored.Filled.ExitToApp, contentDescription = null, modifier = Modifier.size(18.dp))
+                Icon(
+                    imageVector        = Icons.AutoMirrored.Filled.ExitToApp,
+                    contentDescription = null,
+                    modifier           = Modifier.size(18.dp)
+                )
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(text = stringResource(R.string.btn_logout), fontWeight = FontWeight.Bold)
             }
