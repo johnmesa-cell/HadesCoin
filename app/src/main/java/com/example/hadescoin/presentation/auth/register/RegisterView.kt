@@ -8,6 +8,9 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CameraAlt
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.livedata.observeAsState
@@ -30,7 +33,7 @@ import com.example.hadescoin.presentation.components.*
 import com.example.hadescoin.ui.theme.*
 
 private enum class RegisterStep {
-    FORMULARIO, CAMARA_FRONTAL, CAMARA_TRASERA
+    FORMULARIO, CAMARA_FRONTAL, CAMARA_TRASERA, CONFIRMACION
 }
 
 @Composable
@@ -44,10 +47,9 @@ fun RegisterView(
     var pin            by remember { mutableStateOf("") }
     var confirmPin     by remember { mutableStateOf("") }
 
-    val cargando          by viewModel.cargando.observeAsState(false)
-    val registroExitoso   by viewModel.registroExitoso.observeAsState()
-    val registroError     by viewModel.registroError.observeAsState()
-    val documentoCaptured by viewModel.documentoCaptured.observeAsState(false)
+    val cargando        by viewModel.cargando.observeAsState(false)
+    val registroExitoso by viewModel.registroExitoso.observeAsState()
+    val registroError   by viewModel.registroError.observeAsState()
 
     var mensajeError      by remember { mutableStateOf("") }
     var showError         by remember { mutableStateOf(false) }
@@ -82,9 +84,22 @@ fun RegisterView(
                 side       = CedulaSide.TRASERA,
                 onCaptured = {
                     viewModel.onDocumentCaptured()
-                    currentStep = RegisterStep.FORMULARIO
+                    currentStep = RegisterStep.CONFIRMACION
                 },
                 onBack = { currentStep = RegisterStep.CAMARA_FRONTAL }
+            )
+            return
+        }
+        RegisterStep.CONFIRMACION -> {
+            RegisterConfirmacionView(
+                fullName       = fullName,
+                documentNumber = documentNumber,
+                phoneNumber    = phoneNumber,
+                cargando       = cargando,
+                onCreateAccount = {
+                    viewModel.register(fullName, documentNumber, phoneNumber, pin, confirmPin)
+                },
+                onBack = { currentStep = RegisterStep.CAMARA_TRASERA }
             )
             return
         }
@@ -98,14 +113,12 @@ fun RegisterView(
         pin                    = pin,
         confirmPin             = confirmPin,
         cargando               = cargando,
-        documentoCaptured      = documentoCaptured,
         onFullNameChange       = { if (it.all { c -> c.isLetter() || c.isWhitespace() }) { fullName = it; viewModel.clearError() } },
         onDocumentNumberChange = { if (it.length <= 10 && it.all { c -> c.isDigit() }) { documentNumber = it; viewModel.clearError() } },
         onPhoneChange          = { if (it.length <= 10 && it.all { c -> c.isDigit() } && (it.isEmpty() || it[0] == '3')) { phoneNumber = it; viewModel.clearError() } },
         onPinChange            = { if (it.length <= 4 && it.all { c -> c.isDigit() }) { pin = it; viewModel.clearError() } },
         onConfirmPinChange     = { if (it.length <= 4 && it.all { c -> c.isDigit() }) { confirmPin = it; viewModel.clearError() } },
-        onScanDocumentClick    = { cameraPermLauncher.launch(Manifest.permission.CAMERA) },
-        onRegisterClick        = { viewModel.register(fullName, documentNumber, phoneNumber, pin, confirmPin) },
+        onContinueClick        = { cameraPermLauncher.launch(Manifest.permission.CAMERA) },
         onBackToLoginClick     = { navController.popBackStack() }
     )
 
@@ -123,11 +136,12 @@ fun RegisterView(
         ShowMessageAlertDialog(
             onConfirmation = { showPermRationale = false },
             dialogTitle    = "Permiso requerido",
-            dialogText     = "La cámara es necesaria para verificar tu identidad. Actívala desde los ajustes del dispositivo."
+            dialogText     = "La c\u00e1mara es necesaria para verificar tu identidad. Act\u00edvala desde los ajustes del dispositivo."
         )
     }
 }
 
+// ─── Paso 1: Formulario ───────────────────────────────────────────────────────
 @Composable
 fun RegisterViewContent(
     fullName: String,
@@ -136,16 +150,18 @@ fun RegisterViewContent(
     pin: String,
     confirmPin: String,
     cargando: Boolean,
-    documentoCaptured: Boolean = false,
     onFullNameChange: (String) -> Unit,
     onDocumentNumberChange: (String) -> Unit,
     onPhoneChange: (String) -> Unit,
     onPinChange: (String) -> Unit,
     onConfirmPinChange: (String) -> Unit,
-    onScanDocumentClick: () -> Unit = {},
-    onRegisterClick: () -> Unit,
+    onContinueClick: () -> Unit,
     onBackToLoginClick: () -> Unit
 ) {
+    val formValid = fullName.isNotBlank() && documentNumber.length in 5..10 &&
+        phoneNumber.length == 10 && pin.length == 4 &&
+        confirmPin.length == 4 && pin == confirmPin
+
     HadesBackground {
         Column(
             modifier = Modifier
@@ -159,9 +175,7 @@ fun RegisterViewContent(
                 contentDescription = stringResource(R.string.cd_logo),
                 modifier           = Modifier.size(110.dp)
             )
-
             Spacer(modifier = Modifier.height(12.dp))
-
             Text(
                 text          = stringResource(R.string.login_title),
                 fontSize      = 34.sp,
@@ -170,7 +184,6 @@ fun RegisterViewContent(
                 color         = HadesPurple,
                 textAlign     = TextAlign.Center
             )
-
             Spacer(modifier = Modifier.height(6.dp))
             Box(
                 modifier = Modifier
@@ -183,7 +196,6 @@ fun RegisterViewContent(
                     )
             )
             Spacer(modifier = Modifier.height(6.dp))
-
             Text(
                 text          = stringResource(R.string.register_subtitle),
                 fontSize      = 11.sp,
@@ -192,11 +204,9 @@ fun RegisterViewContent(
                 color         = HadesCyan.copy(alpha = 0.7f),
                 textAlign     = TextAlign.Center
             )
-
             Spacer(modifier = Modifier.height(16.dp))
 
-            // --- Indicador de pasos en el formulario (Paso 1 de 3) ---
-            StepIndicator(currentStep = 1, totalSteps = 3)
+            StepIndicator(currentStep = 1, totalSteps = 4)
 
             Spacer(modifier = Modifier.height(20.dp))
 
@@ -208,27 +218,23 @@ fun RegisterViewContent(
                     letterSpacing = 2.sp,
                     color         = HadesCyan
                 )
-
                 HadesTextField(
                     value         = fullName,
                     onValueChange = onFullNameChange,
                     label         = stringResource(R.string.label_full_name)
                 )
-
                 HadesTextField(
                     value         = documentNumber,
                     onValueChange = onDocumentNumberChange,
                     label         = stringResource(R.string.label_document_number),
                     keyboardType  = KeyboardType.Number
                 )
-
                 HadesTextField(
                     value         = phoneNumber,
                     onValueChange = onPhoneChange,
                     label         = stringResource(R.string.label_phone_number_register),
                     keyboardType  = KeyboardType.Phone
                 )
-
                 HadesTextField(
                     value         = pin,
                     onValueChange = onPinChange,
@@ -236,14 +242,13 @@ fun RegisterViewContent(
                     isPassword    = true,
                     keyboardType  = KeyboardType.NumberPassword
                 )
-
                 HadesTextField(
-                    value         = confirmPin,
-                    onValueChange = onConfirmPinChange,
-                    label         = stringResource(R.string.label_confirm_pin),
-                    isPassword    = true,
-                    keyboardType  = KeyboardType.NumberPassword,
-                    isError       = confirmPin.isNotEmpty() && pin != confirmPin,
+                    value          = confirmPin,
+                    onValueChange  = onConfirmPinChange,
+                    label          = stringResource(R.string.label_confirm_pin),
+                    isPassword     = true,
+                    keyboardType   = KeyboardType.NumberPassword,
+                    isError        = confirmPin.isNotEmpty() && pin != confirmPin,
                     supportingText = {
                         if (confirmPin.isNotEmpty() && pin != confirmPin) {
                             Text(
@@ -255,36 +260,32 @@ fun RegisterViewContent(
                     }
                 )
 
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(12.dp))
 
-                // --- Botón escaneo de cédula ---
-                OutlinedButton(
-                    onClick  = onScanDocumentClick,
-                    modifier = Modifier.fillMaxWidth(),
-                    colors   = ButtonDefaults.outlinedButtonColors(
-                        contentColor = if (documentoCaptured) HadesCyan else HadesOrange
+                // Boton continuar a camara — reemplaza al anterior de registrarse
+                Button(
+                    onClick  = onContinueClick,
+                    enabled  = formValid,
+                    colors   = ButtonDefaults.buttonColors(
+                        containerColor = HadesOrange,
+                        contentColor   = HadesBlack
                     ),
-                    border   = androidx.compose.foundation.BorderStroke(
-                        1.dp,
-                        if (documentoCaptured) HadesCyan else HadesOrange
-                    )
+                    shape    = androidx.compose.foundation.shape.RoundedCornerShape(10.dp),
+                    modifier = Modifier.fillMaxWidth().height(52.dp)
                 ) {
+                    Icon(
+                        imageVector        = Icons.Filled.CameraAlt,
+                        contentDescription = null,
+                        modifier           = Modifier.size(20.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text       = if (documentoCaptured) "✅ Cédula verificada (ambos lados)" else "📷 Escanear cédula (2 pasos)",
-                        fontWeight = FontWeight.SemiBold,
-                        fontSize   = 13.sp
+                        text          = "VERIFICAR C\u00c9DULA",
+                        fontWeight    = FontWeight.Bold,
+                        fontSize      = 14.sp,
+                        letterSpacing = 1.sp
                     )
                 }
-
-                Spacer(modifier = Modifier.height(4.dp))
-
-                HadesButton(
-                    text         = stringResource(R.string.btn_register),
-                    textCargando = stringResource(R.string.btn_register_loading),
-                    onClick      = onRegisterClick,
-                    enabled      = pin.length == 4 && confirmPin.length == 4 && pin == confirmPin && documentoCaptured,
-                    cargando     = cargando
-                )
             }
 
             Spacer(modifier = Modifier.height(20.dp))
@@ -312,29 +313,135 @@ fun RegisterViewContent(
     }
 }
 
-@Preview(showBackground = true, showSystemUi = true, name = "Register — vacío")
+// ─── Paso 4: Confirmacion y crear cuenta ─────────────────────────────────────
+@Composable
+fun RegisterConfirmacionView(
+    fullName: String,
+    documentNumber: String,
+    phoneNumber: String,
+    cargando: Boolean,
+    onCreateAccount: () -> Unit,
+    onBack: () -> Unit
+) {
+    HadesBackground {
+        Column(
+            modifier            = Modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 28.dp, vertical = 40.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            StepIndicator(currentStep = 4, totalSteps = 4)
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            Icon(
+                imageVector        = Icons.Filled.CheckCircle,
+                contentDescription = null,
+                tint               = HadesCyan,
+                modifier           = Modifier.size(72.dp)
+            )
+            Spacer(modifier = Modifier.height(12.dp))
+            Text(
+                text       = "\u00a1Verificaci\u00f3n completa!",
+                fontSize   = 22.sp,
+                fontWeight = FontWeight.Black,
+                color      = HadesCyan,
+                textAlign  = TextAlign.Center
+            )
+            Text(
+                text      = "Ambos lados de tu c\u00e9dula fueron capturados correctamente.",
+                fontSize  = 13.sp,
+                color     = HadesOnDark.copy(alpha = 0.7f),
+                textAlign = TextAlign.Center,
+                modifier  = Modifier.padding(top = 6.dp, bottom = 24.dp)
+            )
+
+            HadesCardBox {
+                Text(
+                    text          = "RESUMEN DE REGISTRO",
+                    fontSize      = 11.sp,
+                    fontWeight    = FontWeight.Bold,
+                    letterSpacing = 2.sp,
+                    color         = HadesCyan
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                ResumenFila(label = "Nombre",    valor = fullName)
+                ResumenFila(label = "Documento", valor = documentNumber)
+                ResumenFila(label = "Tel\u00e9fono",  valor = phoneNumber)
+                ResumenFila(label = "C\u00e9dula",    valor = "\u2705 Verificada (frontal + trasera)")
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                HadesButton(
+                    text         = "CREAR CUENTA",
+                    textCargando = "Creando cuenta...",
+                    onClick      = onCreateAccount,
+                    enabled      = !cargando,
+                    cargando     = cargando
+                )
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            TextButton(onClick = onBack) {
+                Text(
+                    text     = "\u2190 Volver a tomar fotos",
+                    color    = HadesOrange,
+                    fontSize = 13.sp
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun ResumenFila(label: String, valor: String) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 4.dp),
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Text(
+            text       = label,
+            fontSize   = 12.sp,
+            color      = HadesOnDark.copy(alpha = 0.5f),
+            fontWeight = FontWeight.Medium
+        )
+        Text(
+            text       = valor,
+            fontSize   = 12.sp,
+            color      = HadesOnDark,
+            fontWeight = FontWeight.SemiBold
+        )
+    }
+}
+
+@Preview(showBackground = true, showSystemUi = true, name = "Register \u2014 Formulario")
 @Composable
 fun RegisterViewPreview() {
     HadesCoinTheme {
         RegisterViewContent(
             fullName = "", documentNumber = "", phoneNumber = "", pin = "", confirmPin = "",
-            cargando = false, documentoCaptured = false,
+            cargando = false,
             onFullNameChange = {}, onDocumentNumberChange = {}, onPhoneChange = {},
-            onPinChange = {}, onConfirmPinChange = {}, onRegisterClick = {}, onBackToLoginClick = {}
+            onPinChange = {}, onConfirmPinChange = {}, onContinueClick = {}, onBackToLoginClick = {}
         )
     }
 }
 
-@Preview(showBackground = true, showSystemUi = true, name = "Register — cédula verificada")
+@Preview(showBackground = true, showSystemUi = true, name = "Register \u2014 Confirmaci\u00f3n")
 @Composable
-fun RegisterViewCapturedPreview() {
+fun RegisterConfirmPreview() {
     HadesCoinTheme {
-        RegisterViewContent(
-            fullName = "Juan Pérez", documentNumber = "1010101010",
-            phoneNumber = "3001234567", pin = "1234", confirmPin = "1234",
-            cargando = false, documentoCaptured = true,
-            onFullNameChange = {}, onDocumentNumberChange = {}, onPhoneChange = {},
-            onPinChange = {}, onConfirmPinChange = {}, onRegisterClick = {}, onBackToLoginClick = {}
+        RegisterConfirmacionView(
+            fullName       = "Juan P\u00e9rez",
+            documentNumber = "1010101010",
+            phoneNumber    = "3001234567",
+            cargando       = false,
+            onCreateAccount = {},
+            onBack          = {}
         )
     }
 }
