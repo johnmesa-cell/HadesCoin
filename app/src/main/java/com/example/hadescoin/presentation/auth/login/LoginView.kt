@@ -6,7 +6,6 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -74,7 +73,7 @@ fun LoginView(
     LaunchedEffect(errorRecuperacion) { errorRecuperacion?.let { mensajeError = it; showError = true } }
 
     AnimatedContent(
-        targetState   = haySession && telefonoLocal.isNotBlank(),
+        targetState    = haySession && telefonoLocal.isNotBlank(),
         transitionSpec = {
             (fadeIn(tween(400)) + slideInVertically(tween(400)) { it / 4 })
                 .togetherWith(fadeOut(tween(200)))
@@ -94,20 +93,20 @@ fun LoginView(
             )
         } else {
             LoginContent(
-                phoneNumber          = phoneNumber,
-                pin                  = pin,
-                cargando             = cargando,
-                loginError           = loginError,
-                onPhoneChange        = { value ->
+                phoneNumber           = phoneNumber,
+                pin                   = pin,
+                cargando              = cargando,
+                loginError            = loginError,
+                onPhoneChange         = { value ->
                     if (value.length <= 10 && value.all { c -> c.isDigit() } && (value.isEmpty() || value[0] == '3')) {
                         phoneNumber = value; viewModel.clearError()
                     }
                 },
-                onPinChange          = { value ->
+                onPinChange           = { value ->
                     if (value.length <= 4 && value.all { c -> c.isDigit() }) { pin = value; viewModel.clearError() }
                 },
-                onLoginClick         = { viewModel.login(phoneNumber, pin) },
-                onRegisterClick      = { navController.navigate("register") },
+                onLoginClick          = { viewModel.login(phoneNumber, pin) },
+                onRegisterClick       = { navController.navigate("register") },
                 onForgotPasswordClick = { showRecoverDialog = true }
             )
         }
@@ -166,7 +165,7 @@ fun LoginView(
     }
 }
 
-// ─── Pantalla inteligente (sesion guardada) ───────────────────────────────────
+// ─── Pantalla inteligente ─────────────────────────────────────────────────────────────────
 @Composable
 fun LoginInteligenteContent(
     nombre: String,
@@ -178,7 +177,6 @@ fun LoginInteligenteContent(
     onOtroUsuario: () -> Unit,
     onForgotPin: () -> Unit
 ) {
-    // Animaciones escalonadas de entrada
     var visible by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) { visible = true }
 
@@ -190,8 +188,6 @@ fun LoginInteligenteContent(
             verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-
-            // ─ Logo ────────────────────────────────────────────────────────────────
             AnimatedVisibility(
                 visible = visible,
                 enter   = fadeIn(tween(300)) + slideInVertically(tween(300)) { -30 }
@@ -204,10 +200,9 @@ fun LoginInteligenteContent(
             }
             Spacer(Modifier.height(20.dp))
 
-            // ─ Avatar con borde degradado ────────────────────────────────────────
             AnimatedVisibility(
                 visible = visible,
-                enter   = fadeIn(tween(400, delayMillis = 100)) + scaleIn(tween(400, delayMillis = 100))
+                enter   = fadeIn(tween(400, 100)) + scaleIn(tween(400, 100))
             ) {
                 GradientAvatarBorder {
                     Icon(
@@ -220,10 +215,9 @@ fun LoginInteligenteContent(
             }
             Spacer(Modifier.height(12.dp))
 
-            // ─ Saludo ──────────────────────────────────────────────────────────────
             AnimatedVisibility(
                 visible = visible,
-                enter   = fadeIn(tween(400, delayMillis = 200)) + slideInVertically(tween(400, delayMillis = 200)) { 20 }
+                enter   = fadeIn(tween(400, 200)) + slideInVertically(tween(400, 200)) { 20 }
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text(
@@ -243,13 +237,12 @@ fun LoginInteligenteContent(
             }
             Spacer(Modifier.height(8.dp))
 
-            // ─ Chip de telefono con icono ───────────────────────────────────────
             AnimatedVisibility(
                 visible = visible,
-                enter   = fadeIn(tween(400, delayMillis = 280))
+                enter   = fadeIn(tween(400, 280))
             ) {
                 Row(
-                    modifier          = Modifier
+                    modifier = Modifier
                         .background(
                             brush = Brush.horizontalGradient(
                                 listOf(HadesNavyDark, HadesPurple.copy(alpha = 0.15f), HadesNavyDark)
@@ -258,7 +251,9 @@ fun LoginInteligenteContent(
                         )
                         .border(
                             width = 1.dp,
-                            brush = Brush.horizontalGradient(listOf(HadesPurple.copy(alpha = 0.5f), HadesCyan.copy(alpha = 0.3f))),
+                            brush = Brush.horizontalGradient(
+                                listOf(HadesPurple.copy(alpha = 0.5f), HadesCyan.copy(alpha = 0.3f))
+                            ),
                             shape = RoundedCornerShape(50)
                         )
                         .padding(horizontal = 16.dp, vertical = 8.dp),
@@ -281,10 +276,9 @@ fun LoginInteligenteContent(
             }
             Spacer(Modifier.height(28.dp))
 
-            // ─ Card PIN ─────────────────────────────────────────────────────────────
             AnimatedVisibility(
                 visible = visible,
-                enter   = fadeIn(tween(500, delayMillis = 350)) + slideInVertically(tween(500, delayMillis = 350)) { 40 }
+                enter   = fadeIn(tween(500, 350)) + slideInVertically(tween(500, 350)) { 40 }
             ) {
                 HadesCardBox {
                     Text(
@@ -294,17 +288,17 @@ fun LoginInteligenteContent(
                         letterSpacing = 2.sp,
                         color         = HadesCyan
                     )
-                    Spacer(Modifier.height(16.dp))
+                    Spacer(Modifier.height(20.dp))
 
-                    // Indicador PIN con 4 circulos (toca para enfocar)
+                    // HadesPinInput con padding generoso para area de toque amplia
                     HadesPinInput(
                         value         = pin,
                         onValueChange = onPinChange,
                         modifier      = Modifier
                             .fillMaxWidth()
-                            .clickable { /* el foco lo maneja BasicTextField interno */ }
+                            .padding(vertical = 12.dp)   // area de toque vertical mas generosa
                     )
-                    Spacer(Modifier.height(20.dp))
+                    Spacer(Modifier.height(8.dp))
 
                     HadesButton(
                         text         = stringResource(R.string.btn_login),
@@ -324,17 +318,18 @@ fun LoginInteligenteContent(
 
             Spacer(Modifier.height(20.dp))
 
-            // ─ Boton otro usuario ────────────────────────────────────────────────
             AnimatedVisibility(
                 visible = visible,
-                enter   = fadeIn(tween(400, delayMillis = 450))
+                enter   = fadeIn(tween(400, 450))
             ) {
                 OutlinedButton(
                     onClick  = onOtroUsuario,
                     colors   = ButtonDefaults.outlinedButtonColors(contentColor = HadesOnDark.copy(alpha = 0.6f)),
                     border   = androidx.compose.foundation.BorderStroke(
                         1.dp,
-                        Brush.horizontalGradient(listOf(HadesPurple.copy(alpha = 0.3f), HadesCyan.copy(alpha = 0.3f)))
+                        Brush.horizontalGradient(
+                            listOf(HadesPurple.copy(alpha = 0.3f), HadesCyan.copy(alpha = 0.3f))
+                        )
                     ),
                     shape    = RoundedCornerShape(10.dp),
                     modifier = Modifier.fillMaxWidth()
@@ -346,22 +341,20 @@ fun LoginInteligenteContent(
     }
 }
 
-// ─── Avatar con borde degradado (componente privado) ────────────────────────────
+// ─── Avatar con borde degradado ───────────────────────────────────────────────────
 @Composable
 private fun GradientAvatarBorder(content: @Composable BoxScope.() -> Unit) {
-    val gradientColors = listOf(HadesPurple, HadesCyan, HadesOrange, HadesPurple)
+    val gradient = listOf(HadesPurple, HadesCyan, HadesOrange, HadesPurple)
     Box(contentAlignment = Alignment.Center) {
-        // Anillo degradado dibujado con Canvas
         Canvas(modifier = Modifier.size(76.dp)) {
             drawCircle(
-                brush  = Brush.sweepGradient(gradientColors),
+                brush  = Brush.sweepGradient(gradient),
                 radius = size.minDimension / 2f,
                 style  = Stroke(width = 3.dp.toPx())
             )
         }
-        // Fondo interior
         Box(
-            modifier = Modifier
+            modifier         = Modifier
                 .size(64.dp)
                 .clip(CircleShape)
                 .background(HadesPurple.copy(alpha = 0.12f)),
@@ -371,7 +364,7 @@ private fun GradientAvatarBorder(content: @Composable BoxScope.() -> Unit) {
     }
 }
 
-// ─── Pantalla normal (sin sesion guardada) ────────────────────────────────────
+// ─── Pantalla normal ───────────────────────────────────────────────────────────────────
 @Composable
 fun LoginContent(
     phoneNumber: String,
@@ -407,8 +400,6 @@ fun LoginContent(
                 textAlign     = TextAlign.Center
             )
             Spacer(Modifier.height(6.dp))
-
-            // Separador degradado superior
             Box(
                 modifier = Modifier
                     .width(180.dp).height(2.dp)
@@ -425,7 +416,6 @@ fun LoginContent(
                 color         = HadesCyan.copy(alpha = 0.7f),
                 textAlign     = TextAlign.Center
             )
-            // Separador degradado inferior (mejora #5 — cierre visual del encabezado)
             Spacer(Modifier.height(6.dp))
             Box(
                 modifier = Modifier
@@ -434,7 +424,6 @@ fun LoginContent(
                         listOf(Color.Transparent, HadesPurple.copy(alpha = 0.5f), Color.Transparent)
                     ))
             )
-
             Spacer(Modifier.height(32.dp))
 
             HadesCardBox {
@@ -501,7 +490,7 @@ fun LoginContent(
     }
 }
 
-// ─── Dialogos ───────────────────────────────────────────────────────────────────────
+// ─── Dialogos ─────────────────────────────────────────────────────────────────────
 @Composable
 fun ResetPinDialog(onDismiss: () -> Unit, onReset: (String) -> Unit) {
     var nuevoPin     by remember { mutableStateOf("") }
@@ -572,7 +561,7 @@ fun RecoverPinDialog(onDismiss: () -> Unit, onRecover: (String, String) -> Unit)
     )
 }
 
-// ─── Previews ────────────────────────────────────────────────────────────────────────
+// ─── Previews ───────────────────────────────────────────────────────────────────────
 @Preview(showBackground = true, showSystemUi = true, name = "Login — normal")
 @Composable
 fun LoginViewPreview() {

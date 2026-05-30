@@ -4,6 +4,8 @@ import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.BasicTextField
@@ -17,6 +19,7 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.Dp
@@ -28,12 +31,7 @@ import com.example.hadescoin.ui.theme.HadesPurple
 
 /**
  * Indicador visual de PIN con 4 circulos al estilo apps bancarias.
- * El campo de texto real es invisible — captura el input detras de los puntos.
- *
- * @param value      PIN actual (max 4 digitos)
- * @param onValueChange  callback con el nuevo valor
- * @param dotSize    tamano de cada circulo (default 18.dp)
- * @param spacing    separacion entre circulos (default 20.dp)
+ * Toca cualquier parte del componente para enfocar y desplegar el teclado.
  */
 @Composable
 fun HadesPinInput(
@@ -43,60 +41,71 @@ fun HadesPinInput(
     dotSize: Dp = 18.dp,
     spacing: Dp = 20.dp
 ) {
-    val focusRequester = remember { FocusRequester() }
+    val focusRequester    = remember { FocusRequester() }
+    val keyboardController = LocalSoftwareKeyboardController.current
+    val interactionSource = remember { MutableInteractionSource() }
 
-    Box(modifier = modifier, contentAlignment = Alignment.Center) {
-        // Campo invisible que captura el input
+    // Area de toque real que envuelve todo — clickable con area generosa
+    Box(
+        modifier         = modifier
+            .clickable(
+                interactionSource = interactionSource,
+                indication        = null   // sin ripple visible
+            ) {
+                focusRequester.requestFocus()
+                keyboardController?.show()
+            },
+        contentAlignment = Alignment.Center
+    ) {
+        // Campo invisible con tamano real (0dp visual pero enfocable) —
+        // ocupa todo el Box para que el click area coincida
         BasicTextField(
-            value               = value,
-            onValueChange       = { if (it.length <= 4 && it.all { c -> c.isDigit() }) onValueChange(it) },
-            keyboardOptions     = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
+            value                = value,
+            onValueChange        = { if (it.length <= 4 && it.all { c -> c.isDigit() }) onValueChange(it) },
+            keyboardOptions      = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
             visualTransformation = PasswordVisualTransformation(),
-            singleLine          = true,
-            cursorBrush         = SolidColor(Color.Transparent),
-            modifier            = Modifier
-                .size(1.dp)  // invisible pero enfocable
+            singleLine           = true,
+            cursorBrush          = SolidColor(Color.Transparent),
+            modifier             = Modifier
+                .matchParentSize()             // mismo tamano que el Box
                 .focusRequester(focusRequester),
-            decorationBox       = { it() }
+            decorationBox        = { /* sin decoracion visual — solo los circulos */ }
         )
 
-        // 4 circulos visuales
+        // 4 circulos visuales (encima del campo invisible)
         Row(
             horizontalArrangement = Arrangement.spacedBy(spacing),
             verticalAlignment     = Alignment.CenterVertically
         ) {
             repeat(4) { index ->
                 val filled = index < value.length
+
                 val dotColor by animateColorAsState(
-                    targetValue = if (filled) HadesPurple else Color.Transparent,
-                    animationSpec = tween(durationMillis = 150),
-                    label = "pin_dot_$index"
+                    targetValue   = if (filled) HadesPurple else Color.Transparent,
+                    animationSpec = tween(150),
+                    label         = "dot_fill_$index"
                 )
                 val borderColor by animateColorAsState(
                     targetValue = when {
-                        filled && index == value.length - 1 -> HadesCyan   // ultimo ingresado: cyan
+                        filled && index == value.length - 1 -> HadesCyan
                         filled                              -> HadesPurple
-                        else                               -> HadesOrange.copy(alpha = 0.4f)
+                        else                                -> HadesOrange.copy(alpha = 0.4f)
                     },
-                    animationSpec = tween(durationMillis = 150),
-                    label = "pin_border_$index"
+                    animationSpec = tween(150),
+                    label         = "dot_border_$index"
                 )
+
                 Box(
                     modifier = Modifier
                         .size(dotSize)
                         .clip(CircleShape)
                         .background(
-                            brush = if (filled) Brush.radialGradient(
-                                listOf(HadesCyan.copy(alpha = 0.3f), dotColor)
-                            ) else Brush.radialGradient(
-                                listOf(HadesNavyDark, HadesNavyDark)
-                            )
+                            brush = if (filled)
+                                Brush.radialGradient(listOf(HadesCyan.copy(alpha = 0.3f), dotColor))
+                            else
+                                Brush.radialGradient(listOf(HadesNavyDark, HadesNavyDark))
                         )
-                        .border(
-                            width = 2.dp,
-                            color = borderColor,
-                            shape = CircleShape
-                        )
+                        .border(width = 2.dp, color = borderColor, shape = CircleShape)
                 )
             }
         }
