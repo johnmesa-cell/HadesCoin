@@ -33,12 +33,18 @@ class WalletRepositoryImpl(
         snapshot:     com.google.firebase.database.DataSnapshot,
         currentPhone: String
     ): WalletTransaction {
-        val senderId   = snapshot.child("senderId").getValue(String::class.java)   ?: ""
-        val type       = snapshot.child("type").getValue(String::class.java)       ?: "TRANSFER"
-        val direction  = when {
-            type != "TRANSFER"       -> if (senderId == currentPhone) "OUT" else "IN"
-            senderId == currentPhone -> "OUT"
-            else                     -> "IN"
+        val senderId  = snapshot.child("senderId").getValue(String::class.java)  ?: ""
+        val type      = snapshot.child("type").getValue(String::class.java)      ?: "TRANSFER"
+        val direction = when (type.uppercase()) {
+            // Depósito: siempre entra dinero al usuario
+            "DEPOSIT"            -> "IN"
+            // Retiros ATM: siempre sale dinero del usuario
+            "WITHDRAW",
+            "WITHDRAWAL_PENDING",
+            "WITHDRAWAL_COMPLETED",
+            "WITHDRAWAL_FAILED"  -> "OUT"
+            // Transferencias y cualquier otro tipo: depende del rol
+            else                 -> if (senderId == currentPhone) "OUT" else "IN"
         }
         return WalletTransaction(
             id               = snapshot.key ?: "",
@@ -80,8 +86,8 @@ class WalletRepositoryImpl(
                 ?: return Result.failure(Exception("Usuario no encontrado"))
             val sender = mapUser(senderSnapshot)
 
-            if (sender.pin != pin)           return Result.failure(Exception("PIN incorrecto"))
-            if (sender.balance < amount)     return Result.failure(Exception("Saldo insuficiente"))
+            if (sender.pin != pin)            return Result.failure(Exception("PIN incorrecto"))
+            if (sender.balance < amount)      return Result.failure(Exception("Saldo insuficiente"))
             if (senderPhone == receiverPhone) return Result.failure(Exception("No puedes transferirte a ti mismo"))
 
             val receiverSnapshot = userDataSource.getUser(receiverPhone)
@@ -150,12 +156,8 @@ class WalletRepositoryImpl(
             val storedTxId = snapshot.child("withdrawalTxId")
                 .getValue(String::class.java) ?: ""
             if (storedTxId.isNotBlank()) {
-                transactionDataSource.updateTransactionField(
-                    storedTxId, "type", "WITHDRAWAL_FAILED"
-                )
-                transactionDataSource.updateTransactionField(
-                    storedTxId, "timestamp", Instant.now().toString()
-                )
+                transactionDataSource.updateTransactionField(storedTxId, "type",      "WITHDRAWAL_FAILED")
+                transactionDataSource.updateTransactionField(storedTxId, "timestamp", Instant.now().toString())
             }
             userDataSource.updateUserField(phoneNumber, "withdrawalCode",   "")
             userDataSource.updateUserField(phoneNumber, "withdrawalAmount", "")
