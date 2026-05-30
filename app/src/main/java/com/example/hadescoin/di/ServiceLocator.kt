@@ -9,6 +9,7 @@ import com.example.hadescoin.data.repository.SessionRepositoryImpl
 import com.example.hadescoin.data.repository.WalletRepositoryImpl
 import com.example.hadescoin.domain.repository.SessionRepository
 import com.example.hadescoin.domain.usecase.GenerateVerificationCodeUseCase
+import com.example.hadescoin.domain.usecase.GenerateWithdrawalCodeUseCase
 import com.example.hadescoin.domain.usecase.GetUserProfileUseCase
 import com.example.hadescoin.domain.usecase.GetWalletDataUseCase
 import com.example.hadescoin.domain.usecase.LoginUseCase
@@ -37,17 +38,17 @@ object ServiceLocator {
     private val walletRepository  by lazy { WalletRepositoryImpl(firebaseUserDataSource, firebaseTransactionDataSource) }
     private val sessionRepository by lazy { SessionRepositoryImpl(sessionLocalDataSource) }
 
-    // ── Providers publicos ──────────────────────────────────────────────────
-    fun provideSessionRepository():              SessionRepository              = sessionRepository
-
-    fun provideLoginUseCase():                   LoginUseCase                   = LoginUseCase(authRepository)
-    fun provideRegisterUseCase():                RegisterUseCase                = RegisterUseCase(authRepository)
-    fun provideGetWalletDataUseCase():           GetWalletDataUseCase           = GetWalletDataUseCase(walletRepository)
-    fun provideTransferUseCase():                TransferUseCase                = TransferUseCase(walletRepository)
-    fun provideGetUserProfileUseCase():          GetUserProfileUseCase          = GetUserProfileUseCase(walletRepository)
-    fun provideUpdateUserPinUseCase():           UpdateUserPinUseCase           = UpdateUserPinUseCase(walletRepository)
-    fun provideUpdateUserNicknameUseCase():      UpdateUserNicknameUseCase      = UpdateUserNicknameUseCase(walletRepository)
-    fun provideRecoverPinUseCase():              RecoverPinUseCase              = RecoverPinUseCase(walletRepository)
+    // ── Providers públicos ───────────────────────────────────────────────────
+    fun provideSessionRepository():               SessionRepository               = sessionRepository
+    fun provideLoginUseCase():                    LoginUseCase                    = LoginUseCase(authRepository)
+    fun provideRegisterUseCase():                 RegisterUseCase                 = RegisterUseCase(authRepository)
+    fun provideGetWalletDataUseCase():            GetWalletDataUseCase            = GetWalletDataUseCase(walletRepository)
+    fun provideTransferUseCase():                 TransferUseCase                 = TransferUseCase(walletRepository)
+    fun provideGetUserProfileUseCase():           GetUserProfileUseCase           = GetUserProfileUseCase(walletRepository)
+    fun provideUpdateUserPinUseCase():            UpdateUserPinUseCase            = UpdateUserPinUseCase(walletRepository)
+    fun provideUpdateUserNicknameUseCase():       UpdateUserNicknameUseCase       = UpdateUserNicknameUseCase(walletRepository)
+    fun provideRecoverPinUseCase():               RecoverPinUseCase               = RecoverPinUseCase(walletRepository)
     fun provideGenerateVerificationCodeUseCase(): GenerateVerificationCodeUseCase = GenerateVerificationCodeUseCase(walletRepository)
     fun provideValidateVerificationCodeUseCase(): ValidateVerificationCodeUseCase = ValidateVerificationCodeUseCase(walletRepository)
+    fun provideGenerateWithdrawalCodeUseCase():   GenerateWithdrawalCodeUseCase   = GenerateWithdrawalCodeUseCase(walletRepository)
 }
