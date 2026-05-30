@@ -50,13 +50,13 @@ fun CameraCaptureView(
     var capturado    by remember { mutableStateOf(false) }
     var errorMsg     by remember { mutableStateOf<String?>(null) }
 
-    val stepNumber  = if (side == CedulaSide.FRONTAL) 2 else 3
-    val sideLabel   = if (side == CedulaSide.FRONTAL) "PARTE FRONTAL" else "PARTE TRASERA"
-    val sideHint    = if (side == CedulaSide.FRONTAL)
+    val stepNumber = if (side == CedulaSide.FRONTAL) 2 else 3
+    val sideLabel  = if (side == CedulaSide.FRONTAL) "PARTE FRONTAL" else "PARTE TRASERA"
+    val sideHint   = if (side == CedulaSide.FRONTAL)
         "Encuadra el frente de tu cédula (foto y nombre)"
     else
         "Encuadra la parte trasera de tu cédula (código de barras)"
-    val fileName    = if (side == CedulaSide.FRONTAL) "cedula_frontal.jpg" else "cedula_trasera.jpg"
+    val fileName   = if (side == CedulaSide.FRONTAL) "cedula_frontal.jpg" else "cedula_trasera.jpg"
 
     HadesBackground {
         Column(
@@ -65,8 +65,6 @@ fun CameraCaptureView(
                 .padding(horizontal = 24.dp, vertical = 32.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-
-            // --- Indicador de pasos ---
             StepIndicator(currentStep = stepNumber, totalSteps = 3)
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -80,17 +78,16 @@ fun CameraCaptureView(
             )
             Spacer(modifier = Modifier.height(4.dp))
             Text(
-                text      = sideHint,
-                fontSize  = 12.sp,
-                color     = HadesCyan.copy(alpha = 0.8f),
+                text          = sideHint,
+                fontSize      = 12.sp,
+                color         = HadesCyan.copy(alpha = 0.8f),
                 letterSpacing = 1.sp,
-                textAlign = TextAlign.Center
+                textAlign     = TextAlign.Center
             )
 
             Spacer(modifier = Modifier.height(20.dp))
 
             if (!capturado) {
-                // --- Preview activo ---
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -104,9 +101,8 @@ fun CameraCaptureView(
                             val cameraProviderFuture = ProcessCameraProvider.getInstance(ctx)
                             cameraProviderFuture.addListener({
                                 val cameraProvider = cameraProviderFuture.get()
-                                val preview = Preview.Builder().build().also {
-                                    it.surfaceProvider = previewView.surfaceProvider
-                                }
+                                val preview = Preview.Builder().build()
+                                preview.surfaceProvider = previewView.surfaceProvider
                                 val capture = ImageCapture.Builder().build()
                                 imageCapture = capture
                                 try {
@@ -125,7 +121,6 @@ fun CameraCaptureView(
                         },
                         modifier = Modifier.fillMaxSize()
                     )
-                    // Marco guía para la cédula
                     Box(
                         modifier = Modifier
                             .align(Alignment.Center)
@@ -138,7 +133,7 @@ fun CameraCaptureView(
                 Spacer(modifier = Modifier.height(20.dp))
 
                 Button(
-                    onClick = {
+                    onClick  = {
                         capturarFoto(
                             fileName     = fileName,
                             imageCapture = imageCapture,
@@ -166,7 +161,6 @@ fun CameraCaptureView(
                 }
 
             } else {
-                // --- Estado: capturado ---
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -174,8 +168,8 @@ fun CameraCaptureView(
                         .clip(RoundedCornerShape(12.dp))
                         .background(HadesBlack)
                         .border(2.dp, HadesCyan, RoundedCornerShape(12.dp)),
-                    verticalArrangement   = Arrangement.Center,
-                    horizontalAlignment   = Alignment.CenterHorizontally
+                    verticalArrangement = Arrangement.Center,
+                    horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Icon(
                         imageVector        = Icons.Filled.CheckCircle,
@@ -195,7 +189,6 @@ fun CameraCaptureView(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // Botón continuar
                 Button(
                     onClick  = onCaptured,
                     colors   = ButtonDefaults.buttonColors(
@@ -215,7 +208,6 @@ fun CameraCaptureView(
 
                 Spacer(modifier = Modifier.height(8.dp))
 
-                // Botón retomar foto
                 OutlinedButton(
                     onClick  = { capturado = false; errorMsg = null },
                     colors   = ButtonDefaults.outlinedButtonColors(contentColor = HadesOrange),
@@ -235,7 +227,12 @@ fun CameraCaptureView(
 
             errorMsg?.let {
                 Spacer(modifier = Modifier.height(10.dp))
-                Text(text = it, color = MaterialTheme.colorScheme.error, fontSize = 12.sp, textAlign = TextAlign.Center)
+                Text(
+                    text      = it,
+                    color     = MaterialTheme.colorScheme.error,
+                    fontSize  = 12.sp,
+                    textAlign = TextAlign.Center
+                )
             }
 
             Spacer(modifier = Modifier.height(12.dp))
@@ -254,10 +251,10 @@ fun StepIndicator(currentStep: Int, totalSteps: Int) {
         verticalAlignment     = Alignment.CenterVertically
     ) {
         repeat(totalSteps) { index ->
-            val step      = index + 1
-            val isActive  = step == currentStep
-            val isDone    = step < currentStep
-            val color     = when {
+            val step     = index + 1
+            val isActive = step == currentStep
+            val isDone   = step < currentStep
+            val color    = when {
                 isDone   -> HadesCyan
                 isActive -> HadesOrange
                 else     -> HadesOnDark.copy(alpha = 0.3f)
@@ -288,9 +285,9 @@ fun StepIndicator(currentStep: Int, totalSteps: Int) {
     }
     Spacer(modifier = Modifier.height(4.dp))
     Text(
-        text      = "Paso $currentStep de $totalSteps",
-        fontSize  = 10.sp,
-        color     = HadesOnDark.copy(alpha = 0.5f),
+        text          = "Paso $currentStep de $totalSteps",
+        fontSize      = 10.sp,
+        color         = HadesOnDark.copy(alpha = 0.5f),
         letterSpacing = 1.sp
     )
 }
