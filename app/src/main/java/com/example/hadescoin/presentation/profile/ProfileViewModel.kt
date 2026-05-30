@@ -14,11 +14,11 @@ import com.example.hadescoin.domain.usecase.ValidateVerificationCodeUseCase
 import kotlinx.coroutines.launch
 
 class ProfileViewModel(
-    private val getUserProfileUseCase:  GetUserProfileUseCase         = ServiceLocator.provideGetUserProfileUseCase(),
-    private val updatePinUseCase:       UpdateUserPinUseCase          = ServiceLocator.provideUpdateUserPinUseCase(),
-    private val updateNicknameUseCase:  UpdateUserNicknameUseCase     = ServiceLocator.provideUpdateUserNicknameUseCase(),
-    private val generateCodeUseCase:    GenerateVerificationCodeUseCase = ServiceLocator.provideGenerateVerificationCodeUseCase(),
-    private val validateCodeUseCase:    ValidateVerificationCodeUseCase = ServiceLocator.provideValidateVerificationCodeUseCase()
+    private val getUserProfileUseCase: GetUserProfileUseCase          = ServiceLocator.provideGetUserProfileUseCase(),
+    private val updatePinUseCase:      UpdateUserPinUseCase           = ServiceLocator.provideUpdateUserPinUseCase(),
+    private val updateNicknameUseCase: UpdateUserNicknameUseCase      = ServiceLocator.provideUpdateUserNicknameUseCase(),
+    private val generateCodeUseCase:   GenerateVerificationCodeUseCase = ServiceLocator.provideGenerateVerificationCodeUseCase(),
+    private val validateCodeUseCase:   ValidateVerificationCodeUseCase = ServiceLocator.provideValidateVerificationCodeUseCase()
 ) : ViewModel() {
 
     private val _user = MutableLiveData<AppUser?>()
@@ -33,7 +33,6 @@ class ProfileViewModel(
     private val _mensajeError = MutableLiveData<String?>()
     val mensajeError: LiveData<String?> = _mensajeError
 
-    // Estado del flujo de verificacion
     private val _codigoGenerado = MutableLiveData<String?>()
     val codigoGenerado: LiveData<String?> = _codigoGenerado
 
@@ -60,11 +59,11 @@ class ProfileViewModel(
     fun cambiarPin(phoneNumber: String, pinActual: String, pinNuevo: String, confirmacion: String) {
         val userVal = _user.value ?: return
         when {
-            pinActual != userVal.pin                             -> { _mensajeError.value = "El PIN actual es incorrecto"; return }
-            pinNuevo.length != 4 || !pinNuevo.all { it.isDigit() } -> { _mensajeError.value = "El nuevo PIN debe tener exactamente 4 dígitos"; return }
-            pinNuevo != confirmacion                             -> { _mensajeError.value = "La confirmación no coincide"; return }
-            pinNuevo == pinActual                                -> { _mensajeError.value = "El nuevo PIN no puede ser igual al anterior"; return }
-            esPinObvio(pinNuevo)                                 -> { _mensajeError.value = "El PIN es muy sencillo. Usa uno más seguro."; return }
+            pinActual != userVal.pin                                  -> { _mensajeError.value = "El PIN actual es incorrecto"; return }
+            pinNuevo.length != 4 || !pinNuevo.all { it.isDigit() }   -> { _mensajeError.value = "El nuevo PIN debe tener exactamente 4 dígitos"; return }
+            pinNuevo != confirmacion                                  -> { _mensajeError.value = "La confirmación no coincide"; return }
+            pinNuevo == pinActual                                     -> { _mensajeError.value = "El nuevo PIN no puede ser igual al anterior"; return }
+            esPinObvio(pinNuevo)                                      -> { _mensajeError.value = "El PIN es muy sencillo. Usa uno más seguro."; return }
         }
         viewModelScope.launch {
             _cargando.value = true
@@ -83,16 +82,18 @@ class ProfileViewModel(
         }
     }
 
-    // ── Flujo verificacion: Paso 1 — generar codigo ──────────────────────────
-    fun generarCodigoVerificacion(phoneNumber: String) {
-        if (phoneNumber.isBlank()) { _mensajeError.value = "Teléfono no disponible"; return }
+    // ── Flujo verificacion: Paso 1 — verificar identidad (telefono + cedula) y generar codigo ──
+    fun generarCodigoVerificacion(phoneNumber: String, documentNumber: String) {
+        if (phoneNumber.isBlank() || documentNumber.isBlank()) {
+            _mensajeError.value = "Teléfono y cédula son requeridos"; return
+        }
         phoneParaReset = phoneNumber
         viewModelScope.launch {
             _cargando.value = true
             try {
-                val code = generateCodeUseCase(phoneNumber)
+                val code = generateCodeUseCase(phoneNumber, documentNumber)
                 if (code != null) _codigoGenerado.value = code
-                else _mensajeError.value = "No se pudo generar el código."
+                else _mensajeError.value = "No se encontró un usuario con esos datos. Verifica el teléfono y la cédula."
             } catch (e: Exception) {
                 _mensajeError.value = "Error: ${e.message}"
             } finally {

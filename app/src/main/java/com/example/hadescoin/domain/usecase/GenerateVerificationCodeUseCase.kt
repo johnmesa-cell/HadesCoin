@@ -5,23 +5,25 @@ import com.example.hadescoin.domain.repository.WalletRepository
 /**
  * GenerateVerificationCodeUseCase
  *
- * Genera un codigo numerico aleatorio de 6 digitos, lo persiste temporalmente
- * en Firebase bajo el campo "verificationCode" del usuario, y retorna el codigo
- * para que la UI lo muestre al usuario.
+ * Verifica que el telefono Y la cedula correspondan al mismo usuario,
+ * genera un codigo numerico aleatorio de 6 digitos, lo persiste en Firebase
+ * bajo el campo "verificationCode" y retorna el codigo para mostrarlo en UI.
  *
- * Uso actual   : Flujo "Olvide mi PIN"
- * Uso futuro   : Confirmacion de Retiro, cualquier accion sensible
+ * Si el usuario no existe o la cedula no coincide retorna null (sin exponer
+ * cual de los dos datos fallo, por seguridad).
  *
- * @return el codigo generado (String de 6 digitos), o null si el usuario
- *         no existe o fallo la escritura en Firebase.
+ * Uso actual : Flujo "Olvide mi PIN"
+ * Uso futuro : Confirmacion de Retiro, cualquier accion sensible
  */
 class GenerateVerificationCodeUseCase(private val repository: WalletRepository) {
 
-    suspend operator fun invoke(phoneNumber: String): String? {
-        // Verificar que el usuario existe antes de generar
-        repository.getUserByPhone(phoneNumber) ?: return null
+    suspend operator fun invoke(phoneNumber: String, documentNumber: String): String? {
+        val user = repository.getUserByPhone(phoneNumber) ?: return null
 
-        val code = (100_000..999_999).random().toString()
+        // Validacion de identidad: cedula debe coincidir
+        if (user.documentNumber.trim() != documentNumber.trim()) return null
+
+        val code  = (100_000..999_999).random().toString()
         val saved = repository.saveVerificationCode(phoneNumber, code)
         return if (saved) code else null
     }

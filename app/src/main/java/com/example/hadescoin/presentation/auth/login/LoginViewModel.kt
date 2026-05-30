@@ -14,15 +14,14 @@ import com.example.hadescoin.domain.usecase.ValidateVerificationCodeUseCase
 import kotlinx.coroutines.launch
 
 class LoginViewModel(
-    private val loginUseCase:              LoginUseCase                = ServiceLocator.provideLoginUseCase(),
-    private val getUserProfileUseCase:     GetUserProfileUseCase       = ServiceLocator.provideGetUserProfileUseCase(),
-    private val generateCodeUseCase:       GenerateVerificationCodeUseCase = ServiceLocator.provideGenerateVerificationCodeUseCase(),
-    private val validateCodeUseCase:       ValidateVerificationCodeUseCase = ServiceLocator.provideValidateVerificationCodeUseCase(),
-    private val updateUserPinUseCase:      UpdateUserPinUseCase        = ServiceLocator.provideUpdateUserPinUseCase(),
-    private val sessionRepository:         SessionRepository            = ServiceLocator.provideSessionRepository()
+    private val loginUseCase:          LoginUseCase                    = ServiceLocator.provideLoginUseCase(),
+    private val getUserProfileUseCase: GetUserProfileUseCase           = ServiceLocator.provideGetUserProfileUseCase(),
+    private val generateCodeUseCase:   GenerateVerificationCodeUseCase = ServiceLocator.provideGenerateVerificationCodeUseCase(),
+    private val validateCodeUseCase:   ValidateVerificationCodeUseCase = ServiceLocator.provideValidateVerificationCodeUseCase(),
+    private val updateUserPinUseCase:  UpdateUserPinUseCase            = ServiceLocator.provideUpdateUserPinUseCase(),
+    private val sessionRepository:     SessionRepository               = ServiceLocator.provideSessionRepository()
 ) : ViewModel() {
 
-    // ── Estado de sesion local ───────────────────────────────────────────────
     private val _haySessionGuardada = MutableLiveData(sessionRepository.hasSession())
     val haySessionGuardada: LiveData<Boolean> = _haySessionGuardada
 
@@ -32,7 +31,6 @@ class LoginViewModel(
     private val _nombreGuardado = MutableLiveData(sessionRepository.getName())
     val nombreGuardado: LiveData<String> = _nombreGuardado
 
-    // ── Estado UI ──────────────────────────────────────────────────────────────
     private val _cargando = MutableLiveData(false)
     val cargando: LiveData<Boolean> = _cargando
 
@@ -42,7 +40,6 @@ class LoginViewModel(
     private val _loginError = MutableLiveData<String?>()
     val loginError: LiveData<String?> = _loginError
 
-    // Estado para el flujo de verificacion (reutilizable)
     private val _codigoGenerado = MutableLiveData<String?>()
     val codigoGenerado: LiveData<String?> = _codigoGenerado
 
@@ -52,7 +49,6 @@ class LoginViewModel(
     private val _errorRecuperacion = MutableLiveData<String?>()
     val errorRecuperacion: LiveData<String?> = _errorRecuperacion
 
-    // Telefono para el reset (se guarda al generar el codigo)
     private var phoneParaReset: String = ""
 
     // ── Login ────────────────────────────────────────────────────────────────────
@@ -88,16 +84,18 @@ class LoginViewModel(
         _nombreGuardado.value     = ""
     }
 
-    // ── Flujo verificacion: Paso 1 — generar codigo ─────────────────────────────
-    fun generarCodigoVerificacion(phoneNumber: String) {
-        if (phoneNumber.isBlank()) { _errorRecuperacion.value = "Ingresa el teléfono"; return }
+    // ── Flujo verificacion: Paso 1 — verificar identidad (telefono + cedula) y generar codigo ──
+    fun generarCodigoVerificacion(phoneNumber: String, documentNumber: String) {
+        if (phoneNumber.isBlank() || documentNumber.isBlank()) {
+            _errorRecuperacion.value = "Ingresa el teléfono y la cédula"; return
+        }
         phoneParaReset = phoneNumber
         viewModelScope.launch {
             _cargando.value = true
             try {
-                val code = generateCodeUseCase(phoneNumber)
+                val code = generateCodeUseCase(phoneNumber, documentNumber)
                 if (code != null) _codigoGenerado.value = code
-                else _errorRecuperacion.value = "No se encontró un usuario con ese teléfono."
+                else _errorRecuperacion.value = "No se encontró un usuario con esos datos. Verifica el teléfono y la cédula."
             } catch (e: Exception) {
                 _errorRecuperacion.value = "Error al generar el código: ${e.message}"
             } finally {

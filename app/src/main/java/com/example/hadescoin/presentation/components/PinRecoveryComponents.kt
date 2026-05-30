@@ -6,23 +6,23 @@ package com.example.hadescoin.presentation.components
  * Flujo reutilizable "Olvide mi PIN" / verificacion de identidad.
  * Tambien sirve como base para confirmar Retiros u otras acciones sensibles.
  *
- * FLUJO (3 pasos encadenados):
- *   Paso 1 — VerifyIdentityDialog : ingresa telefono → genera codigo en Firebase
+ * FLUJO (4 pasos encadenados):
+ *   Paso 1 — VerifyIdentityDialog : ingresa telefono + cedula → genera codigo en Firebase
  *   Paso 2 — CodeRevealDialog    : muestra el codigo de 6 digitos + boton copiar
  *   Paso 3 — ConfirmCodeDialog   : el usuario ingresa el codigo que vio/copio
  *   Paso 4 — ResetPinStepDialog  : elige nuevo PIN (solo para flujo de PIN)
  *
- * Para flujo de Retiro: usa solo pasos 1–3 y en onVerified ejecuta el retiro.
+ * Para flujo de Retiro: usa solo pasos 1-3 con showResetStep = false.
  *
  * USO minimo (flujo de PIN):
  *
  *   PinRecoveryFlow(
- *       codigoGenerado = codigoGenerado,   // LiveData<String?> del ViewModel
- *       codigoValidado = codigoValidado,   // LiveData<Boolean> del ViewModel
+ *       codigoGenerado = codigoGenerado,
+ *       codigoValidado = codigoValidado,
  *       onDismiss      = { showFlow = false },
- *       onGenerate     = { phone -> viewModel.generarCodigoVerificacion(phone) },
- *       onValidate     = { code  -> viewModel.validarCodigo(code) },
- *       onReset        = { pin   -> viewModel.resetearPin(pin) },
+ *       onGenerate     = { phone, doc -> viewModel.generarCodigoVerificacion(phone, doc) },
+ *       onValidate     = { code -> viewModel.validarCodigo(code) },
+ *       onReset        = { pin  -> viewModel.resetearPin(pin) },
  *       onClearState   = { viewModel.clearMessages() }
  *   )
  *
@@ -31,11 +31,10 @@ package com.example.hadescoin.presentation.components
  *   PinRecoveryFlow(
  *       codigoGenerado = codigoGenerado,
  *       codigoValidado = codigoValidado,
- *       onDismiss      = { showFlow = false },
- *       onGenerate     = { phone -> viewModel.generarCodigo(phone) },
- *       onValidate     = { code  -> viewModel.validarCodigo(code) },
- *       onVerified     = { viewModel.ejecutarRetiro() },   // accion al verificar
  *       showResetStep  = false,
+ *       onVerified     = { viewModel.ejecutarRetiro() },
+ *       onGenerate     = { phone, doc -> viewModel.generarCodigo(phone, doc) },
+ *       onValidate     = { code -> viewModel.validarCodigo(code) },
  *       onClearState   = { viewModel.clearMessages() }
  *   )
  */
@@ -73,23 +72,21 @@ fun PinRecoveryFlow(
     codigoGenerado : String?,
     codigoValidado : Boolean,
     onDismiss      : () -> Unit,
-    onGenerate     : (phone: String) -> Unit,
-    onValidate     : (code: String)  -> Unit,
-    onReset        : (pin: String)   -> Unit = {},
-    onVerified     : ()              -> Unit = {},  // hook para Retiro u otras acciones
-    showResetStep  : Boolean                 = true, // false = solo verificacion (Retiro)
-    onClearState   : ()              -> Unit = {}
+    onGenerate     : (phone: String, document: String) -> Unit,
+    onValidate     : (code: String) -> Unit,
+    onReset        : (pin: String)  -> Unit = {},
+    onVerified     : ()             -> Unit = {},
+    showResetStep  : Boolean                = true,
+    onClearState   : ()             -> Unit = {}
 ) {
     var paso by remember { mutableIntStateOf(1) }
 
-    // Paso 1 → 2 cuando Firebase devuelve el codigo
     LaunchedEffect(codigoGenerado) { if (codigoGenerado != null) paso = 2 }
 
-    // Paso 3 → 4 cuando el codigo fue validado correctamente
     LaunchedEffect(codigoValidado) {
         if (codigoValidado) {
-            if (showResetStep) paso = 4   // flujo PIN: pide nuevo PIN
-            else { onVerified(); onDismiss() } // flujo Retiro: ejecuta accion
+            if (showResetStep) paso = 4
+            else { onVerified(); onDismiss() }
         }
     }
 
@@ -114,13 +111,16 @@ fun PinRecoveryFlow(
     }
 }
 
-// ─── Paso 1: ingresar telefono para generar codigo ────────────────────────────
+// ─── Paso 1: ingresar telefono + cedula para verificar identidad ───────────────
 @Composable
 fun VerifyIdentityDialog(
     onDismiss  : () -> Unit,
-    onGenerate : (phone: String) -> Unit
+    onGenerate : (phone: String, document: String) -> Unit
 ) {
-    var phone by remember { mutableStateOf("") }
+    var phone    by remember { mutableStateOf("") }
+    var document by remember { mutableStateOf("") }
+
+    val habilitado = phone.length == 10 && document.length >= 6
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -134,7 +134,7 @@ fun VerifyIdentityDialog(
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Text(
-                    text      = "Ingresa tu número de teléfono. Te mostraremos un código de verificación.",
+                    text      = "Ingresa tu teléfono y número de cédula para verificar tu identidad.",
                     color     = HadesOnDark.copy(alpha = 0.7f),
                     fontSize  = 13.sp,
                     textAlign = TextAlign.Center,
@@ -146,14 +146,24 @@ fun VerifyIdentityDialog(
                     label         = "Teléfono (10 dígitos)",
                     keyboardType  = KeyboardType.Number
                 )
+                HadesTextField(
+                    value         = document,
+                    onValueChange = { if (it.length <= 12 && it.all { c -> c.isDigit() }) document = it },
+                    label         = "Número de Cédula",
+                    keyboardType  = KeyboardType.Number
+                )
             }
         },
         confirmButton = {
             TextButton(
-                enabled = phone.length == 10,
-                onClick = { onGenerate(phone) }
+                enabled = habilitado,
+                onClick = { onGenerate(phone, document) }
             ) {
-                Text("GENERAR CÓDIGO", color = if (phone.length == 10) HadesCyan else HadesOnDark.copy(alpha = 0.3f), fontWeight = FontWeight.Bold)
+                Text(
+                    "VERIFICAR IDENTIDAD",
+                    color      = if (habilitado) HadesCyan else HadesOnDark.copy(alpha = 0.3f),
+                    fontWeight = FontWeight.Bold
+                )
             }
         },
         dismissButton = {
@@ -196,7 +206,6 @@ fun CodeRevealDialog(
                     textAlign = TextAlign.Center
                 )
 
-                // Caja visual del codigo (6 digitos separados)
                 AnimatedVisibility(
                     visible = visible,
                     enter   = fadeIn(tween(400)) + scaleIn(tween(400))
@@ -244,7 +253,6 @@ fun CodeRevealDialog(
                     }
                 }
 
-                // Boton copiar
                 OutlinedButton(
                     onClick  = { clipboard.setText(AnnotatedString(codigo)); copiado = true },
                     colors   = ButtonDefaults.outlinedButtonColors(
