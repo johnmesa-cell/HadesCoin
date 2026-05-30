@@ -14,6 +14,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.hadescoin.ui.theme.*
@@ -25,10 +26,18 @@ fun HadesFinancialChart(
     egresos: Double,
     modifier: Modifier = Modifier
 ) {
-    val total = ingresos + egresos
-    // Calculamos los ángulos. Si no hay datos, no dibujamos arcos.
-    val angularEgresos = if (total > 0) (egresos / total * 360f).toFloat() else 0f
-    val angularIngresos = if (total > 0) (ingresos / total * 360f).toFloat() else 0f
+    val totalMovimiento = ingresos + egresos
+
+    // 1. Cálculo exacto asegurando el 100%
+    val porcentajeIngresos = if (totalMovimiento > 0) {
+        kotlin.math.round((ingresos / totalMovimiento) * 100).toInt()
+    } else 0
+
+    val porcentajeEgresos = if (totalMovimiento > 0) 100 - porcentajeIngresos else 0
+
+    // Ángulos para el Canvas (360 grados proporcionales)
+    val angularIngresos = (porcentajeIngresos / 100f) * 360f
+    val angularEgresos = 360f - angularIngresos
 
     Column(
         modifier = modifier
@@ -52,7 +61,7 @@ fun HadesFinancialChart(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            // Lado Izquierdo: Gráfico circular (Dona)
+            // Lado Izquierdo: Gráfico circular (Dona) con texto central dinámico
             Box(
                 modifier = Modifier.size(90.dp),
                 contentAlignment = Alignment.Center
@@ -61,65 +70,68 @@ fun HadesFinancialChart(
                     val strokeWidth = 10.dp.toPx()
                     val radius = (size.minDimension - strokeWidth) / 2
 
-                    // Fondo del círculo (pista vacía)
+                    // Fondo del círculo
                     drawCircle(
                         color = HadesOnDark.copy(alpha = 0.05f),
                         radius = radius,
                         style = Stroke(width = strokeWidth)
                     )
 
-                    if (total > 0) {
-                        // Arco de Egresos (Naranja)
+                    if (totalMovimiento > 0) {
+                        // Arco de Ingresos (Cyan) - Primero para que sea el dominante arriba
                         drawArc(
-                            color = HadesOrange,
+                            color = HadesCyan,
                             startAngle = -90f,
-                            sweepAngle = angularEgresos,
+                            sweepAngle = angularIngresos,
                             useCenter = false,
                             style = Stroke(width = strokeWidth, cap = StrokeCap.Round)
                         )
-                        // Arco de Ingresos (Cyan)
+                        // Arco de Egresos (Naranja)
                         drawArc(
-                            color = HadesCyan,
-                            startAngle = -90f + angularEgresos,
-                            sweepAngle = angularIngresos,
+                            color = HadesOrange,
+                            startAngle = -90f + angularIngresos,
+                            sweepAngle = angularEgresos,
                             useCenter = false,
                             style = Stroke(width = strokeWidth, cap = StrokeCap.Round)
                         )
                     }
                 }
 
+                // 2. Texto central dinámico y centrado
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text(
-                        text = if (total > 0) "${((ingresos / total) * 100).toInt()}%" else "0%",
+                        text = "$porcentajeIngresos%",
                         fontSize = 18.sp,
                         fontWeight = FontWeight.Black,
-                        color = HadesCyan
+                        color = HadesCyan,
+                        textAlign = TextAlign.Center
                     )
                     Text(
                         text = "ÉXITO",
                         fontSize = 8.sp,
                         fontWeight = FontWeight.Bold,
-                        color = HadesOnDark.copy(alpha = 0.4f)
+                        color = HadesOnDark.copy(alpha = 0.4f),
+                        textAlign = TextAlign.Center
                     )
                 }
             }
 
             Spacer(modifier = Modifier.width(20.dp))
 
-            // Lado Derecho: Leyenda detallada
+            // 3. Estructura limpia (Lado Derecho: Leyenda)
             Column(modifier = Modifier.weight(1f)) {
                 ChartLegendItem(
                     label = "Ingresos",
                     amount = ingresos,
                     color = HadesCyan,
-                    percentage = if (total > 0) (ingresos / total * 100) else 0.0
+                    percentage = porcentajeIngresos.toDouble()
                 )
                 Spacer(modifier = Modifier.height(14.dp))
                 ChartLegendItem(
                     label = "Egresos",
                     amount = egresos,
                     color = HadesOrange,
-                    percentage = if (total > 0) (egresos / total * 100) else 0.0
+                    percentage = porcentajeEgresos.toDouble()
                 )
             }
         }
@@ -167,4 +179,3 @@ private fun ChartLegendItem(
         }
     }
 }
-
