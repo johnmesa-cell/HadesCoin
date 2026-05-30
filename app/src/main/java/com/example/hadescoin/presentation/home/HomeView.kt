@@ -26,14 +26,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
-import com.composables.icons.lucide.ArrowDownToLine
-import com.composables.icons.lucide.ArrowUpFromLine
-import com.composables.icons.lucide.Landmark
-import com.composables.icons.lucide.Lucide
 import com.example.hadescoin.R
 import com.example.hadescoin.domain.model.AppUser
 import com.example.hadescoin.domain.model.WalletTransaction
 import com.example.hadescoin.presentation.components.*
+import com.example.hadescoin.presentation.utils.HadesIcons
 import com.example.hadescoin.presentation.utils.formatTimestamp
 import com.example.hadescoin.presentation.utils.getInitials
 import com.example.hadescoin.presentation.utils.translateTransactionType
@@ -43,25 +40,16 @@ import java.util.Locale
 // ── Helpers de iconos ─────────────────────────────────────────────────────────
 
 /**
- * Ícono para el FAB/SpeedDial según la acción:
- *  - Retiro en cajero  → Lucide.Landmark (edificio banco/cajero)
- *  - Depósito          → Lucide.ArrowDownToLine
- *  - Transferencia     → Icons.Filled.SwapHoriz  (sin cambio)
- *  - Pagar             → Icons.Filled.CreditCard (sin cambio)
- */
-
-/**
- * Ícono para cada fila del historial de movimientos:
- *  - DEPOSIT                          → Lucide.ArrowDownToLine  (cyan)
- *  - WITHDRAW / WITHDRAWAL_*          → Lucide.ArrowUpFromLine  (naranja)
- *  - TRANSFER IN                      → Icons.Filled.ArrowDownward
- *  - TRANSFER OUT                     → Icons.Filled.ArrowUpward
+ * Ícono por tipo de transacción:
+ *  DEPOSIT              → HadesIcons.ArrowDownToLine  (flecha + línea base, cyan)
+ *  WITHDRAW / WITHDRAWAL_* → HadesIcons.ArrowUpFromLine (flecha + línea base, naranja)
+ *  TRANSFER             → ArrowDownward / ArrowUpward  (Material)
  */
 private fun txIcon(type: String, direction: String): ImageVector {
     return when (type.uppercase()) {
-        "DEPOSIT"                                                         -> Lucide.ArrowDownToLine
+        "DEPOSIT"                                                         -> HadesIcons.ArrowDownToLine
         "WITHDRAW",
-        "WITHDRAWAL_PENDING", "WITHDRAWAL_COMPLETED", "WITHDRAWAL_FAILED" -> Lucide.ArrowUpFromLine
+        "WITHDRAWAL_PENDING", "WITHDRAWAL_COMPLETED", "WITHDRAWAL_FAILED" -> HadesIcons.ArrowUpFromLine
         else -> if (direction == "IN") Icons.Filled.ArrowDownward else Icons.Filled.ArrowUpward
     }
 }
@@ -179,7 +167,7 @@ fun HomeViewContent(
         else       -> transactions.filter { it.type.uppercase() == filtroActivo }
     }
 
-    // Solo TX reales (no pendientes ni fallidas) para el resumen
+    // Solo TX reales para el resumen (excluye pendientes y fallidas)
     val totalIngresos = transactions.filter { tx ->
         tx.direction == "IN" &&
                 tx.type.uppercase() !in setOf("WITHDRAWAL_PENDING", "WITHDRAWAL_FAILED")
@@ -197,17 +185,15 @@ fun HomeViewContent(
             onClick = { onTransfer() }
         ),
         SpeedDialItem(
-            // Depósito: flecha entrando con línea base — Lucide.ArrowDownToLine (cyan)
             label   = stringResource(R.string.action_deposit),
-            icon    = Lucide.ArrowDownToLine,
+            icon    = HadesIcons.ArrowDownToLine,
             color   = HadesCyan,
             onClick = {},
             enabled = false
         ),
         SpeedDialItem(
-            // Retiro cajero: Lucide.Landmark (edificio banco/cajero) — naranja
             label   = "Retirar en Cajero",
-            icon    = Lucide.Landmark,
+            icon    = HadesIcons.Landmark,
             color   = HadesOrange,
             onClick = { onWithdrawAtm() }
         ),
