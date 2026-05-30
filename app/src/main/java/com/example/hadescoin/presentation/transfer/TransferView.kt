@@ -45,6 +45,9 @@ fun TransferView(
     val senderBalance   by viewModel.senderBalance.observeAsState(0.0)
     val transferExitosa by viewModel.transferExitosa.observeAsState()
     val transferError   by viewModel.transferError.observeAsState()
+    val mensajeFlotante by viewModel.mensajeFlotante.observeAsState()
+
+    val snackbarHostState = remember { SnackbarHostState() }
 
     var mensajeError by remember { mutableStateOf("") }
     var showError    by remember { mutableStateOf(false) }
@@ -69,25 +72,38 @@ fun TransferView(
         }
     }
 
-    TransferViewContent(
-        senderPhone       = senderPhone,
-        senderBalance     = senderBalance,
-        receiverPhone     = receiverPhone,
-        amount            = amount,
-        pin               = pin,
-        cargando          = cargando,
-        showConfirm       = showConfirm,
-        onReceiverChange  = { receiverPhone = it },
-        onAmountChange    = { amount = it },
-        onPinChange       = { pin = it },
-        onReviewClick     = { showConfirm = true },
-        onConfirmTransfer = {
-            val parsedAmount = amount.toDoubleOrNull() ?: 0.0
-            viewModel.transfer(senderPhone, receiverPhone, parsedAmount, pin)
-        },
-        onDismissConfirm  = { showConfirm = false },
-        onBackClick       = { navController.popBackStack() }
-    )
+    LaunchedEffect(mensajeFlotante) {
+        mensajeFlotante?.let {
+            snackbarHostState.showSnackbar(it)
+            viewModel.clearMensajeFlotante()
+        }
+    }
+
+    Scaffold(
+        snackbarHost = { SnackbarHost(hostState = snackbarHostState) }
+    ) { innerPadding ->
+        Box(modifier = Modifier.padding(innerPadding)) {
+            TransferViewContent(
+                senderPhone       = senderPhone,
+                senderBalance     = senderBalance,
+                receiverPhone     = receiverPhone,
+                amount            = amount,
+                pin               = pin,
+                cargando          = cargando,
+                showConfirm       = showConfirm,
+                onReceiverChange  = { receiverPhone = it },
+                onAmountChange    = { amount = it },
+                onPinChange       = { pin = it },
+                onReviewClick     = { showConfirm = true },
+                onConfirmTransfer = {
+                    val parsedAmount = amount.toDoubleOrNull() ?: 0.0
+                    viewModel.transfer(senderPhone, receiverPhone, parsedAmount, pin)
+                },
+                onDismissConfirm  = { showConfirm = false },
+                onBackClick       = { navController.popBackStack() }
+            )
+        }
+    }
 
     if (cargando) ShowLoadingAlertDialog()
 

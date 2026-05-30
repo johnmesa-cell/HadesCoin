@@ -65,6 +65,7 @@
     <string name="label_incomes">INGRESOS</string>
     <string name="label_expenses">EGRESOS</string>
     <string name="cd_refresh">Actualizar</string>
+    <string name="cd_notifications">Notificaciones</string>
     <string name="cd_logo">HadesCoin Logo</string>
     <string name="btn_logout">Cerrar sesión</string>
 

@@ -6,8 +6,11 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.hadescoin.di.ServiceLocator
 import com.example.hadescoin.domain.model.AppUser
+import com.example.hadescoin.domain.usecase.CreateNotificationUseCase
 import com.example.hadescoin.domain.usecase.GenerateVerificationCodeUseCase
+import com.example.hadescoin.domain.usecase.GetUnreadNotificationsCountUseCase
 import com.example.hadescoin.domain.usecase.GetUserProfileUseCase
+import com.example.hadescoin.domain.usecase.QueueNotificationEmailUseCase
 import com.example.hadescoin.domain.usecase.UpdateUserNicknameUseCase
 import com.example.hadescoin.domain.usecase.UpdateUserPinUseCase
 import com.example.hadescoin.domain.usecase.ValidateVerificationCodeUseCase
@@ -18,7 +21,10 @@ class ProfileViewModel(
     private val updatePinUseCase:      UpdateUserPinUseCase           = ServiceLocator.provideUpdateUserPinUseCase(),
     private val updateNicknameUseCase: UpdateUserNicknameUseCase      = ServiceLocator.provideUpdateUserNicknameUseCase(),
     private val generateCodeUseCase:   GenerateVerificationCodeUseCase = ServiceLocator.provideGenerateVerificationCodeUseCase(),
-    private val validateCodeUseCase:   ValidateVerificationCodeUseCase = ServiceLocator.provideValidateVerificationCodeUseCase()
+    private val validateCodeUseCase:   ValidateVerificationCodeUseCase = ServiceLocator.provideValidateVerificationCodeUseCase(),
+    private val createNotificationUseCase: CreateNotificationUseCase = ServiceLocator.provideCreateNotificationUseCase(),
+    private val getUnreadNotificationsCountUseCase: GetUnreadNotificationsCountUseCase = ServiceLocator.provideGetUnreadNotificationsCountUseCase(),
+    private val queueNotificationEmailUseCase: QueueNotificationEmailUseCase = ServiceLocator.provideQueueNotificationEmailUseCase()
 ) : ViewModel() {
 
     private val _user = MutableLiveData<AppUser?>()
@@ -39,6 +45,9 @@ class ProfileViewModel(
     private val _codigoValidado = MutableLiveData(false)
     val codigoValidado: LiveData<Boolean> = _codigoValidado
 
+    private val _notificacionesNoLeidas = MutableLiveData(0)
+    val notificacionesNoLeidas: LiveData<Int> = _notificacionesNoLeidas
+
     private var phoneParaReset: String = ""
 
     // ── Cargar perfil ──────────────────────────────────────────────────────────
@@ -47,6 +56,7 @@ class ProfileViewModel(
             _cargando.value = true
             try {
                 _user.value = getUserProfileUseCase(phoneNumber)
+                cargarNoLeidas(phoneNumber)
             } catch (e: Exception) {
                 _mensajeError.value = "Error al cargar el perfil"
             } finally {
@@ -70,6 +80,12 @@ class ProfileViewModel(
             try {
                 if (updatePinUseCase(phoneNumber, pinNuevo)) {
                     _mensajeExito.value = "PIN actualizado correctamente"
+                    registrarNotificacionPerfil(
+                        phoneNumber = phoneNumber,
+                        title = "PIN actualizado",
+                        message = "Tu PIN de seguridad fue actualizado correctamente.",
+                        type = "SECURITY"
+                    )
                     cargarPerfil(phoneNumber)
                 } else {
                     _mensajeError.value = "No se pudo actualizar el PIN"
@@ -128,6 +144,12 @@ class ProfileViewModel(
             try {
                 if (updatePinUseCase(phone, nuevoPin)) {
                     _mensajeExito.value = "PIN actualizado correctamente"
+                    registrarNotificacionPerfil(
+                        phoneNumber = phone,
+                        title = "PIN restablecido",
+                        message = "Tu PIN fue restablecido mediante verificacion.",
+                        type = "SECURITY"
+                    )
                     _codigoGenerado.value = null
                     _codigoValidado.value = false
                     cargarPerfil(phone)
@@ -150,6 +172,12 @@ class ProfileViewModel(
             try {
                 if (updateNicknameUseCase(phoneNumber, nuevoApodo)) {
                     _mensajeExito.value = "Apodo actualizado"
+                    registrarNotificacionPerfil(
+                        phoneNumber = phoneNumber,
+                        title = "Perfil actualizado",
+                        message = "Tu apodo fue actualizado a $nuevoApodo.",
+                        type = "PROFILE"
+                    )
                     cargarPerfil(phoneNumber)
                 } else {
                     _mensajeError.value = "No se pudo actualizar el apodo"
@@ -167,6 +195,40 @@ class ProfileViewModel(
         _mensajeError.value   = null
         _codigoGenerado.value = null
         _codigoValidado.value = false
+    }
+
+    fun cargarNoLeidas(phoneNumber: String) {
+        viewModelScope.launch {
+            try {
+                _notificacionesNoLeidas.value = getUnreadNotificationsCountUseCase(phoneNumber)
+            } catch (_: Exception) {
+                _notificacionesNoLeidas.value = 0
+            }
+        }
+    }
+
+    private suspend fun registrarNotificacionPerfil(
+        phoneNumber: String,
+        title: String,
+        message: String,
+        type: String
+    ) {
+        createNotificationUseCase(
+            phoneNumber = phoneNumber,
+            title = title,
+            message = message,
+            type = type
+        )
+
+        val email = _user.value?.email.orEmpty()
+        if (email.isNotBlank()) {
+            queueNotificationEmailUseCase(
+                phoneNumber = phoneNumber,
+                toEmail = email,
+                subject = "HadesCoin - $title",
+                body = message
+            )
+        }
     }
 
     private fun esPinObvio(pin: String) =

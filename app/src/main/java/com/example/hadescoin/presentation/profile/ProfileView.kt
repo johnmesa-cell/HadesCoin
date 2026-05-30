@@ -3,6 +3,8 @@ package com.example.hadescoin.presentation.profile
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.livedata.observeAsState
@@ -30,12 +32,16 @@ fun ProfileView(
     val mensajeError   by viewModel.mensajeError.observeAsState()
     val codigoGenerado by viewModel.codigoGenerado.observeAsState()
     val codigoValidado by viewModel.codigoValidado.observeAsState(false)
+    val noLeidas       by viewModel.notificacionesNoLeidas.observeAsState(0)
 
     var showPinDialog      by remember { mutableStateOf(false) }
     var showNicknameDialog by remember { mutableStateOf(false) }
     var showRecoveryFlow   by remember { mutableStateOf(false) }
 
-    LaunchedEffect(phoneNumber) { viewModel.cargarPerfil(phoneNumber) }
+    LaunchedEffect(phoneNumber) {
+        viewModel.cargarPerfil(phoneNumber)
+        viewModel.cargarNoLeidas(phoneNumber)
+    }
 
     HadesBackground {
         Column(
@@ -86,6 +92,30 @@ fun ProfileView(
                         onClick  = { showNicknameDialog = true },
                         modifier = Modifier.fillMaxWidth()
                     )
+
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    OutlinedButton(
+                        onClick = { navController.navigate("notifications/$phoneNumber") },
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = HadesCyan)
+                    ) {
+                        BadgedBox(
+                            badge = {
+                                if (noLeidas > 0) {
+                                    Badge { Text(noLeidas.toString()) }
+                                }
+                            }
+                        ) {
+                            Icon(
+                                imageVector = Icons.Filled.Notifications,
+                                contentDescription = null,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("Notificaciones")
+                    }
                 }
             }
 

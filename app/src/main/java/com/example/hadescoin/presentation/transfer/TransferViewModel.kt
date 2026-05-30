@@ -5,13 +5,20 @@ import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.hadescoin.di.ServiceLocator
+import com.example.hadescoin.domain.usecase.CreateNotificationUseCase
 import com.example.hadescoin.domain.usecase.GetWalletDataUseCase
+import com.example.hadescoin.domain.usecase.GetUserProfileUseCase
+import com.example.hadescoin.domain.usecase.QueueNotificationEmailUseCase
 import com.example.hadescoin.domain.usecase.TransferUseCase
 import kotlinx.coroutines.launch
+import java.util.Locale
 
 class TransferViewModel(
     private val transferUseCase: TransferUseCase = ServiceLocator.provideTransferUseCase(),
-    private val getWalletDataUseCase: GetWalletDataUseCase = ServiceLocator.provideGetWalletDataUseCase()
+    private val getWalletDataUseCase: GetWalletDataUseCase = ServiceLocator.provideGetWalletDataUseCase(),
+    private val getUserProfileUseCase: GetUserProfileUseCase = ServiceLocator.provideGetUserProfileUseCase(),
+    private val createNotificationUseCase: CreateNotificationUseCase = ServiceLocator.provideCreateNotificationUseCase(),
+    private val queueNotificationEmailUseCase: QueueNotificationEmailUseCase = ServiceLocator.provideQueueNotificationEmailUseCase()
 ) : ViewModel() {
 
     private val _cargando        = MutableLiveData(false)
@@ -25,6 +32,9 @@ class TransferViewModel(
 
     private val _transferError   = MutableLiveData<String?>(null)
     val transferError: LiveData<String?> = _transferError
+
+    private val _mensajeFlotante = MutableLiveData<String?>()
+    val mensajeFlotante: LiveData<String?> = _mensajeFlotante
 
     fun loadSenderBalance(phoneNumber: String) {
         viewModelScope.launch {
@@ -51,6 +61,7 @@ class TransferViewModel(
                     val (updatedUser, _) = getWalletDataUseCase(senderPhone)
                     _senderBalance.value   = updatedUser?.balance ?: 0.0
                     _transferExitosa.value = true
+                    registrarNotificacionesTransferencia(senderPhone, receiverPhone, amount)
                 },
                 onFailure = {
                     _transferError.value = it.message ?: "Error inesperado"
@@ -60,6 +71,52 @@ class TransferViewModel(
         }
     }
 
+    private suspend fun registrarNotificacionesTransferencia(
+        senderPhone: String,
+        receiverPhone: String,
+        amount: Double
+    ) {
+        val monto = String.format(Locale.US, "%,.2f", amount)
+
+        createNotificationUseCase(
+            phoneNumber = senderPhone,
+            title = "Transferencia enviada",
+            message = "Enviaste $$monto al numero $receiverPhone.",
+            type = "TRANSFER"
+        )
+
+        createNotificationUseCase(
+            phoneNumber = receiverPhone,
+            title = "Transferencia recibida",
+            message = "Recibiste $$monto del numero $senderPhone.",
+            type = "TRANSFER"
+        )
+
+        val sender = getUserProfileUseCase(senderPhone)
+        val receiver = getUserProfileUseCase(receiverPhone)
+
+        if (!sender?.email.isNullOrBlank()) {
+            queueNotificationEmailUseCase(
+                phoneNumber = senderPhone,
+                toEmail = sender.email,
+                subject = "HadesCoin - Transferencia enviada",
+                body = "Se registro una transferencia enviada por $$monto al numero $receiverPhone."
+            )
+        }
+
+        if (!receiver?.email.isNullOrBlank()) {
+            queueNotificationEmailUseCase(
+                phoneNumber = receiverPhone,
+                toEmail = receiver.email,
+                subject = "HadesCoin - Transferencia recibida",
+                body = "Se registro una transferencia recibida por $$monto del numero $senderPhone."
+            )
+        }
+
+        _mensajeFlotante.value = "Notificacion guardada y correo en cola"
+    }
+
     fun clearExito() { _transferExitosa.value = null }
     fun clearError() { _transferError.value = null }
+    fun clearMensajeFlotante() { _mensajeFlotante.value = null }
 }

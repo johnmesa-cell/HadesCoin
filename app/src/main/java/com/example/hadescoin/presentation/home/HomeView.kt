@@ -65,6 +65,10 @@ fun HomeView(
     val transactions  by viewModel.transactions.observeAsState(emptyList())
     val error         by viewModel.error.observeAsState()
     val codigoRetiro  by viewModel.codigoRetiro.observeAsState()
+    val noLeidas      by viewModel.notificacionesNoLeidas.observeAsState(0)
+    val mensajeSnack  by viewModel.mensajeFlotante.observeAsState()
+
+    val snackbarHostState = remember { SnackbarHostState() }
 
     var showError          by remember { mutableStateOf(false) }
     var mensajeError       by remember { mutableStateOf("") }
@@ -83,6 +87,13 @@ fun HomeView(
         viewModel.loadWalletData(phoneNumber)
     }
 
+    LaunchedEffect(mensajeSnack) {
+        mensajeSnack?.let {
+            snackbarHostState.showSnackbar(it)
+            viewModel.clearMensajeFlotante()
+        }
+    }
+
     LaunchedEffect(error) {
         error?.let {
             mensajeError = it
@@ -90,29 +101,42 @@ fun HomeView(
         }
     }
 
-    HomeViewContent(
-        appUser        = appUser,
-        transactions   = transactions,
-        cargando       = cargando,
-        menuExpanded   = menuExpanded,
-        onMenuToggle   = { menuExpanded = !menuExpanded },
-        onMenuCollapse = { menuExpanded = false },
-        onRefresh      = { viewModel.refresh() },
-        onLogout       = {
-            navController.navigate("login") { popUpTo(0) { inclusive = true } }
-        },
-        onTransfer     = {
-            menuExpanded = false
-            navController.navigate("transfer/$phoneNumber")
-        },
-        onProfile      = {
-            navController.navigate("profile/$phoneNumber")
-        },
-        onWithdrawAtm  = {
-            menuExpanded = false
-            showWithdrawDialog = true
+    Scaffold(
+        snackbarHost = { SnackbarHost(hostState = snackbarHostState) }
+    ) { innerPadding ->
+        Box(modifier = Modifier.padding(innerPadding)) {
+            HomeViewContent(
+                appUser               = appUser,
+                transactions          = transactions,
+                cargando              = cargando,
+                menuExpanded          = menuExpanded,
+                notificacionesNoLeidas = noLeidas,
+                onMenuToggle          = { menuExpanded = !menuExpanded },
+                onMenuCollapse        = { menuExpanded = false },
+                onRefresh             = {
+                    viewModel.refresh()
+                    viewModel.cargarNoLeidas(phoneNumber)
+                },
+                onLogout              = {
+                    navController.navigate("login") { popUpTo(0) { inclusive = true } }
+                },
+                onTransfer            = {
+                    menuExpanded = false
+                    navController.navigate("transfer/$phoneNumber")
+                },
+                onProfile             = {
+                    navController.navigate("profile/$phoneNumber")
+                },
+                onNotifications       = {
+                    navController.navigate("notifications/$phoneNumber")
+                },
+                onWithdrawAtm         = {
+                    menuExpanded = false
+                    showWithdrawDialog = true
+                }
+            )
         }
-    )
+    }
 
     if (cargando && !showWithdrawDialog) ShowLoadingAlertDialog()
 
@@ -145,12 +169,14 @@ fun HomeViewContent(
     transactions: List<WalletTransaction>,
     cargando: Boolean,
     menuExpanded: Boolean = false,
+    notificacionesNoLeidas: Int = 0,
     onMenuToggle: () -> Unit = {},
     onMenuCollapse: () -> Unit = {},
     onRefresh: () -> Unit = {},
     onLogout: () -> Unit = {},
     onTransfer: () -> Unit = {},
     onProfile: () -> Unit = {},
+    onNotifications: () -> Unit = {},
     onWithdrawAtm: () -> Unit = {}
 ) {
     var showUserPanel by remember { mutableStateOf(false) }
@@ -220,6 +246,8 @@ fun HomeViewContent(
                     HomeHeader(
                         appUser       = appUser,
                         onRefresh     = onRefresh,
+                        notificacionesNoLeidas = notificacionesNoLeidas,
+                        onNotificationsClick = onNotifications,
                         onAvatarClick = { showUserPanel = true }
                     )
                     Spacer(modifier = Modifier.height(24.dp))
@@ -350,6 +378,8 @@ fun HomeViewContent(
 private fun HomeHeader(
     appUser: AppUser?,
     onRefresh: () -> Unit,
+    notificacionesNoLeidas: Int,
+    onNotificationsClick: () -> Unit,
     onAvatarClick: () -> Unit
 ) {
     Row(
@@ -390,13 +420,31 @@ private fun HomeHeader(
                 )
             }
         }
-        IconButton(onClick = onRefresh) {
-            Icon(
-                imageVector        = Icons.Filled.Refresh,
-                contentDescription = stringResource(R.string.cd_refresh),
-                tint               = HadesCyan,
-                modifier           = Modifier.size(22.dp)
-            )
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            IconButton(onClick = onNotificationsClick) {
+                BadgedBox(
+                    badge = {
+                        if (notificacionesNoLeidas > 0) {
+                            Badge { Text(notificacionesNoLeidas.toString()) }
+                        }
+                    }
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.Notifications,
+                        contentDescription = stringResource(R.string.cd_notifications),
+                        tint = HadesCyan,
+                        modifier = Modifier.size(22.dp)
+                    )
+                }
+            }
+            IconButton(onClick = onRefresh) {
+                Icon(
+                    imageVector        = Icons.Filled.Refresh,
+                    contentDescription = stringResource(R.string.cd_refresh),
+                    tint               = HadesCyan,
+                    modifier           = Modifier.size(22.dp)
+                )
+            }
         }
     }
 }
