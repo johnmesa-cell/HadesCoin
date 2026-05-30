@@ -16,7 +16,7 @@ import kotlinx.coroutines.launch
 
 class LoginViewModel(
     application: Application,
-    private val loginUseCase: LoginUseCase     = ServiceLocator.provideLoginUseCase(),
+    private val loginUseCase: LoginUseCase          = ServiceLocator.provideLoginUseCase(),
     private val recoverPinUseCase: RecoverPinUseCase = ServiceLocator.provideRecoverPinUseCase()
 ) : AndroidViewModel(application) {
 
@@ -63,8 +63,8 @@ class LoginViewModel(
             try {
                 val success = loginUseCase(phoneNumber, pin)
                 if (success) {
-                    // Obtener nombre desde Firebase para guardarlo localmente
-                    val nombre = ServiceLocator.provideGetUserNameUseCase()(phoneNumber).orEmpty()
+                    // Obtener nombre desde Firebase usando el use case existente
+                    val nombre = ServiceLocator.provideGetUserProfileUseCase()(phoneNumber)?.fullName.orEmpty()
                     sessionRepo.guardarSesion(phone = phoneNumber, name = nombre)
                     _loginExitoso.value = phoneNumber
                 } else {
