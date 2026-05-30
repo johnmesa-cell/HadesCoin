@@ -122,11 +122,11 @@ fun LoginView(
     if (showRecoveryFlow) {
         PinRecoveryFlow(
             codigoGenerado = codigoGenerado,
-            codigoValidado = codigoValidado ?: false,
+            codigoValidado = codigoValidado,
             onDismiss      = { showRecoveryFlow = false },
-            onGenerate     = { phone -> viewModel.generarCodigoVerificacion(phone) },
-            onValidate     = { code  -> viewModel.validarCodigo(code) },
-            onReset        = { pin   -> viewModel.resetearPin(pin) },
+            onGenerate     = { phone, doc -> viewModel.generarCodigoVerificacion(phone, doc) },
+            onValidate     = { code -> viewModel.validarCodigo(code) },
+            onReset        = { newPin -> viewModel.resetearPin(newPin) },
             onClearState   = { viewModel.clearError() }
         )
     }
