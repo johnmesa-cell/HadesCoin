@@ -28,12 +28,14 @@ interface WalletRepository {
      * - verificationCode: código de 6 dígitos
      * - withdrawalAmount: monto máximo autorizado
      * - expiresAt: timestamp ISO 8601 de expiración (now + 25 min)
-     * Retorna true si se guardó correctamente.
+     * Retorna el txId generado por Firebase, o null si falla.
      */
     suspend fun saveWithdrawalCode(
         phoneNumber: String,
         code:        String,
         amount:      Double,
         expiresAt:   String
-    ): Boolean
+    ): String?
+
+    suspend fun markWithdrawalFailed(phoneNumber: String)
 }

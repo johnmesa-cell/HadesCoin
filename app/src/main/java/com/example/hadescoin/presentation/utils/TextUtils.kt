@@ -14,13 +14,16 @@ fun getInitials(fullName: String?): String {
 
 fun translateTransactionType(type: String): String {
     return when (type.uppercase()) {
-        "TODOS"    -> "Todos"
-        "DEPOSIT"  -> "Depósito"
-        "WITHDRAW" -> "Retiro"
-        "TRANSFER" -> "Transferencia"
-        "INCOME"   -> "Ingreso"
-        "PAYMENT"  -> "Pago"
-        else       -> type
+        "TODOS"                -> "Todos"
+        "DEPOSIT"              -> "Depósito"
+        "WITHDRAW"             -> "Retiro"
+        "WITHDRAWAL_PENDING"   -> "Retiro (pendiente)"
+        "WITHDRAWAL_COMPLETED" -> "Retiro (completado)"
+        "WITHDRAWAL_FAILED"    -> "Retiro (fallido)"
+        "TRANSFER"             -> "Transferencia"
+        "INCOME"               -> "Ingreso"
+        "PAYMENT"              -> "Pago"
+        else                   -> type
     }
 }
 

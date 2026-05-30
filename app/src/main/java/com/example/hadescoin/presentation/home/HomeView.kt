@@ -139,8 +139,15 @@ fun HomeViewContent(
     var saldoVisible  by remember { mutableStateOf(true) }
     var filtroActivo  by remember { mutableStateOf("TODOS") }
 
-    val transaccionesFiltradas = if (filtroActivo == "TODOS") transactions
-        else transactions.filter { it.type.uppercase() == filtroActivo }
+    val transaccionesFiltradas = when (filtroActivo) {
+        "TODOS"    -> transactions
+        "WITHDRAW" -> transactions.filter {
+            val t = it.type.uppercase()
+            t == "WITHDRAW" || t == "WITHDRAWAL_PENDING" ||
+                    t == "WITHDRAWAL_COMPLETED" || t == "WITHDRAWAL_FAILED"
+        }
+        else       -> transactions.filter { it.type.uppercase() == filtroActivo }
+    }
 
     val speedDialItems = listOf(
         SpeedDialItem(

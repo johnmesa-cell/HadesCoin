@@ -11,6 +11,11 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -125,13 +130,22 @@ private fun FormularioRetiroContent(
             modifier            = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            OutlinedButton(
+            Button(
                 onClick  = onDismiss,
-                modifier = Modifier.weight(1f),
-                colors   = ButtonDefaults.outlinedButtonColors(contentColor = HadesOnDark.copy(alpha = 0.6f)),
-                border   = androidx.compose.foundation.BorderStroke(1.dp, HadesPurple.copy(alpha = 0.4f)),
-                shape    = RoundedCornerShape(10.dp)
-            ) { Text("CANCELAR", fontSize = 12.sp) }
+                modifier = Modifier.weight(1f).height(48.dp),
+                colors   = ButtonDefaults.buttonColors(
+                    containerColor = HadesOnDark.copy(alpha = 0.08f),
+                    contentColor   = HadesOnDark.copy(alpha = 0.6f)
+                ),
+                shape = RoundedCornerShape(10.dp)
+            ) {
+                Text(
+                    text          = "CANCELAR",
+                    fontSize      = 13.sp,
+                    fontWeight    = FontWeight.Bold,
+                    letterSpacing = 1.sp
+                )
+            }
 
             HadesButton(
                 text          = "GENERAR",
@@ -139,7 +153,7 @@ private fun FormularioRetiroContent(
                 onClick       = onGenerate,
                 enabled       = formularioListo,
                 cargando      = cargando,
-                modifier      = Modifier.weight(1f)
+                modifier      = Modifier.weight(1f).height(48.dp)
             )
         }
     }
@@ -151,6 +165,10 @@ private fun CodigoRetiroContent(
     monto:    String,
     onCerrar: () -> Unit
 ) {
+    var copiado by remember { mutableStateOf(false) }
+    val clipboardManager = LocalClipboardManager.current
+    val scope = rememberCoroutineScope()
+
     Column(
         modifier            = Modifier.padding(24.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -206,6 +224,32 @@ private fun CodigoRetiroContent(
             fontSize  = 11.sp,
             color     = HadesOnDark.copy(alpha = 0.45f)
         )
+
+        Button(
+            onClick = {
+                clipboardManager.setText(AnnotatedString(codigo))
+                copiado = true
+                scope.launch {
+                    delay(2000)
+                    copiado = false
+                }
+            },
+            modifier = Modifier.fillMaxWidth(),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = if (copiado) HadesCyan.copy(alpha = 0.15f)
+                else HadesPurple.copy(alpha = 0.15f),
+                contentColor   = if (copiado) HadesCyan else HadesPurple
+            ),
+            shape = RoundedCornerShape(10.dp)
+        ) {
+            Text(
+                text       = if (copiado) "¡COPIADO! ✓" else "COPIAR CÓDIGO",
+                fontWeight = FontWeight.Bold,
+                fontSize   = 12.sp,
+                letterSpacing = 1.sp
+            )
+        }
+
         HadesButton(
             text     = "ENTENDIDO",
             onClick  = onCerrar,

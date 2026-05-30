@@ -28,8 +28,8 @@ class GenerateWithdrawalCodeUseCase(private val repository: WalletRepository) {
         val code      = (100000..999999).random().toString()
         val expiresAt = Instant.now().plus(25, ChronoUnit.MINUTES).toString()
 
-        val saved = repository.saveWithdrawalCode(phoneNumber, code, amount, expiresAt)
-        return if (saved) Result.success(code)
+        val txId = repository.saveWithdrawalCode(phoneNumber, code, amount, expiresAt)
+        return if (txId != null) Result.success(code)
         else Result.failure(Exception("No se pudo guardar el código. Intenta de nuevo."))
     }
 }

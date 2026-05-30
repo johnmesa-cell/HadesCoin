@@ -5,6 +5,8 @@ import com.example.hadescoin.data.datasource.FirebaseUserDataSource
 import com.example.hadescoin.domain.model.AppUser
 import com.example.hadescoin.domain.model.WalletTransaction
 import com.example.hadescoin.domain.repository.WalletRepository
+import com.google.firebase.database.FirebaseDatabase
+import kotlinx.coroutines.tasks.await
 import java.time.Instant
 
 class WalletRepositoryImpl(
@@ -119,9 +121,11 @@ class WalletRepositoryImpl(
         code:        String,
         amount:      Double,
         expiresAt:   String
-    ): Boolean {
+    ): String? {
         return try {
-            transactionDataSource.saveTransaction(mapOf(
+            val ref  = FirebaseDatabase.getInstance().getReference("transactions").push()
+            val txId = ref.key ?: return null
+            ref.setValue(mapOf(
                 "senderId"         to phoneNumber,
                 "receiverId"       to "ATM",
                 "amount"           to amount,
@@ -130,12 +134,32 @@ class WalletRepositoryImpl(
                 "withdrawalAmount" to amount,
                 "expiresAt"        to expiresAt,
                 "timestamp"        to Instant.now().toString()
-            ))
-            // También guardamos el código en el nodo del usuario para que el cajero lo valide
+            )).await()
             userDataSource.updateUserField(phoneNumber, "withdrawalCode",   code)
             userDataSource.updateUserField(phoneNumber, "withdrawalAmount", amount.toString())
             userDataSource.updateUserField(phoneNumber, "withdrawalExpiry", expiresAt)
-            true
-        } catch (e: Exception) { false }
+            userDataSource.updateUserField(phoneNumber, "withdrawalTxId",   txId)
+            txId
+        } catch (_: Exception) { null }
+    }
+
+    override suspend fun markWithdrawalFailed(phoneNumber: String) {
+        try {
+            val snapshot   = userDataSource.getUser(phoneNumber) ?: return
+            val storedTxId = snapshot.child("withdrawalTxId")
+                .getValue(String::class.java) ?: ""
+            if (storedTxId.isNotBlank()) {
+                transactionDataSource.updateTransactionField(
+                    storedTxId, "type", "WITHDRAWAL_FAILED"
+                )
+                transactionDataSource.updateTransactionField(
+                    storedTxId, "timestamp", Instant.now().toString()
+                )
+            }
+            userDataSource.updateUserField(phoneNumber, "withdrawalCode",   "")
+            userDataSource.updateUserField(phoneNumber, "withdrawalAmount", "")
+            userDataSource.updateUserField(phoneNumber, "withdrawalExpiry", "")
+            userDataSource.updateUserField(phoneNumber, "withdrawalTxId",   "")
+        } catch (_: Exception) {}
     }
 }
