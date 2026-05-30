@@ -56,7 +56,8 @@ fun RegisterView(
     var currentStep       by remember { mutableStateOf(RegisterStep.FORMULARIO) }
     var showPermRationale by remember { mutableStateOf(false) }
 
-    val goToLogin = { navController.popBackStack() }
+    // Tipo explicito () -> Unit para evitar inferencia erronea de () -> Boolean
+    val goToLogin: () -> Unit = { navController.popBackStack(); Unit }
 
     val cameraPermLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission()
@@ -66,10 +67,10 @@ fun RegisterView(
     }
 
     LaunchedEffect(registroExitoso) {
-        registroExitoso?.let { navController.popBackStack() }
+        if (registroExitoso == true) navController.popBackStack()
     }
     LaunchedEffect(registroError) {
-        registroError?.let { mensajeError = it; showError = true }
+        registroError?.let { err -> mensajeError = err; showError = true }
     }
 
     when (currentStep) {
@@ -115,12 +116,11 @@ fun RegisterView(
         phoneNumber            = phoneNumber,
         pin                    = pin,
         confirmPin             = confirmPin,
-        cargando               = cargando,
-        onFullNameChange       = { if (it.all { c -> c.isLetter() || c.isWhitespace() }) { fullName = it; viewModel.clearError() } },
-        onDocumentNumberChange = { if (it.length <= 10 && it.all { c -> c.isDigit() }) { documentNumber = it; viewModel.clearError() } },
-        onPhoneChange          = { if (it.length <= 10 && it.all { c -> c.isDigit() } && (it.isEmpty() || it[0] == '3')) { phoneNumber = it; viewModel.clearError() } },
-        onPinChange            = { if (it.length <= 4 && it.all { c -> c.isDigit() }) { pin = it; viewModel.clearError() } },
-        onConfirmPinChange     = { if (it.length <= 4 && it.all { c -> c.isDigit() }) { confirmPin = it; viewModel.clearError() } },
+        onFullNameChange       = { value -> if (value.all { c -> c.isLetter() || c.isWhitespace() }) { fullName = value; viewModel.clearError() } },
+        onDocumentNumberChange = { value -> if (value.length <= 10 && value.all { c -> c.isDigit() }) { documentNumber = value; viewModel.clearError() } },
+        onPhoneChange          = { value -> if (value.length <= 10 && value.all { c -> c.isDigit() } && (value.isEmpty() || value[0] == '3')) { phoneNumber = value; viewModel.clearError() } },
+        onPinChange            = { value -> if (value.length <= 4 && value.all { c -> c.isDigit() }) { pin = value; viewModel.clearError() } },
+        onConfirmPinChange     = { value -> if (value.length <= 4 && value.all { c -> c.isDigit() }) { confirmPin = value; viewModel.clearError() } },
         onContinueClick        = { cameraPermLauncher.launch(Manifest.permission.CAMERA) },
         onBackToLoginClick     = goToLogin
     )
@@ -139,7 +139,7 @@ fun RegisterView(
         ShowMessageAlertDialog(
             onConfirmation = { showPermRationale = false },
             dialogTitle    = "Permiso requerido",
-            dialogText     = "La cámara es necesaria para verificar tu identidad. Actívala desde los ajustes del dispositivo."
+            dialogText     = "La c\u00e1mara es necesaria para verificar tu identidad. Act\u00edvala desde los ajustes del dispositivo."
         )
     }
 }
@@ -152,7 +152,6 @@ fun RegisterViewContent(
     phoneNumber: String,
     pin: String,
     confirmPin: String,
-    cargando: Boolean,
     onFullNameChange: (String) -> Unit,
     onDocumentNumberChange: (String) -> Unit,
     onPhoneChange: (String) -> Unit,
@@ -282,7 +281,7 @@ fun RegisterViewContent(
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text          = "VERIFICAR CÉDULA",
+                        text          = "VERIFICAR C\u00c9DULA",
                         fontWeight    = FontWeight.Bold,
                         fontSize      = 14.sp,
                         letterSpacing = 1.sp
@@ -292,7 +291,6 @@ fun RegisterViewContent(
 
             Spacer(modifier = Modifier.height(20.dp))
 
-            // Volver a login — visible en paso 1 tambien
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
                     text     = stringResource(R.string.text_has_account),
@@ -347,14 +345,14 @@ fun RegisterConfirmacionView(
             )
             Spacer(modifier = Modifier.height(12.dp))
             Text(
-                text       = "¡Verificación completa!",
+                text       = "\u00a1Verificaci\u00f3n completa!",
                 fontSize   = 22.sp,
                 fontWeight = FontWeight.Black,
                 color      = HadesCyan,
                 textAlign  = TextAlign.Center
             )
             Text(
-                text      = "Ambos lados de tu cédula fueron capturados correctamente.",
+                text      = "Ambos lados de tu c\u00e9dula fueron capturados correctamente.",
                 fontSize  = 13.sp,
                 color     = HadesOnDark.copy(alpha = 0.7f),
                 textAlign = TextAlign.Center,
@@ -372,8 +370,8 @@ fun RegisterConfirmacionView(
                 Spacer(modifier = Modifier.height(8.dp))
                 ResumenFila(label = "Nombre",    valor = fullName)
                 ResumenFila(label = "Documento", valor = documentNumber)
-                ResumenFila(label = "Teléfono",  valor = phoneNumber)
-                ResumenFila(label = "Cédula",    valor = "✅ Verificada (frontal + trasera)")
+                ResumenFila(label = "Tel\u00e9fono",  valor = phoneNumber)
+                ResumenFila(label = "C\u00e9dula",    valor = "\u2705 Verificada (frontal + trasera)")
 
                 Spacer(modifier = Modifier.height(16.dp))
 
@@ -389,13 +387,12 @@ fun RegisterConfirmacionView(
             Spacer(modifier = Modifier.height(12.dp))
 
             TextButton(onClick = onBack) {
-                Text(text = "← Volver a tomar fotos", color = HadesOrange, fontSize = 13.sp)
+                Text(text = "\u2190 Volver a tomar fotos", color = HadesOrange, fontSize = 13.sp)
             }
 
-            // Volver a login — visible en paso 4 tambien
             TextButton(onClick = onBackToLogin) {
                 Text(
-                    text     = "Ya tengo cuenta. Iniciar sesión",
+                    text     = "Ya tengo cuenta. Iniciar sesi\u00f3n",
                     color    = HadesOnDark.copy(alpha = 0.5f),
                     fontSize = 12.sp
                 )
@@ -427,25 +424,24 @@ private fun ResumenFila(label: String, valor: String) {
     }
 }
 
-@Preview(showBackground = true, showSystemUi = true, name = "Register — Formulario")
+@Preview(showBackground = true, showSystemUi = true, name = "Register \u2014 Formulario")
 @Composable
 fun RegisterViewPreview() {
     HadesCoinTheme {
         RegisterViewContent(
             fullName = "", documentNumber = "", phoneNumber = "", pin = "", confirmPin = "",
-            cargando = false,
             onFullNameChange = {}, onDocumentNumberChange = {}, onPhoneChange = {},
             onPinChange = {}, onConfirmPinChange = {}, onContinueClick = {}, onBackToLoginClick = {}
         )
     }
 }
 
-@Preview(showBackground = true, showSystemUi = true, name = "Register — Confirmación")
+@Preview(showBackground = true, showSystemUi = true, name = "Register \u2014 Confirmaci\u00f3n")
 @Composable
 fun RegisterConfirmPreview() {
     HadesCoinTheme {
         RegisterConfirmacionView(
-            fullName       = "Juan Pérez",
+            fullName       = "Juan P\u00e9rez",
             documentNumber = "1010101010",
             phoneNumber    = "3001234567",
             cargando       = false,
