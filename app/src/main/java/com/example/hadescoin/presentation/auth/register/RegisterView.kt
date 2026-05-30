@@ -1,5 +1,8 @@
 package com.example.hadescoin.presentation.auth.register
 
+import android.Manifest
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -37,12 +40,27 @@ fun RegisterView(
     var pin            by remember { mutableStateOf("") }
     var confirmPin     by remember { mutableStateOf("") }
 
-    val cargando        by viewModel.cargando.observeAsState(false)
-    val registroExitoso by viewModel.registroExitoso.observeAsState()
-    val registroError   by viewModel.registroError.observeAsState()
+    val cargando          by viewModel.cargando.observeAsState(false)
+    val registroExitoso   by viewModel.registroExitoso.observeAsState()
+    val registroError     by viewModel.registroError.observeAsState()
+    val documentoCaptured by viewModel.documentoCaptured.observeAsState(false)
 
-    var mensajeError by remember { mutableStateOf("") }
-    var showError    by remember { mutableStateOf(false) }
+    var mensajeError       by remember { mutableStateOf("") }
+    var showError          by remember { mutableStateOf(false) }
+    var showCamera         by remember { mutableStateOf(false) }
+    var cameraPermGranted  by remember { mutableStateOf(false) }
+    var showPermRationale  by remember { mutableStateOf(false) }
+
+    val cameraPermLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        if (granted) {
+            cameraPermGranted = true
+            showCamera = true
+        } else {
+            showPermRationale = true
+        }
+    }
 
     LaunchedEffect(registroExitoso) {
         registroExitoso?.let { navController.popBackStack() }
@@ -55,6 +73,17 @@ fun RegisterView(
         }
     }
 
+    if (showCamera) {
+        CameraCaptureView(
+            onDocumentCaptured = {
+                viewModel.onDocumentCaptured()
+                showCamera = false
+            },
+            onBack = { showCamera = false }
+        )
+        return
+    }
+
     RegisterViewContent(
         fullName               = fullName,
         documentNumber         = documentNumber,
@@ -62,11 +91,13 @@ fun RegisterView(
         pin                    = pin,
         confirmPin             = confirmPin,
         cargando               = cargando,
+        documentoCaptured      = documentoCaptured,
         onFullNameChange       = { if (it.all { c -> c.isLetter() || c.isWhitespace() }) { fullName = it; viewModel.clearError() } },
         onDocumentNumberChange = { if (it.length <= 10 && it.all { c -> c.isDigit() }) { documentNumber = it; viewModel.clearError() } },
         onPhoneChange          = { if (it.length <= 10 && it.all { c -> c.isDigit() } && (it.isEmpty() || it[0] == '3')) { phoneNumber = it; viewModel.clearError() } },
         onPinChange            = { if (it.length <= 4 && it.all { c -> c.isDigit() }) { pin = it; viewModel.clearError() } },
         onConfirmPinChange     = { if (it.length <= 4 && it.all { c -> c.isDigit() }) { confirmPin = it; viewModel.clearError() } },
+        onScanDocumentClick    = { cameraPermLauncher.launch(Manifest.permission.CAMERA) },
         onRegisterClick        = { viewModel.register(fullName, documentNumber, phoneNumber, pin, confirmPin) },
         onBackToLoginClick     = { navController.popBackStack() }
     )
@@ -80,6 +111,14 @@ fun RegisterView(
             dialogText     = mensajeError
         )
     }
+
+    if (showPermRationale) {
+        ShowMessageAlertDialog(
+            onConfirmation = { showPermRationale = false },
+            dialogTitle    = "Permiso requerido",
+            dialogText     = "La cámara es necesaria para verificar tu identidad. Actívala desde los ajustes del dispositivo."
+        )
+    }
 }
 
 @Composable
@@ -90,11 +129,13 @@ fun RegisterViewContent(
     pin: String,
     confirmPin: String,
     cargando: Boolean,
+    documentoCaptured: Boolean = false,
     onFullNameChange: (String) -> Unit,
     onDocumentNumberChange: (String) -> Unit,
     onPhoneChange: (String) -> Unit,
     onPinChange: (String) -> Unit,
     onConfirmPinChange: (String) -> Unit,
+    onScanDocumentClick: () -> Unit = {},
     onRegisterClick: () -> Unit,
     onBackToLoginClick: () -> Unit
 ) {
@@ -202,13 +243,34 @@ fun RegisterViewContent(
                     }
                 )
 
+                Spacer(modifier = Modifier.height(8.dp))
+
+                // --- Botón escaneo de cédula ---
+                OutlinedButton(
+                    onClick  = onScanDocumentClick,
+                    modifier = Modifier.fillMaxWidth(),
+                    colors   = ButtonDefaults.outlinedButtonColors(
+                        contentColor = if (documentoCaptured) HadesCyan else HadesOrange
+                    ),
+                    border   = androidx.compose.foundation.BorderStroke(
+                        1.dp,
+                        if (documentoCaptured) HadesCyan else HadesOrange
+                    )
+                ) {
+                    Text(
+                        text       = if (documentoCaptured) "✅ Documento capturado" else "📷 Escanear cédula",
+                        fontWeight = FontWeight.SemiBold,
+                        fontSize   = 13.sp
+                    )
+                }
+
                 Spacer(modifier = Modifier.height(4.dp))
 
                 HadesButton(
                     text         = stringResource(R.string.btn_register),
                     textCargando = stringResource(R.string.btn_register_loading),
                     onClick      = onRegisterClick,
-                    enabled      = pin.length == 4 && confirmPin.length == 4 && pin == confirmPin,
+                    enabled      = pin.length == 4 && confirmPin.length == 4 && pin == confirmPin && documentoCaptured,
                     cargando     = cargando
                 )
             }
@@ -244,21 +306,21 @@ fun RegisterViewPreview() {
     HadesCoinTheme {
         RegisterViewContent(
             fullName = "", documentNumber = "", phoneNumber = "", pin = "", confirmPin = "",
-            cargando = false,
+            cargando = false, documentoCaptured = false,
             onFullNameChange = {}, onDocumentNumberChange = {}, onPhoneChange = {},
             onPinChange = {}, onConfirmPinChange = {}, onRegisterClick = {}, onBackToLoginClick = {}
         )
     }
 }
 
-@Preview(showBackground = true, showSystemUi = true, name = "Register — con datos")
+@Preview(showBackground = true, showSystemUi = true, name = "Register — documento capturado")
 @Composable
-fun RegisterViewFilledPreview() {
+fun RegisterViewCapturedPreview() {
     HadesCoinTheme {
         RegisterViewContent(
             fullName = "Juan Pérez", documentNumber = "1010101010",
             phoneNumber = "3001234567", pin = "1234", confirmPin = "1234",
-            cargando = false,
+            cargando = false, documentoCaptured = true,
             onFullNameChange = {}, onDocumentNumberChange = {}, onPhoneChange = {},
             onPinChange = {}, onConfirmPinChange = {}, onRegisterClick = {}, onBackToLoginClick = {}
         )
@@ -272,7 +334,7 @@ fun RegisterViewLoadingPreview() {
         RegisterViewContent(
             fullName = "Juan Pérez", documentNumber = "1010101010",
             phoneNumber = "3001234567", pin = "1234", confirmPin = "1234",
-            cargando = true,
+            cargando = true, documentoCaptured = true,
             onFullNameChange = {}, onDocumentNumberChange = {}, onPhoneChange = {},
             onPinChange = {}, onConfirmPinChange = {}, onRegisterClick = {}, onBackToLoginClick = {}
         )

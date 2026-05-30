@@ -22,6 +22,14 @@ class RegisterViewModel(
     private val _registroError = MutableLiveData<String?>()
     val registroError: LiveData<String?> = _registroError
 
+    // true = el usuario ya capturó su documento
+    private val _documentoCaptured = MutableLiveData(false)
+    val documentoCaptured: LiveData<Boolean> = _documentoCaptured
+
+    fun onDocumentCaptured() {
+        _documentoCaptured.value = true
+    }
+
     fun register(
         fullName: String,
         documentNumber: String,
