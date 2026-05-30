@@ -48,9 +48,14 @@ fun ProfileView(
             Spacer(modifier = Modifier.height(60.dp))
 
             user?.let { u ->
-                val displayGreeting = if (u.nickname.isNotBlank()) u.nickname
-                                      else u.fullName.split(" ").firstOrNull() ?: ""
-                Text(text = "HOLA, $displayGreeting".uppercase(), fontSize = 28.sp, fontWeight = FontWeight.Black, color = HadesPurple, letterSpacing = 4.sp)
+                val displayGreeting = u.nickname.ifBlank { u.fullName.split(" ").firstOrNull() ?: "" }
+                Text(
+                    text       = "HOLA, $displayGreeting".uppercase(),
+                    fontSize   = 28.sp,
+                    fontWeight = FontWeight.Black,
+                    color      = HadesPurple,
+                    letterSpacing = 4.sp
+                )
             } ?: Text(text = "MI PERFIL", fontSize = 28.sp, fontWeight = FontWeight.Black, color = HadesPurple, letterSpacing = 4.sp)
 
             Spacer(modifier = Modifier.height(24.dp))
@@ -92,11 +97,11 @@ fun ProfileView(
 
     if (cargando) ShowLoadingAlertDialog()
 
-    if (mensajeExito != null) {
-        ShowMessageAlertDialog(onConfirmation = { viewModel.clearMessages() }, dialogTitle = "Éxito", dialogText = mensajeExito!!)
+    mensajeExito?.let {
+        ShowMessageAlertDialog(onConfirmation = { viewModel.clearMessages() }, dialogTitle = "Éxito", dialogText = it)
     }
-    if (mensajeError != null) {
-        ShowMessageAlertDialog(onConfirmation = { viewModel.clearMessages() }, dialogTitle = "Error", dialogText = mensajeError!!)
+    mensajeError?.let {
+        ShowMessageAlertDialog(onConfirmation = { viewModel.clearMessages() }, dialogTitle = "Error", dialogText = it)
     }
 
     if (showPinDialog) {
@@ -112,18 +117,18 @@ fun ProfileView(
     if (showRecoveryFlow) {
         PinRecoveryFlow(
             codigoGenerado = codigoGenerado,
-            codigoValidado = codigoValidado ?: false,
+            codigoValidado = codigoValidado,
             onDismiss      = { showRecoveryFlow = false },
-            onGenerate     = { phone -> viewModel.generarCodigoVerificacion(phone) },
-            onValidate     = { code  -> viewModel.validarCodigo(code) },
-            onReset        = { pin   -> viewModel.resetearPin(pin) },
+            onGenerate     = { phone, doc -> viewModel.generarCodigoVerificacion(phone, doc) },
+            onValidate     = { code -> viewModel.validarCodigo(code) },
+            onReset        = { newPin -> viewModel.resetearPin(newPin) },
             onClearState   = { viewModel.clearMessages() }
         )
     }
 
     if (showNicknameDialog) {
         ChangeNicknameDialog(
-            currentNickname = user?.nickname ?: "",
+            currentNickname = user?.nickname.orEmpty(),
             onDismiss       = { showNicknameDialog = false },
             onConfirm       = { nuevo -> viewModel.actualizarApodo(phoneNumber, nuevo); showNicknameDialog = false }
         )
@@ -134,7 +139,12 @@ fun ProfileView(
 fun ProfileItem(label: String, value: String, isMissing: Boolean = false) {
     Column(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
         Text(text = label, fontSize = 12.sp, fontWeight = FontWeight.Bold, color = HadesCyan, letterSpacing = 1.sp)
-        Text(text = if (isMissing) "$value (Pendiente)" else value, fontSize = 16.sp, fontWeight = FontWeight.Medium, color = if (isMissing) HadesOrange else HadesOnDark)
+        Text(
+            text       = if (isMissing) "$value (Pendiente)" else value,
+            fontSize   = 16.sp,
+            fontWeight = FontWeight.Medium,
+            color      = if (isMissing) HadesOrange else HadesOnDark
+        )
     }
 }
 
@@ -149,13 +159,13 @@ fun ChangePinDialog(onDismiss: () -> Unit, onConfirm: (String, String, String) -
         title = { Text("Cambiar PIN", color = HadesPurple) },
         text  = {
             Column {
-                HadesTextField(value = pinActual, onValueChange = { if (it.length <= 4 && it.all { c -> c.isDigit() }) pinActual = it }, label = "PIN Actual", isPassword = true, keyboardType = KeyboardType.NumberPassword)
-                HadesTextField(value = pinNuevo, onValueChange = { if (it.length <= 4 && it.all { c -> c.isDigit() }) pinNuevo = it }, label = "Nuevo PIN", isPassword = true, keyboardType = KeyboardType.NumberPassword)
+                HadesTextField(value = pinActual,    onValueChange = { if (it.length <= 4 && it.all { c -> c.isDigit() }) pinActual    = it }, label = "PIN Actual",          isPassword = true, keyboardType = KeyboardType.NumberPassword)
+                HadesTextField(value = pinNuevo,     onValueChange = { if (it.length <= 4 && it.all { c -> c.isDigit() }) pinNuevo     = it }, label = "Nuevo PIN",           isPassword = true, keyboardType = KeyboardType.NumberPassword)
                 HadesTextField(value = confirmacion, onValueChange = { if (it.length <= 4 && it.all { c -> c.isDigit() }) confirmacion = it }, label = "Confirmar Nuevo PIN", isPassword = true, keyboardType = KeyboardType.NumberPassword)
             }
         },
-        confirmButton = { TextButton(onClick = { onConfirm(pinActual, pinNuevo, confirmacion) }) { Text("ACEPTAR", color = HadesCyan) } },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("CANCELAR", color = Color.Gray) } }
+        confirmButton = { TextButton(onClick = { onConfirm(pinActual, pinNuevo, confirmacion) }) { Text("ACEPTAR",   color = HadesCyan) } },
+        dismissButton = { TextButton(onClick = onDismiss)                                        { Text("CANCELAR", color = Color.Gray) } }
     )
 }
 
@@ -167,7 +177,7 @@ fun ChangeNicknameDialog(currentNickname: String, onDismiss: () -> Unit, onConfi
         containerColor   = HadesNavyDark,
         title = { Text("Actualizar Apodo", color = HadesPurple) },
         text  = { HadesTextField(value = nuevoApodo, onValueChange = { nuevoApodo = it }, label = "Tu Apodo") },
-        confirmButton = { TextButton(onClick = { onConfirm(nuevoApodo) }) { Text("GUARDAR", color = HadesCyan) } },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("CANCELAR", color = Color.Gray) } }
+        confirmButton = { TextButton(onClick = { onConfirm(nuevoApodo) }) { Text("GUARDAR",   color = HadesCyan) } },
+        dismissButton = { TextButton(onClick = onDismiss)                  { Text("CANCELAR", color = Color.Gray) } }
     )
 }
