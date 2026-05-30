@@ -41,14 +41,16 @@ fun HomeView(
     navController: NavController,
     viewModel: HomeViewModel = viewModel()
 ) {
-    val cargando     by viewModel.cargando.observeAsState(false)
-    val appUser      by viewModel.appUser.observeAsState()
-    val transactions by viewModel.transactions.observeAsState(emptyList())
-    val error        by viewModel.error.observeAsState()
+    val cargando      by viewModel.cargando.observeAsState(false)
+    val appUser       by viewModel.appUser.observeAsState()
+    val transactions  by viewModel.transactions.observeAsState(emptyList())
+    val error         by viewModel.error.observeAsState()
+    val codigoRetiro  by viewModel.codigoRetiro.observeAsState()
 
-    var showError    by remember { mutableStateOf(false) }
-    var mensajeError by remember { mutableStateOf("") }
-    var menuExpanded by remember { mutableStateOf(false) }
+    var showError          by remember { mutableStateOf(false) }
+    var mensajeError       by remember { mutableStateOf("") }
+    var menuExpanded       by remember { mutableStateOf(false) }
+    var showWithdrawDialog by remember { mutableStateOf(false) }
 
     DisposableEffect(navController) {
         val listener = NavController.OnDestinationChangedListener { _, destination, _ ->
@@ -86,16 +88,35 @@ fun HomeView(
         },
         onProfile      = {
             navController.navigate("profile/$phoneNumber")
+        },
+        onWithdrawAtm  = {
+            menuExpanded = false
+            showWithdrawDialog = true
         }
     )
 
-    if (cargando) ShowLoadingAlertDialog()
+    if (cargando && !showWithdrawDialog) ShowLoadingAlertDialog()
 
     if (showError) {
         ShowMessageAlertDialog(
             onConfirmation = { viewModel.clearError(); showError = false },
             dialogTitle    = stringResource(R.string.dialog_error_title),
             dialogText     = mensajeError
+        )
+    }
+
+    // ── Diálogo de retiro en cajero ────────────────────────────────────────────
+    if (showWithdrawDialog) {
+        WithdrawCodeDialog(
+            cargando      = cargando,
+            codigoRetiro  = codigoRetiro,
+            onGenerate    = { amount, pin ->
+                viewModel.generarCodigoRetiro(phoneNumber, pin, amount)
+            },
+            onDismiss     = {
+                showWithdrawDialog = false
+                viewModel.clearCodigoRetiro()
+            }
         )
     }
 }
@@ -111,7 +132,8 @@ fun HomeViewContent(
     onRefresh: () -> Unit = {},
     onLogout: () -> Unit = {},
     onTransfer: () -> Unit = {},
-    onProfile: () -> Unit = {}
+    onProfile: () -> Unit = {},
+    onWithdrawAtm: () -> Unit = {}
 ) {
     var showUserPanel by remember { mutableStateOf(false) }
     var saldoVisible  by remember { mutableStateOf(true) }
@@ -135,11 +157,10 @@ fun HomeViewContent(
             enabled = false
         ),
         SpeedDialItem(
-            label   = stringResource(R.string.action_withdraw),
-            icon    = Icons.Filled.ArrowUpward,
+            label   = "Retirar en Cajero",
+            icon    = Icons.Filled.Atm,
             color   = HadesOrange,
-            onClick = {},
-            enabled = false
+            onClick = { onWithdrawAtm() }
         ),
         SpeedDialItem(
             label   = stringResource(R.string.action_pay),
@@ -415,7 +436,7 @@ private fun TransactionRow(tx: WalletTransaction) {
             }
             Spacer(modifier = Modifier.width(12.dp))
             Column {
-                Text(text = typeLabel,                    fontSize = 14.sp, fontWeight = FontWeight.Bold,  color = HadesOnDark)
+                Text(text = typeLabel,                     fontSize = 14.sp, fontWeight = FontWeight.Bold,  color = HadesOnDark)
                 Text(text = formatTimestamp(tx.timestamp), fontSize = 11.sp, color = HadesOnDark.copy(alpha = 0.45f))
             }
         }
@@ -470,7 +491,6 @@ fun UserPanelSheet(
             UserInfoRow(label = stringResource(R.string.label_member_since), value = appUser?.createdAt?.take(10) ?: "—")
             Spacer(modifier = Modifier.height(28.dp))
 
-            // Boton Ver perfil completo
             Button(
                 onClick  = onProfile,
                 modifier = Modifier.fillMaxWidth(),
