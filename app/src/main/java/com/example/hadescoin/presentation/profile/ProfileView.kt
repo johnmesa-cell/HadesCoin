@@ -15,8 +15,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
-import com.example.hadescoin.presentation.auth.login.RecoverPinDialog
-import com.example.hadescoin.presentation.auth.login.ResetPinDialog
 import com.example.hadescoin.presentation.components.*
 import com.example.hadescoin.ui.theme.*
 
@@ -26,28 +24,18 @@ fun ProfileView(
     phoneNumber: String,
     viewModel: ProfileViewModel = viewModel()
 ) {
-    val user           by viewModel.user.observeAsState()
-    val cargando       by viewModel.cargando.observeAsState(false)
-    val mensajeExito   by viewModel.mensajeExito.observeAsState()
-    val mensajeError   by viewModel.mensajeError.observeAsState()
-    val pinRecuperado  by viewModel.pinRecuperado.observeAsState()
+    val user          by viewModel.user.observeAsState()
+    val cargando      by viewModel.cargando.observeAsState(false)
+    val mensajeExito  by viewModel.mensajeExito.observeAsState()
+    val mensajeError  by viewModel.mensajeError.observeAsState()
+    val pinRecuperado by viewModel.pinRecuperado.observeAsState()
 
     var showPinDialog      by remember { mutableStateOf(false) }
     var showNicknameDialog by remember { mutableStateOf(false) }
-    var showRecoverDialog  by remember { mutableStateOf(false) }
-    var showResetDialog    by remember { mutableStateOf(false) }
-    var recoveredPinMsg    by remember { mutableStateOf<String?>(null) }
+    var showRecoveryFlow   by remember { mutableStateOf(false) }
 
     LaunchedEffect(phoneNumber) {
         viewModel.cargarPerfil(phoneNumber)
-    }
-
-    // Cuando se recupera el PIN, mostrar el dialogo con el PIN encontrado
-    LaunchedEffect(pinRecuperado) {
-        pinRecuperado?.let {
-            recoveredPinMsg = "Tu PIN es: $it"
-            showRecoverDialog = false
-        }
     }
 
     HadesBackground {
@@ -82,12 +70,12 @@ fun ProfileView(
 
             user?.let { u ->
                 HadesCardBox {
-                    ProfileItem(label = "Nombre Completo",    value = u.fullName)
-                    ProfileItem(label = "Apodo",              value = u.nickname.ifBlank { "No asignado" }, isMissing = u.nickname.isBlank())
-                    ProfileItem(label = "Número de Documento",value = u.documentNumber, isMissing = u.documentNumber.isBlank())
-                    ProfileItem(label = "Teléfono",           value = u.phoneNumber)
-                    ProfileItem(label = "Miembro desde",      value = u.createdAt.take(10))
-                    ProfileItem(label = "PIN",                value = "****")
+                    ProfileItem(label = "Nombre Completo",     value = u.fullName)
+                    ProfileItem(label = "Apodo",               value = u.nickname.ifBlank { "No asignado" }, isMissing = u.nickname.isBlank())
+                    ProfileItem(label = "Número de Documento", value = u.documentNumber, isMissing = u.documentNumber.isBlank())
+                    ProfileItem(label = "Teléfono",            value = u.phoneNumber)
+                    ProfileItem(label = "Miembro desde",       value = u.createdAt.take(10))
+                    ProfileItem(label = "PIN",                 value = "****")
 
                     Spacer(modifier = Modifier.height(16.dp))
 
@@ -97,11 +85,11 @@ fun ProfileView(
                         modifier = Modifier.fillMaxWidth()
                     )
 
-                    Spacer(modifier = Modifier.height(8.dp))
+                    Spacer(modifier = Modifier.height(4.dp))
 
-                    // Recuperar PIN — reutiliza RecoverPinDialog y ResetPinDialog del login
+                    // Enlace recuperacion de PIN
                     TextButton(
-                        onClick  = { showRecoverDialog = true },
+                        onClick  = { showRecoveryFlow = true },
                         modifier = Modifier.align(Alignment.End)
                     ) {
                         Text(
@@ -112,7 +100,7 @@ fun ProfileView(
                         )
                     }
 
-                    Spacer(modifier = Modifier.height(8.dp))
+                    Spacer(modifier = Modifier.height(4.dp))
 
                     HadesButton(
                         text     = if (u.nickname.isBlank()) "Agregar Apodo" else "Cambiar Apodo",
@@ -134,7 +122,7 @@ fun ProfileView(
         }
     }
 
-    // ── Dialogs ───────────────────────────────────────────────────────────
+    // ─── Dialogs ───────────────────────────────────────────────────────────────
     if (cargando) ShowLoadingAlertDialog()
 
     if (mensajeExito != null) {
@@ -153,7 +141,6 @@ fun ProfileView(
         )
     }
 
-    // Dialogo: cambiar PIN (requiere saber el PIN actual)
     if (showPinDialog) {
         ChangePinDialog(
             onDismiss = { showPinDialog = false },
@@ -164,52 +151,14 @@ fun ProfileView(
         )
     }
 
-    // Dialogo: recuperar PIN con telefono + documento
-    // Reutiliza RecoverPinDialog definido en LoginView.kt
-    if (showRecoverDialog) {
-        RecoverPinDialog(
-            onDismiss = { showRecoverDialog = false; viewModel.clearMessages() },
-            onRecover = { phone, doc ->
-                viewModel.recuperarPin(phone, doc)
-            }
-        )
-    }
-
-    // Dialogo: muestra el PIN encontrado y ofrece cambiarlo
-    if (recoveredPinMsg != null) {
-        AlertDialog(
-            onDismissRequest = { recoveredPinMsg = null; viewModel.clearMessages() },
-            containerColor   = HadesNavyDark,
-            title = { Text("PIN Recuperado", color = HadesPurple, fontWeight = FontWeight.Bold) },
-            text  = {
-                Column {
-                    Text(recoveredPinMsg!!, color = HadesOnDark)
-                    Spacer(Modifier.height(12.dp))
-                    Text("¿Deseas cambiarlo por uno nuevo ahora?", fontSize = 13.sp, color = HadesCyan)
-                }
-            },
-            confirmButton = {
-                TextButton(onClick = { recoveredPinMsg = null; showResetDialog = true }) {
-                    Text("CAMBIAR PIN", color = HadesOrange, fontWeight = FontWeight.Bold)
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { recoveredPinMsg = null; viewModel.clearMessages() }) {
-                    Text("ENTENDIDO", color = HadesCyan)
-                }
-            }
-        )
-    }
-
-    // Dialogo: ingresar el nuevo PIN tras recuperacion
-    // Reutiliza ResetPinDialog definido en LoginView.kt
-    if (showResetDialog) {
-        ResetPinDialog(
-            onDismiss = { showResetDialog = false; viewModel.clearMessages() },
-            onReset   = { nuevoPin ->
-                viewModel.resetearPinDespuesDeRecuperar(nuevoPin)
-                showResetDialog = false
-            }
+    // Flujo completo reutilizable desde components/
+    if (showRecoveryFlow) {
+        PinRecoveryFlow(
+            pinRecuperado = pinRecuperado,
+            onDismiss     = { showRecoveryFlow = false },
+            onRecover     = { phone, doc -> viewModel.recuperarPin(phone, doc) },
+            onReset       = { nuevoPin -> viewModel.resetearPinDespuesDeRecuperar(nuevoPin) },
+            onClearState  = { viewModel.clearMessages() }
         )
     }
 
