@@ -50,7 +50,8 @@ class WalletRepositoryImpl(
             timestamp        = snapshot.child("timestamp").getValue(String::class.java)        ?: "",
             verificationCode = snapshot.child("verificationCode").getValue(String::class.java) ?: "",
             withdrawalAmount = snapshot.child("withdrawalAmount").getValue(Double::class.java) ?: 0.0,
-            expiresAt        = snapshot.child("expiresAt").getValue(String::class.java)        ?: ""
+            expiresAt        = snapshot.child("expiresAt").getValue(String::class.java)        ?: "",
+            source           = snapshot.child("source").getValue(String::class.java)           ?: ""
         )
     }
 

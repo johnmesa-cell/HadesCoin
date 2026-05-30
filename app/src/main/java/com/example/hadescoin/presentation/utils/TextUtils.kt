@@ -16,6 +16,9 @@ fun translateTransactionType(type: String): String {
     return when (type.uppercase()) {
         "TODOS"                -> "Todos"
         "DEPOSIT"              -> "Depósito"
+        // [Mejora #8 — Notificaciones]: cuando se implemente, usar
+        // tx.source == "ATM" para mostrar "Depósito en cajero" y
+        // disparar la notificación push. Implementar en NotificationService.
         "WITHDRAW"             -> "Retiro"
         "WITHDRAWAL_PENDING"   -> "Retiro (pendiente)"
         "WITHDRAWAL_COMPLETED" -> "Retiro (completado)"

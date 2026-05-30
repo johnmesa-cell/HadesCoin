@@ -11,5 +11,6 @@ data class WalletTransaction(
     // Campos exclusivos de retiro con código temporal
     val verificationCode: String = "",
     val withdrawalAmount: Double = 0.0,
-    val expiresAt:        String = ""
+    val expiresAt:        String = "",
+    val source:           String = ""
 )
