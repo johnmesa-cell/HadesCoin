@@ -56,6 +56,8 @@ fun RegisterView(
     var currentStep       by remember { mutableStateOf(RegisterStep.FORMULARIO) }
     var showPermRationale by remember { mutableStateOf(false) }
 
+    val goToLogin = { navController.popBackStack() }
+
     val cameraPermLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission()
     ) { granted ->
@@ -73,33 +75,34 @@ fun RegisterView(
     when (currentStep) {
         RegisterStep.CAMARA_FRONTAL -> {
             CameraCaptureView(
-                side       = CedulaSide.FRONTAL,
-                onCaptured = { currentStep = RegisterStep.CAMARA_TRASERA },
-                onBack     = { currentStep = RegisterStep.FORMULARIO }
+                side          = CedulaSide.FRONTAL,
+                onCaptured    = { currentStep = RegisterStep.CAMARA_TRASERA },
+                onBack        = { currentStep = RegisterStep.FORMULARIO },
+                onBackToLogin = goToLogin
             )
             return
         }
         RegisterStep.CAMARA_TRASERA -> {
             CameraCaptureView(
-                side       = CedulaSide.TRASERA,
-                onCaptured = {
+                side          = CedulaSide.TRASERA,
+                onCaptured    = {
                     viewModel.onDocumentCaptured()
                     currentStep = RegisterStep.CONFIRMACION
                 },
-                onBack = { currentStep = RegisterStep.CAMARA_FRONTAL }
+                onBack        = { currentStep = RegisterStep.CAMARA_FRONTAL },
+                onBackToLogin = goToLogin
             )
             return
         }
         RegisterStep.CONFIRMACION -> {
             RegisterConfirmacionView(
-                fullName       = fullName,
-                documentNumber = documentNumber,
-                phoneNumber    = phoneNumber,
-                cargando       = cargando,
-                onCreateAccount = {
-                    viewModel.register(fullName, documentNumber, phoneNumber, pin, confirmPin)
-                },
-                onBack = { currentStep = RegisterStep.CAMARA_TRASERA }
+                fullName        = fullName,
+                documentNumber  = documentNumber,
+                phoneNumber     = phoneNumber,
+                cargando        = cargando,
+                onCreateAccount = { viewModel.register(fullName, documentNumber, phoneNumber, pin, confirmPin) },
+                onBack          = { currentStep = RegisterStep.CAMARA_TRASERA },
+                onBackToLogin   = goToLogin
             )
             return
         }
@@ -119,7 +122,7 @@ fun RegisterView(
         onPinChange            = { if (it.length <= 4 && it.all { c -> c.isDigit() }) { pin = it; viewModel.clearError() } },
         onConfirmPinChange     = { if (it.length <= 4 && it.all { c -> c.isDigit() }) { confirmPin = it; viewModel.clearError() } },
         onContinueClick        = { cameraPermLauncher.launch(Manifest.permission.CAMERA) },
-        onBackToLoginClick     = { navController.popBackStack() }
+        onBackToLoginClick     = goToLogin
     )
 
     if (cargando) ShowLoadingAlertDialog()
@@ -136,7 +139,7 @@ fun RegisterView(
         ShowMessageAlertDialog(
             onConfirmation = { showPermRationale = false },
             dialogTitle    = "Permiso requerido",
-            dialogText     = "La c\u00e1mara es necesaria para verificar tu identidad. Act\u00edvala desde los ajustes del dispositivo."
+            dialogText     = "La cámara es necesaria para verificar tu identidad. Actívala desde los ajustes del dispositivo."
         )
     }
 }
@@ -262,7 +265,6 @@ fun RegisterViewContent(
 
                 Spacer(modifier = Modifier.height(12.dp))
 
-                // Boton continuar a camara — reemplaza al anterior de registrarse
                 Button(
                     onClick  = onContinueClick,
                     enabled  = formValid,
@@ -280,7 +282,7 @@ fun RegisterViewContent(
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text          = "VERIFICAR C\u00c9DULA",
+                        text          = "VERIFICAR CÉDULA",
                         fontWeight    = FontWeight.Bold,
                         fontSize      = 14.sp,
                         letterSpacing = 1.sp
@@ -290,6 +292,7 @@ fun RegisterViewContent(
 
             Spacer(modifier = Modifier.height(20.dp))
 
+            // Volver a login — visible en paso 1 tambien
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
                     text     = stringResource(R.string.text_has_account),
@@ -321,7 +324,8 @@ fun RegisterConfirmacionView(
     phoneNumber: String,
     cargando: Boolean,
     onCreateAccount: () -> Unit,
-    onBack: () -> Unit
+    onBack: () -> Unit,
+    onBackToLogin: () -> Unit
 ) {
     HadesBackground {
         Column(
@@ -343,14 +347,14 @@ fun RegisterConfirmacionView(
             )
             Spacer(modifier = Modifier.height(12.dp))
             Text(
-                text       = "\u00a1Verificaci\u00f3n completa!",
+                text       = "¡Verificación completa!",
                 fontSize   = 22.sp,
                 fontWeight = FontWeight.Black,
                 color      = HadesCyan,
                 textAlign  = TextAlign.Center
             )
             Text(
-                text      = "Ambos lados de tu c\u00e9dula fueron capturados correctamente.",
+                text      = "Ambos lados de tu cédula fueron capturados correctamente.",
                 fontSize  = 13.sp,
                 color     = HadesOnDark.copy(alpha = 0.7f),
                 textAlign = TextAlign.Center,
@@ -368,8 +372,8 @@ fun RegisterConfirmacionView(
                 Spacer(modifier = Modifier.height(8.dp))
                 ResumenFila(label = "Nombre",    valor = fullName)
                 ResumenFila(label = "Documento", valor = documentNumber)
-                ResumenFila(label = "Tel\u00e9fono",  valor = phoneNumber)
-                ResumenFila(label = "C\u00e9dula",    valor = "\u2705 Verificada (frontal + trasera)")
+                ResumenFila(label = "Teléfono",  valor = phoneNumber)
+                ResumenFila(label = "Cédula",    valor = "✅ Verificada (frontal + trasera)")
 
                 Spacer(modifier = Modifier.height(16.dp))
 
@@ -382,13 +386,18 @@ fun RegisterConfirmacionView(
                 )
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(12.dp))
 
             TextButton(onClick = onBack) {
+                Text(text = "← Volver a tomar fotos", color = HadesOrange, fontSize = 13.sp)
+            }
+
+            // Volver a login — visible en paso 4 tambien
+            TextButton(onClick = onBackToLogin) {
                 Text(
-                    text     = "\u2190 Volver a tomar fotos",
-                    color    = HadesOrange,
-                    fontSize = 13.sp
+                    text     = "Ya tengo cuenta. Iniciar sesión",
+                    color    = HadesOnDark.copy(alpha = 0.5f),
+                    fontSize = 12.sp
                 )
             }
         }
@@ -418,7 +427,7 @@ private fun ResumenFila(label: String, valor: String) {
     }
 }
 
-@Preview(showBackground = true, showSystemUi = true, name = "Register \u2014 Formulario")
+@Preview(showBackground = true, showSystemUi = true, name = "Register — Formulario")
 @Composable
 fun RegisterViewPreview() {
     HadesCoinTheme {
@@ -431,17 +440,18 @@ fun RegisterViewPreview() {
     }
 }
 
-@Preview(showBackground = true, showSystemUi = true, name = "Register \u2014 Confirmaci\u00f3n")
+@Preview(showBackground = true, showSystemUi = true, name = "Register — Confirmación")
 @Composable
 fun RegisterConfirmPreview() {
     HadesCoinTheme {
         RegisterConfirmacionView(
-            fullName       = "Juan P\u00e9rez",
+            fullName       = "Juan Pérez",
             documentNumber = "1010101010",
             phoneNumber    = "3001234567",
             cargando       = false,
             onCreateAccount = {},
-            onBack          = {}
+            onBack          = {},
+            onBackToLogin   = {}
         )
     }
 }

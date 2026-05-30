@@ -41,7 +41,8 @@ enum class CedulaSide {
 fun CameraCaptureView(
     side: CedulaSide,
     onCaptured: () -> Unit,
-    onBack: () -> Unit
+    onBack: () -> Unit,
+    onBackToLogin: () -> Unit
 ) {
     val context        = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -65,7 +66,8 @@ fun CameraCaptureView(
                 .padding(horizontal = 24.dp, vertical = 32.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            StepIndicator(currentStep = stepNumber, totalSteps = 3)
+            // totalSteps = 4 estandarizado
+            StepIndicator(currentStep = stepNumber, totalSteps = 4)
 
             Spacer(modifier = Modifier.height(16.dp))
 
@@ -235,10 +237,16 @@ fun CameraCaptureView(
                 )
             }
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(8.dp))
 
+            // Volver al paso anterior
             TextButton(onClick = onBack) {
-                Text(text = "Cancelar", color = HadesOrange, fontSize = 13.sp)
+                Text(text = "← Volver al paso anterior", color = HadesOrange, fontSize = 13.sp)
+            }
+
+            // Volver a inicio de sesion (disponible en cualquier punto)
+            TextButton(onClick = onBackToLogin) {
+                Text(text = "Ya tengo cuenta. Iniciar sesión", color = HadesOnDark.copy(alpha = 0.5f), fontSize = 12.sp)
             }
         }
     }
