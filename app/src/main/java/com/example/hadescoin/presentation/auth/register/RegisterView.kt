@@ -29,6 +29,10 @@ import com.example.hadescoin.R
 import com.example.hadescoin.presentation.components.*
 import com.example.hadescoin.ui.theme.*
 
+private enum class RegisterStep {
+    FORMULARIO, CAMARA_FRONTAL, CAMARA_TRASERA
+}
+
 @Composable
 fun RegisterView(
     navController: NavController,
@@ -45,43 +49,46 @@ fun RegisterView(
     val registroError     by viewModel.registroError.observeAsState()
     val documentoCaptured by viewModel.documentoCaptured.observeAsState(false)
 
-    var mensajeError       by remember { mutableStateOf("") }
-    var showError          by remember { mutableStateOf(false) }
-    var showCamera         by remember { mutableStateOf(false) }
-    var cameraPermGranted  by remember { mutableStateOf(false) }
-    var showPermRationale  by remember { mutableStateOf(false) }
+    var mensajeError      by remember { mutableStateOf("") }
+    var showError         by remember { mutableStateOf(false) }
+    var currentStep       by remember { mutableStateOf(RegisterStep.FORMULARIO) }
+    var showPermRationale by remember { mutableStateOf(false) }
 
     val cameraPermLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission()
     ) { granted ->
-        if (granted) {
-            cameraPermGranted = true
-            showCamera = true
-        } else {
-            showPermRationale = true
-        }
+        if (granted) currentStep = RegisterStep.CAMARA_FRONTAL
+        else showPermRationale = true
     }
 
     LaunchedEffect(registroExitoso) {
         registroExitoso?.let { navController.popBackStack() }
     }
-
     LaunchedEffect(registroError) {
-        registroError?.let {
-            mensajeError = it
-            showError = true
-        }
+        registroError?.let { mensajeError = it; showError = true }
     }
 
-    if (showCamera) {
-        CameraCaptureView(
-            onDocumentCaptured = {
-                viewModel.onDocumentCaptured()
-                showCamera = false
-            },
-            onBack = { showCamera = false }
-        )
-        return
+    when (currentStep) {
+        RegisterStep.CAMARA_FRONTAL -> {
+            CameraCaptureView(
+                side       = CedulaSide.FRONTAL,
+                onCaptured = { currentStep = RegisterStep.CAMARA_TRASERA },
+                onBack     = { currentStep = RegisterStep.FORMULARIO }
+            )
+            return
+        }
+        RegisterStep.CAMARA_TRASERA -> {
+            CameraCaptureView(
+                side       = CedulaSide.TRASERA,
+                onCaptured = {
+                    viewModel.onDocumentCaptured()
+                    currentStep = RegisterStep.FORMULARIO
+                },
+                onBack = { currentStep = RegisterStep.CAMARA_FRONTAL }
+            )
+            return
+        }
+        RegisterStep.FORMULARIO -> { /* continua abajo */ }
     }
 
     RegisterViewContent(
@@ -186,7 +193,12 @@ fun RegisterViewContent(
                 textAlign     = TextAlign.Center
             )
 
-            Spacer(modifier = Modifier.height(28.dp))
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // --- Indicador de pasos en el formulario (Paso 1 de 3) ---
+            StepIndicator(currentStep = 1, totalSteps = 3)
+
+            Spacer(modifier = Modifier.height(20.dp))
 
             HadesCardBox {
                 Text(
@@ -258,7 +270,7 @@ fun RegisterViewContent(
                     )
                 ) {
                     Text(
-                        text       = if (documentoCaptured) "✅ Documento capturado" else "📷 Escanear cédula",
+                        text       = if (documentoCaptured) "✅ Cédula verificada (ambos lados)" else "📷 Escanear cédula (2 pasos)",
                         fontWeight = FontWeight.SemiBold,
                         fontSize   = 13.sp
                     )
@@ -313,7 +325,7 @@ fun RegisterViewPreview() {
     }
 }
 
-@Preview(showBackground = true, showSystemUi = true, name = "Register — documento capturado")
+@Preview(showBackground = true, showSystemUi = true, name = "Register — cédula verificada")
 @Composable
 fun RegisterViewCapturedPreview() {
     HadesCoinTheme {
@@ -321,20 +333,6 @@ fun RegisterViewCapturedPreview() {
             fullName = "Juan Pérez", documentNumber = "1010101010",
             phoneNumber = "3001234567", pin = "1234", confirmPin = "1234",
             cargando = false, documentoCaptured = true,
-            onFullNameChange = {}, onDocumentNumberChange = {}, onPhoneChange = {},
-            onPinChange = {}, onConfirmPinChange = {}, onRegisterClick = {}, onBackToLoginClick = {}
-        )
-    }
-}
-
-@Preview(showBackground = true, showSystemUi = true, name = "Register — cargando")
-@Composable
-fun RegisterViewLoadingPreview() {
-    HadesCoinTheme {
-        RegisterViewContent(
-            fullName = "Juan Pérez", documentNumber = "1010101010",
-            phoneNumber = "3001234567", pin = "1234", confirmPin = "1234",
-            cargando = true, documentoCaptured = true,
             onFullNameChange = {}, onDocumentNumberChange = {}, onPhoneChange = {},
             onPinChange = {}, onConfirmPinChange = {}, onRegisterClick = {}, onBackToLoginClick = {}
         )
