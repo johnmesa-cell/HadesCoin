@@ -17,6 +17,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -105,7 +106,6 @@ fun HomeView(
         )
     }
 
-    // ── Diálogo de retiro en cajero ────────────────────────────────────────────
     if (showWithdrawDialog) {
         WithdrawCodeDialog(
             cargando      = cargando,
@@ -118,6 +118,16 @@ fun HomeView(
                 viewModel.clearCodigoRetiro()
             }
         )
+    }
+}
+
+// Devuelve el icono correcto según el tipo de transacción
+private fun txIcon(type: String, direction: String): ImageVector {
+    return when (type.uppercase()) {
+        "DEPOSIT"                                                        -> Icons.Filled.Atm
+        "WITHDRAW",
+        "WITHDRAWAL_PENDING", "WITHDRAWAL_COMPLETED", "WITHDRAWAL_FAILED" -> Icons.Filled.Atm
+        else -> if (direction == "IN") Icons.Filled.ArrowDownward else Icons.Filled.ArrowUpward
     }
 }
 
@@ -148,6 +158,17 @@ fun HomeViewContent(
         }
         else       -> transactions.filter { it.type.uppercase() == filtroActivo }
     }
+
+    // Ingresos: DEPOSIT + transferencias recibidas (WITHDRAWAL_* excluidos del conteo de ingresos)
+    val totalIngresos = transactions.filter { tx ->
+        tx.direction == "IN" &&
+                tx.type.uppercase() !in setOf("WITHDRAWAL_PENDING", "WITHDRAWAL_FAILED")
+    }.sumOf { it.amount }
+    // Egresos: solo retiros completados + transferencias enviadas (excluye pendientes y fallidos)
+    val totalEgresos = transactions.filter { tx ->
+        tx.direction == "OUT" &&
+                tx.type.uppercase() !in setOf("WITHDRAWAL_PENDING", "WITHDRAWAL_FAILED")
+    }.sumOf { it.amount }
 
     val speedDialItems = listOf(
         SpeedDialItem(
@@ -220,11 +241,9 @@ fun HomeViewContent(
 
                 item {
                     Spacer(modifier = Modifier.height(12.dp))
-                    val totalIngresos = transactions.filter { it.direction == "IN" }.sumOf { it.amount }
-                    val totalEgresos  = transactions.filter { it.direction == "OUT" }.sumOf { it.amount }
                     HadesSummaryRow(
                         items = listOf(
-                            HadesSummaryItem(stringResource(R.string.label_incomes), totalIngresos, HadesCyan,   "+ "),
+                            HadesSummaryItem(stringResource(R.string.label_incomes),  totalIngresos, HadesCyan,   "+ "),
                             HadesSummaryItem(stringResource(R.string.label_expenses), totalEgresos,  HadesOrange, "- ")
                         )
                     )
@@ -256,7 +275,7 @@ fun HomeViewContent(
                 if (transaccionesFiltradas.isEmpty() && !cargando) {
                     item {
                         Box(
-                            modifier        = Modifier
+                            modifier         = Modifier
                                 .fillMaxWidth()
                                 .padding(vertical = 48.dp),
                             contentAlignment = Alignment.Center
@@ -422,7 +441,7 @@ private fun TransactionRow(tx: WalletTransaction) {
     val isIncome    = tx.direction == "IN"
     val amountColor = if (isIncome) HadesCyan else HadesOrange
     val prefix      = if (isIncome) "+" else "-"
-    val icon        = if (isIncome) Icons.Filled.ArrowDownward else Icons.Filled.ArrowUpward
+    val icon        = txIcon(tx.type, tx.direction)
     val typeLabel   = translateTransactionType(tx.type)
 
     Row(
@@ -570,10 +589,10 @@ fun HomeViewFilledPreview() {
         HomeViewContent(
             appUser = AppUser(fullName = "Juan Pérez", balance = 1250.50, phoneNumber = "3001234567", documentNumber = "1010101010"),
             transactions = listOf(
-                WalletTransaction(type = "DEPOSIT",  amount = 500.0,  direction = "IN",  timestamp = "2026-05-21T10:00:00Z"),
-                WalletTransaction(type = "WITHDRAW", amount = 50.25,  direction = "OUT", timestamp = "2026-05-20T08:00:00Z"),
-                WalletTransaction(type = "TRANSFER", amount = 200.0,  direction = "OUT", timestamp = "2026-05-19T15:00:00Z"),
-                WalletTransaction(type = "TRANSFER", amount = 150.0,  direction = "IN",  timestamp = "2026-05-18T11:00:00Z")
+                WalletTransaction(type = "DEPOSIT",              amount = 500.0,  direction = "IN",  timestamp = "2026-05-21T10:00:00Z"),
+                WalletTransaction(type = "WITHDRAWAL_COMPLETED", amount = 50.25,  direction = "OUT", timestamp = "2026-05-20T08:00:00Z"),
+                WalletTransaction(type = "TRANSFER",             amount = 200.0,  direction = "OUT", timestamp = "2026-05-19T15:00:00Z"),
+                WalletTransaction(type = "TRANSFER",             amount = 150.0,  direction = "IN",  timestamp = "2026-05-18T11:00:00Z")
             ),
             cargando = false
         )
