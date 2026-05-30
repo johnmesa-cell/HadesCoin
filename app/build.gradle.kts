@@ -67,6 +67,9 @@ dependencies {
     implementation("com.google.firebase:firebase-database")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services")
 
+    // Lucide Icons — trazo fino, compatible con estética oscura/neón
+    implementation("com.composables:icons-lucide-android:2.2.1")
+
     // CameraX
     val cameraxVersion = "1.5.0-alpha06"
     implementation("androidx.camera:camera-core:$cameraxVersion")

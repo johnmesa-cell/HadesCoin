@@ -26,6 +26,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
+import com.composables.icons.lucide.ArrowDownToLine
+import com.composables.icons.lucide.ArrowUpFromLine
+import com.composables.icons.lucide.Landmark
+import com.composables.icons.lucide.Lucide
 import com.example.hadescoin.R
 import com.example.hadescoin.domain.model.AppUser
 import com.example.hadescoin.domain.model.WalletTransaction
@@ -35,6 +39,32 @@ import com.example.hadescoin.presentation.utils.getInitials
 import com.example.hadescoin.presentation.utils.translateTransactionType
 import com.example.hadescoin.ui.theme.*
 import java.util.Locale
+
+// ── Helpers de iconos ─────────────────────────────────────────────────────────
+
+/**
+ * Ícono para el FAB/SpeedDial según la acción:
+ *  - Retiro en cajero  → Lucide.Landmark (edificio banco/cajero)
+ *  - Depósito          → Lucide.ArrowDownToLine
+ *  - Transferencia     → Icons.Filled.SwapHoriz  (sin cambio)
+ *  - Pagar             → Icons.Filled.CreditCard (sin cambio)
+ */
+
+/**
+ * Ícono para cada fila del historial de movimientos:
+ *  - DEPOSIT                          → Lucide.ArrowDownToLine  (cyan)
+ *  - WITHDRAW / WITHDRAWAL_*          → Lucide.ArrowUpFromLine  (naranja)
+ *  - TRANSFER IN                      → Icons.Filled.ArrowDownward
+ *  - TRANSFER OUT                     → Icons.Filled.ArrowUpward
+ */
+private fun txIcon(type: String, direction: String): ImageVector {
+    return when (type.uppercase()) {
+        "DEPOSIT"                                                         -> Lucide.ArrowDownToLine
+        "WITHDRAW",
+        "WITHDRAWAL_PENDING", "WITHDRAWAL_COMPLETED", "WITHDRAWAL_FAILED" -> Lucide.ArrowUpFromLine
+        else -> if (direction == "IN") Icons.Filled.ArrowDownward else Icons.Filled.ArrowUpward
+    }
+}
 
 @Composable
 fun HomeView(
@@ -121,16 +151,6 @@ fun HomeView(
     }
 }
 
-// Devuelve el icono correcto según el tipo de transacción
-private fun txIcon(type: String, direction: String): ImageVector {
-    return when (type.uppercase()) {
-        "DEPOSIT"                                                        -> Icons.Filled.Atm
-        "WITHDRAW",
-        "WITHDRAWAL_PENDING", "WITHDRAWAL_COMPLETED", "WITHDRAWAL_FAILED" -> Icons.Filled.Atm
-        else -> if (direction == "IN") Icons.Filled.ArrowDownward else Icons.Filled.ArrowUpward
-    }
-}
-
 @Composable
 fun HomeViewContent(
     appUser: AppUser?,
@@ -159,12 +179,11 @@ fun HomeViewContent(
         else       -> transactions.filter { it.type.uppercase() == filtroActivo }
     }
 
-    // Ingresos: DEPOSIT + transferencias recibidas (WITHDRAWAL_* excluidos del conteo de ingresos)
+    // Solo TX reales (no pendientes ni fallidas) para el resumen
     val totalIngresos = transactions.filter { tx ->
         tx.direction == "IN" &&
                 tx.type.uppercase() !in setOf("WITHDRAWAL_PENDING", "WITHDRAWAL_FAILED")
     }.sumOf { it.amount }
-    // Egresos: solo retiros completados + transferencias enviadas (excluye pendientes y fallidos)
     val totalEgresos = transactions.filter { tx ->
         tx.direction == "OUT" &&
                 tx.type.uppercase() !in setOf("WITHDRAWAL_PENDING", "WITHDRAWAL_FAILED")
@@ -178,15 +197,17 @@ fun HomeViewContent(
             onClick = { onTransfer() }
         ),
         SpeedDialItem(
+            // Depósito: flecha entrando con línea base — Lucide.ArrowDownToLine (cyan)
             label   = stringResource(R.string.action_deposit),
-            icon    = Icons.Filled.ArrowDownward,
+            icon    = Lucide.ArrowDownToLine,
             color   = HadesCyan,
             onClick = {},
             enabled = false
         ),
         SpeedDialItem(
+            // Retiro cajero: Lucide.Landmark (edificio banco/cajero) — naranja
             label   = "Retirar en Cajero",
-            icon    = Icons.Filled.Atm,
+            icon    = Lucide.Landmark,
             color   = HadesOrange,
             onClick = { onWithdrawAtm() }
         ),
