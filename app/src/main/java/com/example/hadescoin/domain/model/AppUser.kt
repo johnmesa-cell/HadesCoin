@@ -7,5 +7,6 @@ data class AppUser(
     val fullName: String = "",
     val pin: String = "",
     val balance: Double = 0.0,
-    val createdAt: String = ""
+    val createdAt: String = "",
+    val cedulaVerificada: Boolean = false
 )

@@ -22,7 +22,6 @@ class RegisterViewModel(
     private val _registroError = MutableLiveData<String?>()
     val registroError: LiveData<String?> = _registroError
 
-    // true = el usuario ya capturó su documento
     private val _documentoCaptured = MutableLiveData(false)
     val documentoCaptured: LiveData<Boolean> = _documentoCaptured
 
@@ -72,12 +71,13 @@ class RegisterViewModel(
             _cargando.value = true
             try {
                 val user = AppUser(
-                    id             = phoneNumber,
-                    documentNumber = documentNumber,
-                    phoneNumber    = phoneNumber,
-                    fullName       = fullName,
-                    pin            = pin,
-                    balance        = 0.0
+                    id                = phoneNumber,
+                    documentNumber    = documentNumber,
+                    phoneNumber       = phoneNumber,
+                    fullName          = fullName,
+                    pin               = pin,
+                    balance           = 0.0,
+                    cedulaVerificada  = _documentoCaptured.value == true
                 )
                 val success = registerUseCase(user)
                 if (success) {

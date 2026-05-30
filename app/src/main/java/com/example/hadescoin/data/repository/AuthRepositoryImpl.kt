@@ -17,12 +17,13 @@ class AuthRepositoryImpl(
 
     override suspend fun register(user: AppUser): Boolean {
         val userData = mapOf(
-            "documentNumber" to user.documentNumber,
-            "phoneNumber"    to user.phoneNumber,
-            "fullName"       to user.fullName,
-            "pin"            to user.pin,
-            "balance"        to 0.0,
-            "createdAt"      to Instant.now().toString()
+            "documentNumber"   to user.documentNumber,
+            "phoneNumber"      to user.phoneNumber,
+            "fullName"         to user.fullName,
+            "pin"              to user.pin,
+            "balance"          to 0.0,
+            "createdAt"        to Instant.now().toString(),
+            "cedulaVerificada" to user.cedulaVerificada
         )
         return dataSource.saveUser(user.phoneNumber, userData)
     }
