@@ -14,4 +14,8 @@ interface WalletRepository {
     ): Result<Unit>
 
     suspend fun getUserByPhone(phoneNumber: String): AppUser?
+
+    suspend fun updatePin(phoneNumber: String, newPin: String): Boolean
+
+    suspend fun updateNickname(phoneNumber: String, nickname: String): Boolean
 }

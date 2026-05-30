@@ -32,4 +32,13 @@ class FirebaseUserDataSource {
             false
         }
     }
+
+    suspend fun updateUserField(phoneNumber: String, field: String, value: Any): Boolean {
+        return try {
+            database.child(phoneNumber).child(field).setValue(value).await()
+            true
+        } catch (_: Exception) {
+            false
+        }
+    }
 }

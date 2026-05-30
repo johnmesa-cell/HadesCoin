@@ -8,6 +8,10 @@ import com.example.hadescoin.domain.usecase.GetWalletDataUseCase
 import com.example.hadescoin.domain.usecase.LoginUseCase
 import com.example.hadescoin.domain.usecase.RegisterUseCase
 import com.example.hadescoin.domain.usecase.TransferUseCase
+import com.example.hadescoin.domain.usecase.GetUserProfileUseCase
+import com.example.hadescoin.domain.usecase.UpdateUserPinUseCase
+import com.example.hadescoin.domain.usecase.UpdateUserNicknameUseCase
+import com.example.hadescoin.domain.usecase.RecoverPinUseCase
 
 object ServiceLocator {
 
@@ -21,4 +25,9 @@ object ServiceLocator {
     fun provideRegisterUseCase(): RegisterUseCase = RegisterUseCase(authRepository)
     fun provideGetWalletDataUseCase(): GetWalletDataUseCase = GetWalletDataUseCase(walletRepository)
     fun provideTransferUseCase(): TransferUseCase = TransferUseCase(walletRepository)
+
+    fun provideGetUserProfileUseCase(): GetUserProfileUseCase = GetUserProfileUseCase(walletRepository)
+    fun provideUpdateUserPinUseCase(): UpdateUserPinUseCase = UpdateUserPinUseCase(walletRepository)
+    fun provideUpdateUserNicknameUseCase(): UpdateUserNicknameUseCase = UpdateUserNicknameUseCase(walletRepository)
+    fun provideRecoverPinUseCase(): RecoverPinUseCase = RecoverPinUseCase(walletRepository)
 }

@@ -8,5 +8,7 @@ data class AppUser(
     val pin: String = "",
     val balance: Double = 0.0,
     val createdAt: String = "",
-    val cedulaVerificada: Boolean = false
+    val cedulaVerificada: Boolean = false,
+    val nickname: String = "",
+    val email: String = ""
 )

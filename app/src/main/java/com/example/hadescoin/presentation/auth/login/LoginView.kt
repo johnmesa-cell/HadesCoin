@@ -35,9 +35,15 @@ fun LoginView(
     val cargando     by viewModel.cargando.observeAsState(false)
     val loginExitoso by viewModel.loginExitoso.observeAsState()
     val loginError   by viewModel.loginError.observeAsState()
+    val pinRecuperado by viewModel.pinRecuperado.observeAsState()
+    val errorRecuperacion by viewModel.errorRecuperacion.observeAsState()
 
     var mensajeError by remember { mutableStateOf("") }
     var showError    by remember { mutableStateOf(false) }
+    var showRecoverDialog by remember { mutableStateOf(false) }
+    var showResetDialog by remember { mutableStateOf(false) }
+    var recoveredPinMessage by remember { mutableStateOf<String?>(null) }
+    var phoneForReset by remember { mutableStateOf("") }
 
     LaunchedEffect(loginExitoso) {
         loginExitoso?.let { phone ->
@@ -49,6 +55,21 @@ fun LoginView(
 
     LaunchedEffect(loginError) {
         loginError?.let {
+            mensajeError = it
+            showError = true
+        }
+    }
+
+    LaunchedEffect(pinRecuperado) {
+        pinRecuperado?.let { pin ->
+            recoveredPinMessage = "Tu PIN es: $pin"
+            // phoneForReset = phoneNumber // SE ELIMINA: Ya no depende del campo de la pantalla de login
+            showRecoverDialog = false
+        }
+    }
+
+    LaunchedEffect(errorRecuperacion) {
+        errorRecuperacion?.let {
             mensajeError = it
             showError = true
         }
@@ -68,18 +89,155 @@ fun LoginView(
             if (it.length <= 4 && it.all { c -> c.isDigit() }) { pin = it; viewModel.clearError() }
         },
         onLoginClick    = { viewModel.login(phoneNumber, pin) },
-        onRegisterClick = { navController.navigate("register") }
+        onRegisterClick = { navController.navigate("register") },
+        onForgotPasswordClick = { showRecoverDialog = true }
     )
 
     if (cargando) ShowLoadingAlertDialog()
 
     if (showError) {
         ShowMessageAlertDialog(
-            onConfirmation = { showError = false },
+            onConfirmation = { showError = false; viewModel.clearError() },
             dialogTitle    = stringResource(R.string.dialog_error_title),
             dialogText     = mensajeError
         )
     }
+
+    if (recoveredPinMessage != null) {
+        AlertDialog(
+            onDismissRequest = { recoveredPinMessage = null; viewModel.clearError() },
+            containerColor = HadesNavyDark,
+            title = { Text("PIN Recuperado", color = HadesPurple, fontWeight = FontWeight.Bold) },
+            text = {
+                Column {
+                    Text(recoveredPinMessage!!, color = HadesOnDark)
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Text("¿Deseas cambiarlo por uno nuevo ahora?", fontSize = 13.sp, color = HadesCyan)
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    recoveredPinMessage = null
+                    showResetDialog = true
+                }) {
+                    Text("CAMBIAR PIN", color = HadesOrange, fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { recoveredPinMessage = null; viewModel.clearError() }) {
+                    Text("ENTENDIDO", color = HadesCyan)
+                }
+            }
+        )
+    }
+
+    if (showRecoverDialog) {
+        RecoverPinDialog(
+            onDismiss = { showRecoverDialog = false; viewModel.clearError() },
+            onRecover = { phone, doc ->
+                phoneForReset = phone // SE AGREGA: Capturamos el teléfono del diálogo para evitar errores
+                viewModel.recuperarPin(phone, doc)
+            }
+        )
+    }
+
+    if (showResetDialog) {
+        ResetPinDialog(
+            onDismiss = { showResetDialog = false; viewModel.clearError() },
+            onReset = { nuevoPin ->
+                viewModel.resetearPinDespuesDeRecuperar(phoneForReset, nuevoPin)
+                showResetDialog = false
+            }
+        )
+    }
+}
+
+@Composable
+fun ResetPinDialog(
+    onDismiss: () -> Unit,
+    onReset: (String) -> Unit
+) {
+    var nuevoPin by remember { mutableStateOf("") }
+    var confirmacion by remember { mutableStateOf("") }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        containerColor = HadesNavyDark,
+        title = { Text("Nuevo PIN", color = HadesPurple, fontWeight = FontWeight.Bold) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                HadesTextField(
+                    value = nuevoPin,
+                    onValueChange = { if (it.length <= 4 && it.all { it.isDigit() }) nuevoPin = it },
+                    label = "Ingresa tu nuevo PIN",
+                    isPassword = true,
+                    keyboardType = KeyboardType.NumberPassword
+                )
+                HadesTextField(
+                    value = confirmacion,
+                    onValueChange = { if (it.length <= 4 && it.all { it.isDigit() }) confirmacion = it },
+                    label = "Confirma tu nuevo PIN",
+                    isPassword = true,
+                    keyboardType = KeyboardType.NumberPassword
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(
+                enabled = nuevoPin.length == 4 && nuevoPin == confirmacion,
+                onClick = { onReset(nuevoPin) }
+            ) {
+                Text("ACTUALIZAR", color = HadesCyan, fontWeight = FontWeight.Bold)
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("CANCELAR", color = Color.Gray)
+            }
+        }
+    )
+}
+
+@Composable
+fun RecoverPinDialog(
+    onDismiss: () -> Unit,
+    onRecover: (String, String) -> Unit
+) {
+    var phone by remember { mutableStateOf("") }
+    var doc by remember { mutableStateOf("") }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        containerColor = HadesNavyDark,
+        title = { Text("Recuperar PIN", color = HadesPurple, fontWeight = FontWeight.Bold) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("Ingresa tus datos para recuperar el PIN", color = HadesOnDark, fontSize = 14.sp)
+                HadesTextField(
+                    value = phone,
+                    onValueChange = { if (it.length <= 10 && it.all { c -> c.isDigit() }) phone = it },
+                    label = "Teléfono",
+                    keyboardType = KeyboardType.Number
+                )
+                HadesTextField(
+                    value = doc,
+                    onValueChange = { if (it.all { c -> c.isDigit() }) doc = it },
+                    label = "Número de Documento",
+                    keyboardType = KeyboardType.Number
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = { onRecover(phone, doc) }) {
+                Text("RECUPERAR", color = HadesCyan, fontWeight = FontWeight.Bold)
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("CANCELAR", color = Color.Gray)
+            }
+        }
+    )
 }
 
 @Composable
@@ -91,7 +249,8 @@ fun LoginContent(
     onPhoneChange: (String) -> Unit,
     onPinChange: (String) -> Unit,
     onLoginClick: () -> Unit,
-    onRegisterClick: () -> Unit
+    onRegisterClick: () -> Unit,
+    onForgotPasswordClick: () -> Unit
 ) {
     HadesBackground {
         Column(
@@ -177,6 +336,18 @@ fun LoginContent(
                     enabled      = phoneNumber.length >= 5 && pin.length == 4,
                     cargando     = cargando
                 )
+
+                TextButton(
+                    onClick = onForgotPasswordClick,
+                    modifier = Modifier.align(Alignment.End)
+                ) {
+                    Text(
+                        text = "¿Olvidaste tu PIN?",
+                        color = HadesCyan,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Medium
+                    )
+                }
             }
 
             Spacer(modifier = Modifier.height(20.dp))
@@ -210,7 +381,8 @@ fun LoginViewPreview() {
     HadesCoinTheme {
         LoginContent(
             phoneNumber = "", pin = "", cargando = false, loginError = null,
-            onPhoneChange = {}, onPinChange = {}, onLoginClick = {}, onRegisterClick = {}
+            onPhoneChange = {}, onPinChange = {}, onLoginClick = {}, onRegisterClick = {},
+            onForgotPasswordClick = {}
         )
     }
 }
@@ -221,7 +393,8 @@ fun LoginViewFilledPreview() {
     HadesCoinTheme {
         LoginContent(
             phoneNumber = "3001234567", pin = "1234", cargando = false, loginError = null,
-            onPhoneChange = {}, onPinChange = {}, onLoginClick = {}, onRegisterClick = {}
+            onPhoneChange = {}, onPinChange = {}, onLoginClick = {}, onRegisterClick = {},
+            onForgotPasswordClick = {}
         )
     }
 }
@@ -232,7 +405,8 @@ fun LoginViewLoadingPreview() {
     HadesCoinTheme {
         LoginContent(
             phoneNumber = "3001234567", pin = "1234", cargando = true, loginError = null,
-            onPhoneChange = {}, onPinChange = {}, onLoginClick = {}, onRegisterClick = {}
+            onPhoneChange = {}, onPinChange = {}, onLoginClick = {}, onRegisterClick = {},
+            onForgotPasswordClick = {}
         )
     }
 }

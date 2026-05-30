@@ -21,7 +21,9 @@ class WalletRepositoryImpl(
             fullName       = snapshot.child("fullName").getValue(String::class.java) ?: "",
             pin            = snapshot.child("pin").getValue(String::class.java) ?: "",
             balance        = snapshot.child("balance").getValue(Double::class.java) ?: 0.0,
-            createdAt      = snapshot.child("createdAt").getValue(String::class.java) ?: ""
+            createdAt      = snapshot.child("createdAt").getValue(String::class.java) ?: "",
+            nickname       = snapshot.child("nickname").getValue(String::class.java) ?: "",
+            email          = snapshot.child("email").getValue(String::class.java) ?: ""
         )
     }
 
@@ -101,5 +103,13 @@ class WalletRepositoryImpl(
         } catch (e: Exception) {
             Result.failure(e)
         }
+    }
+
+    override suspend fun updatePin(phoneNumber: String, newPin: String): Boolean {
+        return userDataSource.updateUserField(phoneNumber, "pin", newPin)
+    }
+
+    override suspend fun updateNickname(phoneNumber: String, nickname: String): Boolean {
+        return userDataSource.updateUserField(phoneNumber, "nickname", nickname)
     }
 }
