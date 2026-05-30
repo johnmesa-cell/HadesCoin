@@ -3,21 +3,41 @@ package com.example.hadescoin.presentation.components
 /**
  * PinRecoveryComponents.kt
  *
- * Componente reutilizable que encapsula el flujo completo "Olvidé mi PIN".
- * Puede usarse desde Login, Perfil, Retiro o cualquier pantalla futura.
+ * Flujo reutilizable "Olvide mi PIN" / verificacion de identidad.
+ * Tambien sirve como base para confirmar Retiros u otras acciones sensibles.
  *
- * Uso:
+ * FLUJO (3 pasos encadenados):
+ *   Paso 1 — VerifyIdentityDialog : ingresa telefono → genera codigo en Firebase
+ *   Paso 2 — CodeRevealDialog    : muestra el codigo de 6 digitos + boton copiar
+ *   Paso 3 — ConfirmCodeDialog   : el usuario ingresa el codigo que vio/copio
+ *   Paso 4 — ResetPinStepDialog  : elige nuevo PIN (solo para flujo de PIN)
+ *
+ * Para flujo de Retiro: usa solo pasos 1–3 y en onVerified ejecuta el retiro.
+ *
+ * USO minimo (flujo de PIN):
+ *
  *   PinRecoveryFlow(
- *       onDismiss  = { ... },
- *       onRecover  = { phone, doc -> viewModel.recuperarPin(phone, doc) },
- *       onReset    = { nuevoPin -> viewModel.resetearPin(nuevoPin) },
- *       pinRecuperado = pinRecuperado  // String? desde ViewModel
+ *       codigoGenerado = codigoGenerado,   // LiveData<String?> del ViewModel
+ *       codigoValidado = codigoValidado,   // LiveData<Boolean> del ViewModel
+ *       onDismiss      = { showFlow = false },
+ *       onGenerate     = { phone -> viewModel.generarCodigoVerificacion(phone) },
+ *       onValidate     = { code  -> viewModel.validarCodigo(code) },
+ *       onReset        = { pin   -> viewModel.resetearPin(pin) },
+ *       onClearState   = { viewModel.clearMessages() }
  *   )
  *
- * Flujo interno (3 pasos en dialogs encadenados):
- *   [1] RecoverPinStepDialog  — ingresa telefono + documento
- *   [2] PinRevealDialog       — muestra el PIN encontrado con boton copiar
- *   [3] ResetPinStepDialog    — confirma nuevo PIN (dos campos)
+ * USO para Retiro (sin paso 4):
+ *
+ *   PinRecoveryFlow(
+ *       codigoGenerado = codigoGenerado,
+ *       codigoValidado = codigoValidado,
+ *       onDismiss      = { showFlow = false },
+ *       onGenerate     = { phone -> viewModel.generarCodigo(phone) },
+ *       onValidate     = { code  -> viewModel.validarCodigo(code) },
+ *       onVerified     = { viewModel.ejecutarRetiro() },   // accion al verificar
+ *       showResetStep  = false,
+ *       onClearState   = { viewModel.clearMessages() }
+ *   )
  */
 
 import androidx.compose.animation.AnimatedVisibility
@@ -30,6 +50,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ContentCopy
+import androidx.compose.material.icons.filled.Key
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.LockOpen
 import androidx.compose.material3.*
@@ -46,62 +67,60 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.hadescoin.ui.theme.*
 
-// ─── Controlador del flujo completo ───────────────────────────────────────────
-/**
- * Orquesta los 3 pasos del flujo. Coloca este composable en la pantalla host
- * y pasa los callbacks del ViewModel correspondiente.
- *
- * @param pinRecuperado  Estado LiveData/StateFlow observado en la pantalla host.
- *                       Cuando llega no-null, el flujo avanza al paso 2.
- * @param onDismiss      Se llama si el usuario cancela en cualquier paso.
- * @param onRecover      Paso 1: invoca el caso de uso con (telefono, documento).
- * @param onReset        Paso 3: invoca el caso de uso con el nuevo PIN elegido.
- * @param onClearState   Limpia el estado del ViewModel al cerrar o completar.
- */
+// ─── Orquestador del flujo ────────────────────────────────────────────────
 @Composable
 fun PinRecoveryFlow(
-    pinRecuperado : String?,
-    onDismiss     : () -> Unit,
-    onRecover     : (phone: String, doc: String) -> Unit,
-    onReset       : (nuevoPin: String) -> Unit,
-    onClearState  : () -> Unit = {}
+    codigoGenerado : String?,
+    codigoValidado : Boolean,
+    onDismiss      : () -> Unit,
+    onGenerate     : (phone: String) -> Unit,
+    onValidate     : (code: String)  -> Unit,
+    onReset        : (pin: String)   -> Unit = {},
+    onVerified     : ()              -> Unit = {},  // hook para Retiro u otras acciones
+    showResetStep  : Boolean                 = true, // false = solo verificacion (Retiro)
+    onClearState   : ()              -> Unit = {}
 ) {
-    // Paso activo: 1 = verificar identidad, 2 = ver PIN, 3 = cambiar PIN
     var paso by remember { mutableIntStateOf(1) }
 
-    // Cuando el ViewModel entrega el PIN, avanzamos al paso 2
-    LaunchedEffect(pinRecuperado) {
-        if (pinRecuperado != null) paso = 2
+    // Paso 1 → 2 cuando Firebase devuelve el codigo
+    LaunchedEffect(codigoGenerado) { if (codigoGenerado != null) paso = 2 }
+
+    // Paso 3 → 4 cuando el codigo fue validado correctamente
+    LaunchedEffect(codigoValidado) {
+        if (codigoValidado) {
+            if (showResetStep) paso = 4   // flujo PIN: pide nuevo PIN
+            else { onVerified(); onDismiss() } // flujo Retiro: ejecuta accion
+        }
     }
 
     when (paso) {
-        1 -> RecoverPinStepDialog(
-            onDismiss = { onDismiss(); onClearState() },
-            onRecover = onRecover
+        1 -> VerifyIdentityDialog(
+            onDismiss  = { onDismiss(); onClearState() },
+            onGenerate = onGenerate
         )
-        2 -> PinRevealDialog(
-            pin       = pinRecuperado ?: "",
-            onDismiss = { onDismiss(); onClearState() },
-            onChangePinClick = { paso = 3 }
+        2 -> CodeRevealDialog(
+            codigo     = codigoGenerado ?: "",
+            onDismiss  = { onDismiss(); onClearState() },
+            onContinue = { paso = 3 }
         )
-        3 -> ResetPinStepDialog(
+        3 -> ConfirmCodeDialog(
+            onDismiss  = { onDismiss(); onClearState() },
+            onValidate = onValidate
+        )
+        4 -> ResetPinStepDialog(
             onDismiss = { onDismiss(); onClearState() },
-            onReset   = { nuevoPin ->
-                onReset(nuevoPin)
-                onClearState()
-            }
+            onReset   = { pin -> onReset(pin); onClearState() }
         )
     }
 }
 
-// ─── Paso 1: verificar identidad ──────────────────────────────────────────────
+// ─── Paso 1: ingresar telefono para generar codigo ────────────────────────────
 @Composable
-fun RecoverPinStepDialog(
-    onDismiss : () -> Unit,
-    onRecover : (phone: String, doc: String) -> Unit
+fun VerifyIdentityDialog(
+    onDismiss  : () -> Unit,
+    onGenerate : (phone: String) -> Unit
 ) {
     var phone by remember { mutableStateOf("") }
-    var doc   by remember { mutableStateOf("") }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -109,13 +128,13 @@ fun RecoverPinStepDialog(
         title = {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Icon(Icons.Filled.Lock, contentDescription = null, tint = HadesPurple, modifier = Modifier.size(20.dp))
-                Text("Recuperar PIN", color = HadesPurple, fontWeight = FontWeight.Bold)
+                Text("Olvidé mi PIN", color = HadesPurple, fontWeight = FontWeight.Bold)
             }
         },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Text(
-                    text      = "Verifica tu identidad para continuar",
+                    text      = "Ingresa tu número de teléfono. Te mostraremos un código de verificación.",
                     color     = HadesOnDark.copy(alpha = 0.7f),
                     fontSize  = 13.sp,
                     textAlign = TextAlign.Center,
@@ -127,20 +146,14 @@ fun RecoverPinStepDialog(
                     label         = "Teléfono (10 dígitos)",
                     keyboardType  = KeyboardType.Number
                 )
-                HadesTextField(
-                    value         = doc,
-                    onValueChange = { if (it.all { c -> c.isDigit() }) doc = it },
-                    label         = "Número de Documento",
-                    keyboardType  = KeyboardType.Number
-                )
             }
         },
         confirmButton = {
             TextButton(
-                enabled = phone.length == 10 && doc.isNotBlank(),
-                onClick = { onRecover(phone, doc) }
+                enabled = phone.length == 10,
+                onClick = { onGenerate(phone) }
             ) {
-                Text("VERIFICAR", color = HadesCyan, fontWeight = FontWeight.Bold)
+                Text("GENERAR CÓDIGO", color = if (phone.length == 10) HadesCyan else HadesOnDark.copy(alpha = 0.3f), fontWeight = FontWeight.Bold)
             }
         },
         dismissButton = {
@@ -149,12 +162,12 @@ fun RecoverPinStepDialog(
     )
 }
 
-// ─── Paso 2: mostrar PIN con botón copiar ─────────────────────────────────────
+// ─── Paso 2: mostrar el codigo generado con boton copiar ───────────────────────
 @Composable
-fun PinRevealDialog(
-    pin              : String,
-    onDismiss        : () -> Unit,
-    onChangePinClick : () -> Unit
+fun CodeRevealDialog(
+    codigo     : String,
+    onDismiss  : () -> Unit,
+    onContinue : () -> Unit
 ) {
     val clipboard = LocalClipboardManager.current
     var copiado   by remember { mutableStateOf(false) }
@@ -166,8 +179,8 @@ fun PinRevealDialog(
         containerColor   = HadesNavyDark,
         title = {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Icon(Icons.Filled.LockOpen, contentDescription = null, tint = HadesCyan, modifier = Modifier.size(20.dp))
-                Text("PIN Encontrado", color = HadesPurple, fontWeight = FontWeight.Bold)
+                Icon(Icons.Filled.Key, contentDescription = null, tint = HadesCyan, modifier = Modifier.size(20.dp))
+                Text("Tu código de verificación", color = HadesPurple, fontWeight = FontWeight.Bold)
             }
         },
         text = {
@@ -177,12 +190,13 @@ fun PinRevealDialog(
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Text(
-                    text     = "Este es tu PIN actual:",
-                    color    = HadesOnDark.copy(alpha = 0.7f),
-                    fontSize = 13.sp
+                    text      = "Usa este código para confirmar tu identidad en el siguiente paso:",
+                    color     = HadesOnDark.copy(alpha = 0.7f),
+                    fontSize  = 13.sp,
+                    textAlign = TextAlign.Center
                 )
 
-                // Caja visual del PIN
+                // Caja visual del codigo (6 digitos separados)
                 AnimatedVisibility(
                     visible = visible,
                     enter   = fadeIn(tween(400)) + scaleIn(tween(400))
@@ -192,43 +206,35 @@ fun PinRevealDialog(
                             .fillMaxWidth()
                             .background(
                                 brush = Brush.horizontalGradient(
-                                    listOf(HadesPurple.copy(alpha = 0.15f), HadesCyan.copy(alpha = 0.08f))
+                                    listOf(HadesPurple.copy(alpha = 0.12f), HadesCyan.copy(alpha = 0.06f))
                                 ),
                                 shape = RoundedCornerShape(16.dp)
                             )
                             .border(
                                 width = 1.5.dp,
                                 brush = Brush.horizontalGradient(
-                                    listOf(HadesPurple.copy(alpha = 0.6f), HadesCyan.copy(alpha = 0.4f))
+                                    listOf(HadesPurple.copy(alpha = 0.5f), HadesCyan.copy(alpha = 0.35f))
                                 ),
                                 shape = RoundedCornerShape(16.dp)
                             )
                             .padding(vertical = 20.dp),
                         contentAlignment = Alignment.Center
                     ) {
-                        // Dígitos separados
                         Row(
-                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
                             verticalAlignment      = Alignment.CenterVertically
                         ) {
-                            pin.forEach { digit ->
+                            codigo.forEach { digit ->
                                 Box(
                                     modifier = Modifier
-                                        .size(44.dp)
-                                        .background(
-                                            color = HadesNavyDark,
-                                            shape = RoundedCornerShape(10.dp)
-                                        )
-                                        .border(
-                                            width = 1.dp,
-                                            color = HadesPurple.copy(alpha = 0.5f),
-                                            shape = RoundedCornerShape(10.dp)
-                                        ),
+                                        .size(38.dp)
+                                        .background(HadesNavyDark, RoundedCornerShape(8.dp))
+                                        .border(1.dp, HadesPurple.copy(alpha = 0.4f), RoundedCornerShape(8.dp)),
                                     contentAlignment = Alignment.Center
                                 ) {
                                     Text(
                                         text       = digit.toString(),
-                                        fontSize   = 24.sp,
+                                        fontSize   = 20.sp,
                                         fontWeight = FontWeight.Black,
                                         color      = HadesOnDark
                                     )
@@ -240,53 +246,94 @@ fun PinRevealDialog(
 
                 // Boton copiar
                 OutlinedButton(
-                    onClick = {
-                        clipboard.setText(AnnotatedString(pin))
-                        copiado = true
-                    },
-                    colors  = ButtonDefaults.outlinedButtonColors(
+                    onClick  = { clipboard.setText(AnnotatedString(codigo)); copiado = true },
+                    colors   = ButtonDefaults.outlinedButtonColors(
                         contentColor = if (copiado) HadesCyan else HadesOnDark.copy(alpha = 0.7f)
                     ),
-                    border  = androidx.compose.foundation.BorderStroke(
+                    border   = androidx.compose.foundation.BorderStroke(
                         1.dp,
                         if (copiado) HadesCyan.copy(alpha = 0.6f) else HadesOnDark.copy(alpha = 0.2f)
                     ),
-                    shape   = RoundedCornerShape(10.dp),
+                    shape    = RoundedCornerShape(10.dp),
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Icon(
-                        imageVector        = Icons.Filled.ContentCopy,
-                        contentDescription = "Copiar PIN",
-                        modifier           = Modifier.size(16.dp)
-                    )
+                    Icon(Icons.Filled.ContentCopy, contentDescription = "Copiar", modifier = Modifier.size(16.dp))
                     Spacer(Modifier.width(6.dp))
-                    Text(
-                        text       = if (copiado) "¡Copiado!" else "Copiar PIN",
-                        fontSize   = 13.sp,
-                        fontWeight = FontWeight.Medium
-                    )
+                    Text(if (copiado) "¡Copiado!" else "Copiar código", fontSize = 13.sp)
                 }
 
                 Text(
-                    text      = "Te recomendamos cambiarlo por uno nuevo.",
-                    color     = HadesOnDark.copy(alpha = 0.45f),
+                    text      = "Tendrás que ingresarlo en el próximo paso.",
+                    color     = HadesOnDark.copy(alpha = 0.4f),
                     fontSize  = 11.sp,
                     textAlign = TextAlign.Center
                 )
             }
         },
         confirmButton = {
-            TextButton(onClick = onChangePinClick) {
-                Text("CAMBIAR PIN", color = HadesOrange, fontWeight = FontWeight.Bold)
+            TextButton(onClick = onContinue) {
+                Text("CONTINUAR", color = HadesOrange, fontWeight = FontWeight.Bold)
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text("ENTENDIDO", color = HadesCyan) }
+            TextButton(onClick = onDismiss) { Text("CANCELAR", color = HadesOnDark.copy(alpha = 0.5f)) }
         }
     )
 }
 
-// ─── Paso 3: elegir nuevo PIN ─────────────────────────────────────────────────
+// ─── Paso 3: confirmar el codigo recibido ────────────────────────────────────
+@Composable
+fun ConfirmCodeDialog(
+    onDismiss  : () -> Unit,
+    onValidate : (code: String) -> Unit
+) {
+    var code by remember { mutableStateOf("") }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        containerColor   = HadesNavyDark,
+        title = {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Icon(Icons.Filled.LockOpen, contentDescription = null, tint = HadesCyan, modifier = Modifier.size(20.dp))
+                Text("Confirmar código", color = HadesPurple, fontWeight = FontWeight.Bold)
+            }
+        },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Text(
+                    text      = "Ingresa el código de 6 dígitos que se te mostró:",
+                    color     = HadesOnDark.copy(alpha = 0.7f),
+                    fontSize  = 13.sp,
+                    textAlign = TextAlign.Center,
+                    modifier  = Modifier.fillMaxWidth()
+                )
+                HadesTextField(
+                    value         = code,
+                    onValueChange = { if (it.length <= 6 && it.all { c -> c.isDigit() }) code = it },
+                    label         = "Código de verificación",
+                    keyboardType  = KeyboardType.Number
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(
+                enabled = code.length == 6,
+                onClick = { onValidate(code) }
+            ) {
+                Text(
+                    text       = "VERIFICAR",
+                    color      = if (code.length == 6) HadesCyan else HadesOnDark.copy(alpha = 0.3f),
+                    fontWeight = FontWeight.Bold
+                )
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("CANCELAR", color = HadesOnDark.copy(alpha = 0.5f)) }
+        }
+    )
+}
+
+// ─── Paso 4: elegir nuevo PIN (solo flujo de cambio de PIN) ─────────────────
 @Composable
 fun ResetPinStepDialog(
     onDismiss : () -> Unit,
@@ -296,10 +343,8 @@ fun ResetPinStepDialog(
     var confirmacion by remember { mutableStateOf("") }
 
     val coincide   = nuevoPin.length == 4 && nuevoPin == confirmacion
-    val errorTexto = when {
-        nuevoPin.length == 4 && confirmacion.length == 4 && nuevoPin != confirmacion -> "Los PINs no coinciden"
-        else -> null
-    }
+    val errorTexto = if (nuevoPin.length == 4 && confirmacion.length == 4 && !coincide)
+        "Los PINs no coinciden" else null
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -333,26 +378,16 @@ fun ResetPinStepDialog(
                     isError       = errorTexto != null
                 )
                 if (errorTexto != null) {
-                    Text(
-                        text      = errorTexto,
-                        color     = MaterialTheme.colorScheme.error,
-                        fontSize  = 11.sp,
-                        textAlign = TextAlign.End,
-                        modifier  = Modifier.fillMaxWidth()
-                    )
+                    Text(errorTexto, color = MaterialTheme.colorScheme.error, fontSize = 11.sp,
+                        textAlign = TextAlign.End, modifier = Modifier.fillMaxWidth())
                 }
             }
         },
         confirmButton = {
-            TextButton(
-                enabled = coincide,
-                onClick = { onReset(nuevoPin) }
-            ) {
-                Text(
-                    text       = "ACTUALIZAR",
+            TextButton(enabled = coincide, onClick = { onReset(nuevoPin) }) {
+                Text("ACTUALIZAR",
                     color      = if (coincide) HadesCyan else HadesOnDark.copy(alpha = 0.3f),
-                    fontWeight = FontWeight.Bold
-                )
+                    fontWeight = FontWeight.Bold)
             }
         },
         dismissButton = {
