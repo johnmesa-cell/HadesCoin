@@ -1,10 +1,8 @@
 package com.example.hadescoin.presentation.auth.login
 
-import android.app.Application
-import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
-import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.hadescoin.data.local.SessionRepository
 import com.example.hadescoin.di.ServiceLocator
@@ -12,39 +10,27 @@ import com.example.hadescoin.domain.usecase.GetUserProfileUseCase
 import com.example.hadescoin.domain.usecase.LoginUseCase
 import com.example.hadescoin.domain.usecase.RecoverPinUseCase
 import com.example.hadescoin.domain.usecase.UpdateUserPinUseCase
-import kotlinx.coroutines.flow.SharingStarted
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
-/**
- * MVVM + Clean Architecture:
- * - El ViewModel solo conoce Use Cases (capa domain) y SessionRepository (capa data/local).
- * - No llama a ServiceLocator en tiempo de ejecucion; todas las dependencias
- *   llegan inyectadas desde LoginViewModelFactory.
- * - AndroidViewModel se usa unicamente para acceder al Application Context
- *   que necesita DataStore (SessionRepository). No se usa para nada mas.
- */
 class LoginViewModel(
-    application: Application,
-    private val loginUseCase: LoginUseCase,
-    private val getUserProfileUseCase: GetUserProfileUseCase,
-    private val recoverPinUseCase: RecoverPinUseCase,
-    private val updateUserPinUseCase: UpdateUserPinUseCase,
-    private val sessionRepository: SessionRepository
-) : AndroidViewModel(application) {
+    private val loginUseCase:          LoginUseCase          = ServiceLocator.provideLoginUseCase(),
+    private val getUserProfileUseCase: GetUserProfileUseCase = ServiceLocator.provideGetUserProfileUseCase(),
+    private val recoverPinUseCase:     RecoverPinUseCase     = ServiceLocator.provideRecoverPinUseCase(),
+    private val updateUserPinUseCase:  UpdateUserPinUseCase  = ServiceLocator.provideUpdateUserPinUseCase(),
+    private val sessionRepository:     SessionRepository     = ServiceLocator.provideSessionRepository()
+) : ViewModel() {
 
-    // ---- Estado DataStore expuesto como StateFlow (observable en Compose) --------
-    val haySessionGuardada: StateFlow<Boolean> = sessionRepository.haySessionGuardada
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
+    // ---- Estado de sesion local (LiveData individuales — sin StateFlow) ----------
+    private val _haySessionGuardada = MutableLiveData(false)
+    val haySessionGuardada: LiveData<Boolean> = _haySessionGuardada
 
-    val telefonoGuardado: StateFlow<String> = sessionRepository.telefonoGuardado
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), "")
+    private val _telefonoGuardado = MutableLiveData("")
+    val telefonoGuardado: LiveData<String> = _telefonoGuardado
 
-    val nombreGuardado: StateFlow<String> = sessionRepository.nombreGuardado
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), "")
+    private val _nombreGuardado = MutableLiveData("")
+    val nombreGuardado: LiveData<String> = _nombreGuardado
 
-    // ---- Estado UI (LiveData para compatibilidad con observeAsState) -------------
+    // ---- Estado UI ---------------------------------------------------------------
     private val _cargando = MutableLiveData(false)
     val cargando: LiveData<Boolean> = _cargando
 
@@ -59,6 +45,25 @@ class LoginViewModel(
 
     private val _errorRecuperacion = MutableLiveData<String?>()
     val errorRecuperacion: LiveData<String?> = _errorRecuperacion
+
+    init {
+        cargarSesionLocal()
+    }
+
+    // ---- Carga inicial de sesion desde DataStore ---------------------------------
+    private fun cargarSesionLocal() {
+        viewModelScope.launch {
+            sessionRepository.telefonoGuardado.collect { telefono ->
+                _telefonoGuardado.value = telefono
+                _haySessionGuardada.value = telefono.isNotBlank()
+            }
+        }
+        viewModelScope.launch {
+            sessionRepository.nombreGuardado.collect { nombre ->
+                _nombreGuardado.value = nombre
+            }
+        }
+    }
 
     // ---- Casos de uso: Login -----------------------------------------------------
     fun login(phoneNumber: String, pin: String) {
@@ -90,7 +95,12 @@ class LoginViewModel(
     }
 
     fun olvidarSesionGuardada() {
-        viewModelScope.launch { sessionRepository.limpiarSesion() }
+        viewModelScope.launch {
+            sessionRepository.limpiarSesion()
+            _haySessionGuardada.value = false
+            _telefonoGuardado.value = ""
+            _nombreGuardado.value = ""
+        }
     }
 
     // ---- Casos de uso: Recuperacion de PIN ---------------------------------------
@@ -149,22 +159,4 @@ class LoginViewModel(
 
     private fun esPinValido(pin: String) =
         pin.length == 4 && pin.all { it.isDigit() }
-
-    // ---- Factory (unico punto donde ServiceLocator es conocido) ------------------
-    companion object {
-        fun factory(application: Application): ViewModelProvider.Factory =
-            object : ViewModelProvider.Factory {
-                @Suppress("UNCHECKED_CAST")
-                override fun <T : androidx.lifecycle.ViewModel> create(modelClass: Class<T>): T {
-                    return LoginViewModel(
-                        application          = application,
-                        loginUseCase         = ServiceLocator.provideLoginUseCase(),
-                        getUserProfileUseCase = ServiceLocator.provideGetUserProfileUseCase(),
-                        recoverPinUseCase    = ServiceLocator.provideRecoverPinUseCase(),
-                        updateUserPinUseCase = ServiceLocator.provideUpdateUserPinUseCase(),
-                        sessionRepository    = SessionRepository(application)
-                    ) as T
-                }
-            }
-    }
 }

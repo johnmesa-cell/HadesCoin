@@ -13,7 +13,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -30,17 +29,13 @@ import com.example.hadescoin.ui.theme.*
 
 @Composable
 fun LoginView(
-    navController: NavController
+    navController: NavController,
+    viewModel: LoginViewModel = viewModel()   // Sin factory, sin Hilt — patron del proyecto
 ) {
-    val context = LocalContext.current
-    // Factory suministra todas las dependencias; Compose no necesita conocer nada mas
-    val viewModel: LoginViewModel = viewModel(
-        factory = LoginViewModel.factory(context.applicationContext as android.app.Application)
-    )
-
-    val haySession    by viewModel.haySessionGuardada.collectAsState()
-    val telefonoLocal by viewModel.telefonoGuardado.collectAsState()
-    val nombreLocal   by viewModel.nombreGuardado.collectAsState()
+    // Sesion local — observados como LiveData con observeAsState
+    val haySession    by viewModel.haySessionGuardada.observeAsState(false)
+    val telefonoLocal by viewModel.telefonoGuardado.observeAsState("")
+    val nombreLocal   by viewModel.nombreGuardado.observeAsState("")
 
     var phoneNumber by remember { mutableStateOf("") }
     var pin         by remember { mutableStateOf("") }
@@ -58,7 +53,7 @@ fun LoginView(
     var recoveredPinMsg   by remember { mutableStateOf<String?>(null) }
     var phoneForReset     by remember { mutableStateOf("") }
 
-    // Precarga el telefono cuando hay sesion guardada
+    // Precarga el telefono en el campo cuando hay sesion guardada
     LaunchedEffect(haySession, telefonoLocal) {
         if (haySession && telefonoLocal.isNotBlank()) phoneNumber = telefonoLocal
     }
@@ -72,25 +67,27 @@ fun LoginView(
     LaunchedEffect(pinRecuperado)     { pinRecuperado?.let     { recoveredPinMsg = "Tu PIN es: $it"; showRecoverDialog = false } }
     LaunchedEffect(errorRecuperacion) { errorRecuperacion?.let { mensajeError = it; showError = true } }
 
-    // Seleccion de modo segun estado DataStore
+    // Seleccion de modo segun sesion
     if (haySession && telefonoLocal.isNotBlank()) {
         LoginInteligenteContent(
             nombre             = nombreLocal,
             telefonoPrecargado = telefonoLocal,
             pin                = pin,
             cargando           = cargando,
-            onPinChange        = { value -> if (value.length <= 4 && value.all { c -> c.isDigit() }) { pin = value; viewModel.clearError() } },
-            onLoginClick       = { viewModel.login(telefonoLocal, pin) },
-            onOtroUsuario      = { pin = ""; viewModel.olvidarSesionGuardada() },
-            onForgotPin        = { showRecoverDialog = true }
+            onPinChange        = { value ->
+                if (value.length <= 4 && value.all { c -> c.isDigit() }) { pin = value; viewModel.clearError() }
+            },
+            onLoginClick  = { viewModel.login(telefonoLocal, pin) },
+            onOtroUsuario = { pin = ""; viewModel.olvidarSesionGuardada() },
+            onForgotPin   = { showRecoverDialog = true }
         )
     } else {
         LoginContent(
-            phoneNumber          = phoneNumber,
-            pin                  = pin,
-            cargando             = cargando,
-            loginError           = loginError,
-            onPhoneChange        = { value ->
+            phoneNumber   = phoneNumber,
+            pin           = pin,
+            cargando      = cargando,
+            loginError    = loginError,
+            onPhoneChange = { value ->
                 if (value.length <= 10 && value.all { c -> c.isDigit() } && (value.isEmpty() || value[0] == '3')) {
                     phoneNumber = value; viewModel.clearError()
                 }
@@ -104,7 +101,7 @@ fun LoginView(
         )
     }
 
-    // --- Dialogs -----------------------------------------------------------------
+    // Dialogs
     if (cargando) ShowLoadingAlertDialog()
 
     if (showError) {
@@ -150,12 +147,15 @@ fun LoginView(
     if (showResetDialog) {
         ResetPinDialog(
             onDismiss = { showResetDialog = false; viewModel.clearError() },
-            onReset   = { nuevoPin -> viewModel.resetearPinDespuesDeRecuperar(phoneForReset, nuevoPin); showResetDialog = false }
+            onReset   = { nuevoPin ->
+                viewModel.resetearPinDespuesDeRecuperar(phoneForReset, nuevoPin)
+                showResetDialog = false
+            }
         )
     }
 }
 
-// ─── Pantalla inteligente (sesion guardada) ──────────────────────────────────
+// ─── Pantalla inteligente (sesion guardada) ───────────────────────────────────
 @Composable
 fun LoginInteligenteContent(
     nombre: String,
@@ -268,7 +268,7 @@ fun LoginInteligenteContent(
     }
 }
 
-// ─── Pantalla normal (sin sesion guardada) ───────────────────────────────────
+// ─── Pantalla normal (sin sesion guardada) ────────────────────────────────────
 @Composable
 fun LoginContent(
     phoneNumber: String,
@@ -382,7 +382,7 @@ fun LoginContent(
     }
 }
 
-// ─── Dialogos de recuperacion de PIN ───────────────────────────────────────
+// ─── Dialogos ───────────────────────────────────────────────────────────────────────
 @Composable
 fun ResetPinDialog(onDismiss: () -> Unit, onReset: (String) -> Unit) {
     var nuevoPin     by remember { mutableStateOf("") }
@@ -442,7 +442,7 @@ fun RecoverPinDialog(onDismiss: () -> Unit, onRecover: (String, String) -> Unit)
     )
 }
 
-// ─── Previews ───────────────────────────────────────────────────────────────────
+// ─── Previews ───────────────────────────────────────────────────────────────────────
 @Preview(showBackground = true, showSystemUi = true, name = "Login — normal")
 @Composable
 fun LoginViewPreview() {
