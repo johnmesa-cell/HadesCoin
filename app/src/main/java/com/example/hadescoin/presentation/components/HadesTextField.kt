@@ -7,6 +7,7 @@ import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
@@ -23,6 +24,7 @@ fun HadesTextField(
     isPassword: Boolean = false,
     isError: Boolean = false,
     enabled: Boolean = true,
+    icon: ImageVector? = null,
     keyboardType: KeyboardType = KeyboardType.Text,
     singleLine: Boolean = true,
     prefix: (@Composable () -> Unit)? = null,
@@ -36,6 +38,9 @@ fun HadesTextField(
         singleLine = singleLine,
         enabled = enabled,
         isError = isError,
+        leadingIcon = icon?.let {
+            { androidx.compose.material3.Icon(imageVector = it, contentDescription = null) }
+        },
         visualTransformation = if (isPassword) PasswordVisualTransformation()
                                else VisualTransformation.None,
         keyboardOptions = KeyboardOptions(keyboardType = keyboardType),

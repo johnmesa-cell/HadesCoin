@@ -36,6 +36,8 @@ import com.example.hadescoin.presentation.utils.formatTimestamp
 import com.example.hadescoin.presentation.utils.getInitials
 import com.example.hadescoin.presentation.utils.translateTransactionType
 import com.example.hadescoin.ui.theme.*
+import java.text.SimpleDateFormat
+import java.util.Date
 import java.util.Locale
 
 // ── Helpers de iconos ─────────────────────────────────────────────────────────
@@ -168,14 +170,42 @@ fun HomeViewContent(
     var saldoVisible  by remember { mutableStateOf(true) }
     var filtroActivo  by remember { mutableStateOf("TODOS") }
 
-    val transaccionesFiltradas = when (filtroActivo) {
-        "TODOS"    -> transactions
-        "WITHDRAW" -> transactions.filter {
-            val t = it.type.uppercase()
-            t == "WITHDRAW" || t == "WITHDRAWAL_PENDING" ||
-                    t == "WITHDRAWAL_COMPLETED" || t == "WITHDRAWAL_FAILED"
+    // Nuevos estados para filtros mejorados
+    var searchQuery     by remember { mutableStateOf("") }
+    var filtroDireccion by remember { mutableStateOf("TODOS") } // TODOS, IN, OUT
+    var fechaSeleccionada by remember { mutableStateOf<String?>(null) }
+    var showDatePicker    by remember { mutableStateOf(false) }
+    var selectedTx        by remember { mutableStateOf<WalletTransaction?>(null) }
+
+    val transaccionesFiltradas = transactions.filter { tx ->
+        // 1. Filtro por tipo de transacción (el existente)
+        val matchesType = when (filtroActivo) {
+            "TODOS"    -> true
+            "WITHDRAW" -> {
+                val t = tx.type.uppercase()
+                t == "WITHDRAW" || t == "WITHDRAWAL_PENDING" ||
+                        t == "WITHDRAWAL_COMPLETED" || t == "WITHDRAWAL_FAILED"
+            }
+            else       -> tx.type.uppercase() == filtroActivo
         }
-        else       -> transactions.filter { it.type.uppercase() == filtroActivo }
+
+        // 2. Filtro por dirección (Ingreso/Egreso)
+        val matchesDirection = when (filtroDireccion) {
+            "TODOS" -> true
+            else    -> tx.direction.uppercase() == filtroDireccion
+        }
+
+        // 3. Filtro por búsqueda de teléfono
+        val matchesSearch = if (searchQuery.isBlank()) true else {
+            tx.senderId.contains(searchQuery) || tx.receiverId.contains(searchQuery)
+        }
+
+        // 4. Filtro por fecha
+        val matchesDate = if (fechaSeleccionada == null) true else {
+            tx.timestamp.startsWith(fechaSeleccionada!!)
+        }
+
+        matchesType && matchesDirection && matchesSearch && matchesDate
     }
 
     // Solo TX reales para el resumen (excluye pendientes y fallidas)
@@ -244,28 +274,100 @@ fun HomeViewContent(
                         saldoVisible  = saldoVisible,
                         onToggleSaldo = { saldoVisible = !saldoVisible }
                     )
-                    Spacer(modifier = Modifier.height(16.dp))
+                    Spacer(modifier = Modifier.height(24.dp))
                 }
 
-                item { Spacer(modifier = Modifier.height(28.dp)) }
+                item {
+                    HadesFinancialChart(
+                        ingresos = totalIngresos,
+                        egresos = totalEgresos
+                    )
+                    Spacer(modifier = Modifier.height(28.dp))
+                }
 
                 item {
+                    Text(
+                        text = "HISTORIAL DE ACTIVIDAD",
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = HadesCyan,
+                        letterSpacing = 2.sp
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    HadesTextField(
+                        value = searchQuery,
+                        onValueChange = { searchQuery = it },
+                        label = "Buscar por número...",
+                        icon = Icons.Filled.Search,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Box(modifier = Modifier.weight(1f)) {
+                            HadesFilterChipRow(
+                                opciones = listOf("TODOS", "IN", "OUT"),
+                                seleccionado = filtroDireccion,
+                                onSeleccion = { filtroDireccion = it },
+                                labelTransform = {
+                                    when (it) {
+                                        "IN" -> "Ingresos"
+                                        "OUT" -> "Egresos"
+                                        else -> "Todos"
+                                    }
+                                }
+                            )
+                        }
+
+                        IconButton(
+                            onClick = { showDatePicker = true },
+                            modifier = Modifier
+                                .size(40.dp)
+                                .clip(RoundedCornerShape(10.dp))
+                                .background(if (fechaSeleccionada != null) HadesCyan.copy(alpha = 0.2f) else HadesNavyDark)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Filled.DateRange,
+                                contentDescription = "Filtrar por fecha",
+                                tint = if (fechaSeleccionada != null) HadesCyan else HadesOnDark.copy(alpha = 0.6f),
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+
+                        if (fechaSeleccionada != null) {
+                            IconButton(
+                                onClick = { fechaSeleccionada = null },
+                                modifier = Modifier.size(24.dp)
+                            ) {
+                                Icon(Icons.Filled.Close, contentDescription = "Limpiar fecha", tint = HadesOrange, modifier = Modifier.size(16.dp))
+                            }
+                        }
+                    }
+
+                    if (fechaSeleccionada != null) {
+                        Text(
+                            text = "Fecha: $fechaSeleccionada",
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = HadesCyan,
+                            modifier = Modifier.padding(top = 4.dp, start = 4.dp)
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
                     HadesFilterChipRow(
                         opciones       = listOf("TODOS", "TRANSFER", "DEPOSIT", "WITHDRAW"),
                         seleccionado   = filtroActivo,
                         onSeleccion    = { filtroActivo = it },
                         labelTransform = { translateTransactionType(it) }
                     )
-                    Spacer(modifier = Modifier.height(8.dp))
-                }
-
-                item {
-                    Spacer(modifier = Modifier.height(12.dp))
-                    HadesFinancialChart(
-                        ingresos = totalIngresos,
-                        egresos = totalEgresos
-                    )
-                    Spacer(modifier = Modifier.height(24.dp))
+                    Spacer(modifier = Modifier.height(20.dp))
                 }
 
                 item {
@@ -319,7 +421,10 @@ fun HomeViewContent(
                 }
 
                 items(transaccionesFiltradas) { tx ->
-                    TransactionRow(tx = tx)
+                    TransactionRow(
+                        tx = tx,
+                        onClick = { selectedTx = tx }
+                    )
                     Spacer(modifier = Modifier.height(8.dp))
                 }
 
@@ -352,6 +457,23 @@ fun HomeViewContent(
                     showUserPanel = false
                     onProfile()
                 }
+            )
+        }
+
+        if (showDatePicker) {
+            HadesDatePickerDialog(
+                onDateSelected = { date ->
+                    fechaSeleccionada = date
+                    showDatePicker = false
+                },
+                onDismiss = { showDatePicker = false }
+            )
+        }
+
+        if (selectedTx != null) {
+            TransactionDetailDialog(
+                tx = selectedTx!!,
+                onDismiss = { selectedTx = null }
             )
         }
     }
@@ -480,7 +602,10 @@ private fun BalanceCard(
 }
 
 @Composable
-private fun TransactionRow(tx: WalletTransaction) {
+private fun TransactionRow(
+    tx: WalletTransaction,
+    onClick: () -> Unit
+) {
     val isIncome    = tx.direction == "IN"
     val amountColor = if (isIncome) HadesCyan else HadesOrange
     val prefix      = if (isIncome) "+" else "-"
@@ -492,6 +617,7 @@ private fun TransactionRow(tx: WalletTransaction) {
             .fillMaxWidth()
             .clip(RoundedCornerShape(14.dp))
             .background(HadesNavyDark)
+            .clickable { onClick() }
             .padding(horizontal = 16.dp, vertical = 14.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment     = Alignment.CenterVertically
@@ -647,3 +773,105 @@ fun HomeViewFilledPreview() {
 fun HomeViewLoadingPreview() {
     HadesCoinTheme { HomeViewContent(appUser = null, transactions = emptyList(), cargando = true) }
 }
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun HadesDatePickerDialog(
+    onDateSelected: (String) -> Unit,
+    onDismiss: () -> Unit
+) {
+    val datePickerState = rememberDatePickerState()
+
+    DatePickerDialog(
+        onDismissRequest = onDismiss,
+        confirmButton = {
+            TextButton(onClick = {
+                datePickerState.selectedDateMillis?.let { millis ->
+                    val sdf = SimpleDateFormat("yyyy-MM-dd", Locale.US)
+                    onDateSelected(sdf.format(Date(millis)))
+                }
+            }) {
+                Text("ACEPTAR", color = HadesCyan)
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("CANCELAR", color = HadesOnDark)
+            }
+        },
+        colors = DatePickerDefaults.colors(
+            containerColor = HadesNavyDark
+        )
+    ) {
+        DatePicker(state = datePickerState)
+    }
+}
+
+@Composable
+fun TransactionDetailDialog(
+    tx: WalletTransaction,
+    onDismiss: () -> Unit
+) {
+    val isIncome = tx.direction == "IN"
+    val color = if (isIncome) HadesCyan else HadesOrange
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        containerColor = HadesNavyDark,
+        title = {
+            Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
+                Box(
+                    modifier = Modifier
+                        .size(60.dp)
+                        .clip(CircleShape)
+                        .background(color.copy(alpha = 0.1f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = if (isIncome) Icons.Filled.ArrowDownward else Icons.Filled.ArrowUpward,
+                        contentDescription = null,
+                        tint = color,
+                        modifier = Modifier.size(32.dp)
+                    )
+                }
+                Spacer(modifier = Modifier.height(12.dp))
+                Text(
+                    text = translateTransactionType(tx.type),
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = HadesOnDark
+                )
+            }
+        },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                DetailItem(label = "Monto", value = "$ ${String.format(Locale.US, "%,.2f", tx.amount)}", valueColor = color)
+                DetailItem(label = "Fecha", value = formatTimestamp(tx.timestamp))
+                DetailItem(label = "Dirección", value = if (isIncome) "Recibido" else "Enviado")
+
+                if (tx.type == "TRANSFER") {
+                    DetailItem(label = "Origen", value = tx.senderId)
+                    DetailItem(label = "Destino", value = tx.receiverId)
+                }
+
+                if (tx.verificationCode.isNotEmpty()) {
+                    DetailItem(label = "Código", value = tx.verificationCode, valueColor = HadesPurple)
+                }
+
+                DetailItem(label = "ID Transacción", value = tx.id.take(12) + "...")
+            }
+        },
+        confirmButton = {
+            HadesButton(text = "CERRAR", onClick = onDismiss)
+        }
+    )
+}
+
+@Composable
+private fun DetailItem(label: String, value: String, valueColor: Color = HadesOnDark) {
+    Column {
+        Text(text = label, fontSize = 10.sp, color = HadesOnDark.copy(alpha = 0.5f), letterSpacing = 1.sp)
+        Text(text = value, fontSize = 15.sp, fontWeight = FontWeight.Medium, color = valueColor)
+    }
+}
+
