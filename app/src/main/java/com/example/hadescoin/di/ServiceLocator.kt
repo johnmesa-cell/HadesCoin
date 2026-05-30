@@ -20,9 +20,11 @@ import com.example.hadescoin.domain.usecase.GetUserProfileUseCase
 import com.example.hadescoin.domain.usecase.GetWalletDataUseCase
 import com.example.hadescoin.domain.usecase.LoginUseCase
 import com.example.hadescoin.domain.usecase.MarkNotificationAsReadUseCase
+import com.example.hadescoin.domain.usecase.ObserveNotificationsUseCase
 import com.example.hadescoin.domain.usecase.QueueNotificationEmailUseCase
 import com.example.hadescoin.domain.usecase.RecoverPinUseCase
 import com.example.hadescoin.domain.usecase.RegisterUseCase
+import com.example.hadescoin.domain.usecase.StopObservingNotificationsUseCase
 import com.example.hadescoin.domain.usecase.TransferUseCase
 import com.example.hadescoin.domain.usecase.UpdateUserNicknameUseCase
 import com.example.hadescoin.domain.usecase.UpdateUserPinUseCase
@@ -66,5 +68,7 @@ object ServiceLocator {
     fun provideGetNotificationsUseCase():         GetNotificationsUseCase          = GetNotificationsUseCase(notificationRepository)
     fun provideMarkNotificationAsReadUseCase():   MarkNotificationAsReadUseCase    = MarkNotificationAsReadUseCase(notificationRepository)
     fun provideGetUnreadNotificationsCountUseCase(): GetUnreadNotificationsCountUseCase = GetUnreadNotificationsCountUseCase(notificationRepository)
+    fun provideObserveNotificationsUseCase():     ObserveNotificationsUseCase      = ObserveNotificationsUseCase(notificationRepository)
+    fun provideStopObservingNotificationsUseCase(): StopObservingNotificationsUseCase = StopObservingNotificationsUseCase(notificationRepository)
     fun provideQueueNotificationEmailUseCase():   QueueNotificationEmailUseCase    = QueueNotificationEmailUseCase(notificationEmailRepository)
 }

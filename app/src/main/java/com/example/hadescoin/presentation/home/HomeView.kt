@@ -17,6 +17,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -66,12 +67,9 @@ fun HomeView(
     val error         by viewModel.error.observeAsState()
     val codigoRetiro  by viewModel.codigoRetiro.observeAsState()
     val noLeidas      by viewModel.notificacionesNoLeidas.observeAsState(0)
-    val mensajeSnack  by viewModel.mensajeFlotante.observeAsState()
 
-    val snackbarHostState = remember { SnackbarHostState() }
-
-    var showError          by remember { mutableStateOf(false) }
     var mensajeError       by remember { mutableStateOf("") }
+    var showError          by remember { mutableStateOf(false) }
     var menuExpanded       by remember { mutableStateOf(false) }
     var showWithdrawDialog by remember { mutableStateOf(false) }
 
@@ -87,13 +85,6 @@ fun HomeView(
         viewModel.loadWalletData(phoneNumber)
     }
 
-    LaunchedEffect(mensajeSnack) {
-        mensajeSnack?.let {
-            snackbarHostState.showSnackbar(it)
-            viewModel.clearMensajeFlotante()
-        }
-    }
-
     LaunchedEffect(error) {
         error?.let {
             mensajeError = it
@@ -101,42 +92,36 @@ fun HomeView(
         }
     }
 
-    Scaffold(
-        snackbarHost = { SnackbarHost(hostState = snackbarHostState) }
-    ) { innerPadding ->
-        Box(modifier = Modifier.padding(innerPadding)) {
-            HomeViewContent(
-                appUser               = appUser,
-                transactions          = transactions,
-                cargando              = cargando,
-                menuExpanded          = menuExpanded,
-                notificacionesNoLeidas = noLeidas,
-                onMenuToggle          = { menuExpanded = !menuExpanded },
-                onMenuCollapse        = { menuExpanded = false },
-                onRefresh             = {
-                    viewModel.refresh()
-                    viewModel.cargarNoLeidas(phoneNumber)
-                },
-                onLogout              = {
-                    navController.navigate("login") { popUpTo(0) { inclusive = true } }
-                },
-                onTransfer            = {
-                    menuExpanded = false
-                    navController.navigate("transfer/$phoneNumber")
-                },
-                onProfile             = {
-                    navController.navigate("profile/$phoneNumber")
-                },
-                onNotifications       = {
-                    navController.navigate("notifications/$phoneNumber")
-                },
-                onWithdrawAtm         = {
-                    menuExpanded = false
-                    showWithdrawDialog = true
-                }
-            )
+    HomeViewContent(
+        appUser               = appUser,
+        transactions          = transactions,
+        noLeidas              = noLeidas,
+        cargando              = cargando,
+        menuExpanded          = menuExpanded,
+        onMenuToggle          = { menuExpanded = !menuExpanded },
+        onMenuCollapse        = { menuExpanded = false },
+        onRefresh             = {
+            viewModel.refresh()
+            viewModel.cargarNoLeidas(phoneNumber)
+        },
+        onLogout              = {
+            navController.navigate("login") { popUpTo(0) { inclusive = true } }
+        },
+        onTransfer            = {
+            menuExpanded = false
+            navController.navigate("transfer/$phoneNumber")
+        },
+        onProfile             = {
+            navController.navigate("profile/$phoneNumber")
+        },
+        onNotifications       = {
+            navController.navigate("notifications/$phoneNumber")
+        },
+        onWithdrawAtm         = {
+            menuExpanded = false
+            showWithdrawDialog = true
         }
-    }
+    )
 
     if (cargando && !showWithdrawDialog) ShowLoadingAlertDialog()
 
@@ -167,9 +152,9 @@ fun HomeView(
 fun HomeViewContent(
     appUser: AppUser?,
     transactions: List<WalletTransaction>,
+    noLeidas: Int = 0,
     cargando: Boolean,
     menuExpanded: Boolean = false,
-    notificacionesNoLeidas: Int = 0,
     onMenuToggle: () -> Unit = {},
     onMenuCollapse: () -> Unit = {},
     onRefresh: () -> Unit = {},
@@ -245,9 +230,9 @@ fun HomeViewContent(
                     Spacer(modifier = Modifier.height(40.dp))
                     HomeHeader(
                         appUser       = appUser,
+                        noLeidas      = noLeidas,
                         onRefresh     = onRefresh,
-                        notificacionesNoLeidas = notificacionesNoLeidas,
-                        onNotificationsClick = onNotifications,
+                        onNotifications = onNotifications,
                         onAvatarClick = { showUserPanel = true }
                     )
                     Spacer(modifier = Modifier.height(24.dp))
@@ -377,9 +362,9 @@ fun HomeViewContent(
 @Composable
 private fun HomeHeader(
     appUser: AppUser?,
+    noLeidas: Int,
     onRefresh: () -> Unit,
-    notificacionesNoLeidas: Int,
-    onNotificationsClick: () -> Unit,
+    onNotifications: () -> Unit,
     onAvatarClick: () -> Unit
 ) {
     Row(
@@ -421,11 +406,16 @@ private fun HomeHeader(
             }
         }
         Row(verticalAlignment = Alignment.CenterVertically) {
-            IconButton(onClick = onNotificationsClick) {
+            IconButton(onClick = onNotifications) {
                 BadgedBox(
                     badge = {
-                        if (notificacionesNoLeidas > 0) {
-                            Badge { Text(notificacionesNoLeidas.toString()) }
+                        if (noLeidas > 0) {
+                            Badge(
+                                containerColor = HadesOrange,
+                                contentColor = Color.White
+                            ) {
+                                Text(noLeidas.toString())
+                            }
                         }
                     }
                 ) {

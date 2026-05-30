@@ -7,5 +7,11 @@ interface NotificationRepository {
     suspend fun getNotificationsByPhone(phoneNumber: String): List<AppNotification>
     suspend fun markAsRead(phoneNumber: String, notificationId: String): Boolean
     suspend fun getUnreadCount(phoneNumber: String): Int
-}
 
+    fun observeNotifications(
+        phoneNumber: String,
+        onUpdate: (List<AppNotification>) -> Unit
+    ): Any
+
+    fun stopObserving(phoneNumber: String, subscription: Any)
+}

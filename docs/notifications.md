@@ -91,17 +91,17 @@ Cola desacoplada para que un Worker externo o Cloud Function procese el envío.
 ## Componentes de UI
 
 ### 1. Pantalla de Notificaciones (`NotificationsView`)
-- Acceso desde la campanita del Home o desde el Perfil.
+- Acceso desde la vista de `Perfil`.
 - Lista ordenada cronológicamente (más reciente primero).
 - Indicador visual (punto naranja) para mensajes no leídos.
 - Al tocar una notificación, se marca automáticamente como leída en Firebase.
 
 ### 2. Campanita e Indicador (Badge)
-- Implementado en `HomeHeader` y en la vista de `Profile`.
-- Muestra el número de notificaciones pendientes en tiempo real.
+- Implementado en la vista de `Profile` para un acceso centralizado a la seguridad y alertas.
+- Muestra el número de notificaciones pendientes en tiempo real (actualización automática mediante Listeners de Firebase).
 
 ### 3. Notificación Flotante (Snackbar)
-- Cuando ocurre un evento de éxito (ej. transferencia), se muestra un aviso flotante inmediato informando que la notificación ha sido guardada para revisión posterior.
+- Se mantiene el esquema original del proyecto, priorizando diálogos para confirmaciones directas del usuario. Los eventos detallados se registran silenciosamente en la bandeja de notificaciones (dentro del Perfil) para no interrumpir la navegación principal, permitiendo que la interfaz se mantenga idéntica a su estado original.
 
 ---
 
@@ -111,4 +111,3 @@ El sistema verifica si el usuario tiene un campo `email` en su perfil de Firebas
 - Si existe, además de la notificación interna, se inserta un objeto en `emailQueue`.
 - El objeto incluye el asunto y el cuerpo del mensaje relacionado con la transacción o cambio de seguridad.
 - Este proceso es asíncrono y no bloquea la experiencia del usuario en la app.
-

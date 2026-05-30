@@ -11,6 +11,8 @@ import com.example.hadescoin.domain.usecase.CreateNotificationUseCase
 import com.example.hadescoin.domain.usecase.GenerateWithdrawalCodeUseCase
 import com.example.hadescoin.domain.usecase.GetUnreadNotificationsCountUseCase
 import com.example.hadescoin.domain.usecase.GetWalletDataUseCase
+import com.example.hadescoin.domain.usecase.ObserveNotificationsUseCase
+import com.example.hadescoin.domain.usecase.StopObservingNotificationsUseCase
 import kotlinx.coroutines.launch
 import java.util.Locale
 
@@ -18,7 +20,9 @@ class HomeViewModel(
     private val getWalletDataUseCase:       GetWalletDataUseCase       = ServiceLocator.provideGetWalletDataUseCase(),
     private val generateWithdrawalCodeUseCase: GenerateWithdrawalCodeUseCase = ServiceLocator.provideGenerateWithdrawalCodeUseCase(),
     private val createNotificationUseCase: CreateNotificationUseCase = ServiceLocator.provideCreateNotificationUseCase(),
-    private val getUnreadNotificationsCountUseCase: GetUnreadNotificationsCountUseCase = ServiceLocator.provideGetUnreadNotificationsCountUseCase()
+    private val getUnreadNotificationsCountUseCase: GetUnreadNotificationsCountUseCase = ServiceLocator.provideGetUnreadNotificationsCountUseCase(),
+    private val observeNotificationsUseCase: ObserveNotificationsUseCase = ServiceLocator.provideObserveNotificationsUseCase(),
+    private val stopObservingNotificationsUseCase: StopObservingNotificationsUseCase = ServiceLocator.provideStopObservingNotificationsUseCase()
 ) : ViewModel() {
 
     private val _cargando     = MutableLiveData(false)
@@ -40,15 +44,40 @@ class HomeViewModel(
     private val _notificacionesNoLeidas = MutableLiveData(0)
     val notificacionesNoLeidas: LiveData<Int> = _notificacionesNoLeidas
 
-    private val _mensajeFlotante = MutableLiveData<String?>()
-    val mensajeFlotante: LiveData<String?> = _mensajeFlotante
-
     private var phoneNumberCache: String = ""
+    private var notificationsSubscription: Any? = null
+    private var lastNotificationsList: List<com.example.hadescoin.domain.model.AppNotification> = emptyList()
 
     fun loadWalletData(phoneNumber: String) {
+        // Limpiar datos previos antes de cargar el nuevo usuario
+        _appUser.value = null
+        _transactions.value = emptyList()
+        _notificacionesNoLeidas.value = 0
+        _error.value = null
+
         phoneNumberCache = phoneNumber
         fetchData(phoneNumber)
-        cargarNoLeidas(phoneNumber)
+        startObservingNotifications(phoneNumber)
+    }
+
+    private fun startObservingNotifications(phoneNumber: String) {
+        // Detener subscripción previa si existe
+        notificationsSubscription?.let { stopObservingNotificationsUseCase(phoneNumber, it) }
+
+        notificationsSubscription = observeNotificationsUseCase(phoneNumber) { newList ->
+            // Calcular no leídas
+            val unreadCount = newList.count { !it.read }
+            _notificacionesNoLeidas.postValue(unreadCount)
+
+            lastNotificationsList = newList
+        }
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        notificationsSubscription?.let {
+            stopObservingNotificationsUseCase(phoneNumberCache, it)
+        }
     }
 
     fun refresh() {
@@ -105,20 +134,16 @@ class HomeViewModel(
 
     private suspend fun registrarNotificacionRetiro(phoneNumber: String, code: String, amount: Double) {
         val monto = String.format(Locale.US, "%,.2f", amount)
-        val ok = createNotificationUseCase(
+        createNotificationUseCase(
             phoneNumber = phoneNumber,
             title = "Codigo de retiro generado",
             message = "Tu codigo $code fue creado para retirar $$monto en cajero.",
             type = "WITHDRAW"
         )
-        if (ok) {
-            _mensajeFlotante.value = "Notificacion guardada en tu campanita"
-        }
     }
 
     fun clearCodigoRetiro() { _codigoRetiro.value = null }
 
-    fun clearMensajeFlotante() { _mensajeFlotante.value = null }
 
     fun clearError() { _error.value = null }
 }

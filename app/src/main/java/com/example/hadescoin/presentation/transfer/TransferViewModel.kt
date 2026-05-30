@@ -33,9 +33,6 @@ class TransferViewModel(
     private val _transferError   = MutableLiveData<String?>(null)
     val transferError: LiveData<String?> = _transferError
 
-    private val _mensajeFlotante = MutableLiveData<String?>()
-    val mensajeFlotante: LiveData<String?> = _mensajeFlotante
-
     fun loadSenderBalance(phoneNumber: String) {
         viewModelScope.launch {
             try {
@@ -112,11 +109,8 @@ class TransferViewModel(
                 body = "Se registro una transferencia recibida por $$monto del numero $senderPhone."
             )
         }
-
-        _mensajeFlotante.value = "Notificacion guardada y correo en cola"
     }
 
     fun clearExito() { _transferExitosa.value = null }
     fun clearError() { _transferError.value = null }
-    fun clearMensajeFlotante() { _mensajeFlotante.value = null }
 }

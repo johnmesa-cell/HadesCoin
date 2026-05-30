@@ -1,7 +1,9 @@
 package com.example.hadescoin.data.datasource
 
 import com.google.firebase.database.DataSnapshot
+import com.google.firebase.database.DatabaseError
 import com.google.firebase.database.FirebaseDatabase
+import com.google.firebase.database.ValueEventListener
 import kotlinx.coroutines.tasks.await
 import java.time.Instant
 
@@ -24,6 +26,21 @@ class FirebaseNotificationDataSource {
     suspend fun getNotifications(phoneNumber: String): List<DataSnapshot> {
         val snapshot = notificationsRef.child(phoneNumber).get().await()
         return snapshot.children.toList()
+    }
+
+    fun observeNotifications(phoneNumber: String, onUpdate: (List<DataSnapshot>) -> Unit): ValueEventListener {
+        val listener = object : ValueEventListener {
+            override fun onDataChange(snapshot: DataSnapshot) {
+                onUpdate(snapshot.children.toList())
+            }
+            override fun onCancelled(error: DatabaseError) {}
+        }
+        notificationsRef.child(phoneNumber).addValueEventListener(listener)
+        return listener
+    }
+
+    fun removeNotificationsListener(phoneNumber: String, listener: ValueEventListener) {
+        notificationsRef.child(phoneNumber).removeEventListener(listener)
     }
 
     suspend fun markAsRead(phoneNumber: String, notificationId: String): Boolean {
@@ -64,4 +81,3 @@ class FirebaseNotificationDataSource {
         }
     }
 }
-

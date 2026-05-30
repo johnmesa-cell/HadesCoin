@@ -52,6 +52,12 @@ class ProfileViewModel(
 
     // ── Cargar perfil ──────────────────────────────────────────────────────────
     fun cargarPerfil(phoneNumber: String) {
+        // Limpiar datos previos del usuario antes de cargar los nuevos
+        _user.value = null
+        _notificacionesNoLeidas.value = 0
+        _mensajeError.value = null
+        _mensajeExito.value = null
+
         viewModelScope.launch {
             _cargando.value = true
             try {

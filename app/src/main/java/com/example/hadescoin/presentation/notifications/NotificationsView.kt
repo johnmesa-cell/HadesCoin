@@ -23,9 +23,6 @@ import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SnackbarHost
-import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -63,98 +60,84 @@ fun NotificationsView(
     val error by viewModel.error.observeAsState()
     val noLeidas by viewModel.noLeidas.observeAsState(0)
 
-    val snackbarHostState = remember { SnackbarHostState() }
     var errorMostrado by remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(phoneNumber) {
         viewModel.cargarNotificaciones(phoneNumber)
     }
 
-    LaunchedEffect(error) {
-        if (!error.isNullOrBlank() && error != errorMostrado) {
-            errorMostrado = error
-            snackbarHostState.showSnackbar(error.orEmpty())
-            viewModel.clearError()
-        }
-    }
-
-    Scaffold(
-        snackbarHost = { SnackbarHost(hostState = snackbarHostState) }
-    ) { innerPadding ->
-        HadesBackground {
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(innerPadding)
-                    .padding(horizontal = 24.dp)
+    HadesBackground {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 24.dp)
+        ) {
+            Spacer(modifier = Modifier.height(32.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Spacer(modifier = Modifier.height(32.dp))
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        IconButton(onClick = { navController.popBackStack() }) {
-                            Icon(
-                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                                contentDescription = "Volver",
-                                tint = HadesCyan
-                            )
-                        }
-                        Text(
-                            text = "NOTIFICACIONES",
-                            fontSize = 16.sp,
-                            fontWeight = FontWeight.Black,
-                            color = HadesPurple,
-                            letterSpacing = 2.sp
-                        )
-                    }
-
-                    BadgedBox(
-                        badge = {
-                            if (noLeidas > 0) {
-                                Badge { Text(noLeidas.toString()) }
-                            }
-                        }
-                    ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    IconButton(onClick = { navController.popBackStack() }) {
                         Icon(
-                            imageVector = Icons.Filled.Notifications,
-                            contentDescription = null,
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "Volver",
                             tint = HadesCyan
                         )
                     }
+                    Text(
+                        text = "NOTIFICACIONES",
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Black,
+                        color = HadesPurple,
+                        letterSpacing = 2.sp
+                    )
                 }
 
-                Spacer(modifier = Modifier.height(16.dp))
+                BadgedBox(
+                    badge = {
+                        if (noLeidas > 0) {
+                            Badge { Text(noLeidas.toString()) }
+                        }
+                    }
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.Notifications,
+                        contentDescription = null,
+                        tint = HadesCyan
+                    )
+                }
+            }
 
-                if (notificaciones.isEmpty() && !cargando) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 48.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = "No tienes notificaciones aún",
-                            color = HadesOnDark.copy(alpha = 0.6f),
-                            fontSize = 14.sp
+            Spacer(modifier = Modifier.height(16.dp))
+
+            if (notificaciones.isEmpty() && !cargando) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 48.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "No tienes notificaciones aún",
+                        color = HadesOnDark.copy(alpha = 0.6f),
+                        fontSize = 14.sp
+                    )
+                }
+            } else {
+                LazyColumn(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    items(notificaciones) { notificacion ->
+                        NotificationRow(
+                            notification = notificacion,
+                            onClick = {
+                                if (!notificacion.read) {
+                                    viewModel.marcarComoLeida(phoneNumber, notificacion.id)
+                                }
+                            }
                         )
                     }
-                } else {
-                    LazyColumn(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                        items(notificaciones) { notificacion ->
-                            NotificationRow(
-                                notification = notificacion,
-                                onClick = {
-                                    if (!notificacion.read) {
-                                        viewModel.marcarComoLeida(phoneNumber, notificacion.id)
-                                    }
-                                }
-                            )
-                        }
-                        item { Spacer(modifier = Modifier.height(24.dp)) }
-                    }
+                    item { Spacer(modifier = Modifier.height(24.dp)) }
                 }
             }
         }
