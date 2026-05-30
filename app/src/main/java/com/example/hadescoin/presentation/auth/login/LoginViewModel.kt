@@ -4,8 +4,8 @@ import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.hadescoin.data.local.SessionRepository
 import com.example.hadescoin.di.ServiceLocator
+import com.example.hadescoin.domain.repository.SessionRepository
 import com.example.hadescoin.domain.usecase.GetUserProfileUseCase
 import com.example.hadescoin.domain.usecase.LoginUseCase
 import com.example.hadescoin.domain.usecase.RecoverPinUseCase
@@ -20,17 +20,17 @@ class LoginViewModel(
     private val sessionRepository:     SessionRepository     = ServiceLocator.provideSessionRepository()
 ) : ViewModel() {
 
-    // ---- Estado de sesion local (LiveData individuales — sin StateFlow) ----------
-    private val _haySessionGuardada = MutableLiveData(false)
+    // ── Estado de sesion local ────────────────────────────────────────────
+    private val _haySessionGuardada = MutableLiveData(sessionRepository.hasSession())
     val haySessionGuardada: LiveData<Boolean> = _haySessionGuardada
 
-    private val _telefonoGuardado = MutableLiveData("")
+    private val _telefonoGuardado = MutableLiveData(sessionRepository.getPhone())
     val telefonoGuardado: LiveData<String> = _telefonoGuardado
 
-    private val _nombreGuardado = MutableLiveData("")
+    private val _nombreGuardado = MutableLiveData(sessionRepository.getName())
     val nombreGuardado: LiveData<String> = _nombreGuardado
 
-    // ---- Estado UI ---------------------------------------------------------------
+    // ── Estado UI ─────────────────────────────────────────────────────────
     private val _cargando = MutableLiveData(false)
     val cargando: LiveData<Boolean> = _cargando
 
@@ -46,26 +46,7 @@ class LoginViewModel(
     private val _errorRecuperacion = MutableLiveData<String?>()
     val errorRecuperacion: LiveData<String?> = _errorRecuperacion
 
-    init {
-        cargarSesionLocal()
-    }
-
-    // ---- Carga inicial de sesion desde DataStore ---------------------------------
-    private fun cargarSesionLocal() {
-        viewModelScope.launch {
-            sessionRepository.telefonoGuardado.collect { telefono ->
-                _telefonoGuardado.value = telefono
-                _haySessionGuardada.value = telefono.isNotBlank()
-            }
-        }
-        viewModelScope.launch {
-            sessionRepository.nombreGuardado.collect { nombre ->
-                _nombreGuardado.value = nombre
-            }
-        }
-    }
-
-    // ---- Casos de uso: Login -----------------------------------------------------
+    // ── Casos de uso: Login ───────────────────────────────────────────────
     fun login(phoneNumber: String, pin: String) {
         if (!esTelefonoValido(phoneNumber)) {
             _loginError.value = "El teléfono debe tener 10 dígitos y empezar por 3"
@@ -81,8 +62,11 @@ class LoginViewModel(
                 val exitoso = loginUseCase(phoneNumber, pin)
                 if (exitoso) {
                     val nombre = getUserProfileUseCase(phoneNumber)?.fullName.orEmpty()
-                    sessionRepository.guardarSesion(phone = phoneNumber, name = nombre)
-                    _loginExitoso.value = phoneNumber
+                    sessionRepository.saveSession(phone = phoneNumber, name = nombre)
+                    _telefonoGuardado.value   = phoneNumber
+                    _nombreGuardado.value     = nombre
+                    _haySessionGuardada.value = true
+                    _loginExitoso.value       = phoneNumber
                 } else {
                     _loginError.value = "Teléfono o PIN incorrectos"
                 }
@@ -95,19 +79,17 @@ class LoginViewModel(
     }
 
     fun olvidarSesionGuardada() {
-        viewModelScope.launch {
-            sessionRepository.limpiarSesion()
-            _haySessionGuardada.value = false
-            _telefonoGuardado.value = ""
-            _nombreGuardado.value = ""
-        }
+        sessionRepository.clearSession()
+        _haySessionGuardada.value = false
+        _telefonoGuardado.value   = ""
+        _nombreGuardado.value     = ""
     }
 
-    // ---- Casos de uso: Recuperacion de PIN ---------------------------------------
+    // ── Casos de uso: Recuperacion de PIN ────────────────────────────────
     fun clearError() {
-        _loginError.value = null
+        _loginError.value        = null
         _errorRecuperacion.value = null
-        _pinRecuperado.value = null
+        _pinRecuperado.value     = null
     }
 
     fun recuperarPin(phoneNumber: String, documentNumber: String) {
@@ -153,7 +135,7 @@ class LoginViewModel(
         }
     }
 
-    // ---- Validaciones privadas ---------------------------------------------------
+    // ── Validaciones privadas ─────────────────────────────────────────────
     private fun esTelefonoValido(p: String) =
         p.length == 10 && p.firstOrNull() == '3' && p.all { it.isDigit() }
 

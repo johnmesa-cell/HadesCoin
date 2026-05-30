@@ -3,9 +3,11 @@ package com.example.hadescoin.di
 import android.content.Context
 import com.example.hadescoin.data.datasource.FirebaseTransactionDataSource
 import com.example.hadescoin.data.datasource.FirebaseUserDataSource
-import com.example.hadescoin.data.local.SessionRepository
+import com.example.hadescoin.data.datasource.local.SessionLocalDataSource
 import com.example.hadescoin.data.repository.AuthRepositoryImpl
+import com.example.hadescoin.data.repository.SessionRepositoryImpl
 import com.example.hadescoin.data.repository.WalletRepositoryImpl
+import com.example.hadescoin.domain.repository.SessionRepository
 import com.example.hadescoin.domain.usecase.GetUserProfileUseCase
 import com.example.hadescoin.domain.usecase.GetWalletDataUseCase
 import com.example.hadescoin.domain.usecase.LoginUseCase
@@ -24,18 +26,19 @@ object ServiceLocator {
         appContext = context.applicationContext
     }
 
-    // Data sources
+    // ── Datasources ──────────────────────────────────────────────────────
     private val firebaseUserDataSource        by lazy { FirebaseUserDataSource() }
     private val firebaseTransactionDataSource by lazy { FirebaseTransactionDataSource() }
+    private val sessionLocalDataSource        by lazy { SessionLocalDataSource(appContext) }
 
-    // Repositories
-    private val authRepository   by lazy { AuthRepositoryImpl(firebaseUserDataSource) }
-    private val walletRepository by lazy { WalletRepositoryImpl(firebaseUserDataSource, firebaseTransactionDataSource) }
+    // ── Repositories ─────────────────────────────────────────────────────
+    private val authRepository    by lazy { AuthRepositoryImpl(firebaseUserDataSource) }
+    private val walletRepository  by lazy { WalletRepositoryImpl(firebaseUserDataSource, firebaseTransactionDataSource) }
+    private val sessionRepository by lazy { SessionRepositoryImpl(sessionLocalDataSource) }
 
-    // Session local (DataStore) — requiere context
-    fun provideSessionRepository(): SessionRepository = SessionRepository(appContext)
+    // ── Providers públicos ───────────────────────────────────────────────
+    fun provideSessionRepository():         SessionRepository         = sessionRepository
 
-    // Use cases
     fun provideLoginUseCase():              LoginUseCase              = LoginUseCase(authRepository)
     fun provideRegisterUseCase():           RegisterUseCase           = RegisterUseCase(authRepository)
     fun provideGetWalletDataUseCase():      GetWalletDataUseCase      = GetWalletDataUseCase(walletRepository)
