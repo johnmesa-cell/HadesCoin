@@ -1,7 +1,6 @@
 package com.example.hadescoin.presentation.auth.register
 
 import android.content.Context
-import android.util.Log
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.ImageCapture
 import androidx.camera.core.ImageCaptureException
@@ -20,7 +19,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -29,6 +27,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import com.example.hadescoin.presentation.components.HadesBackground
 import com.example.hadescoin.ui.theme.*
 import java.io.File
 import java.util.concurrent.Executor
@@ -38,12 +37,12 @@ fun CameraCaptureView(
     onDocumentCaptured: () -> Unit,
     onBack: () -> Unit
 ) {
-    val context       = LocalContext.current
+    val context        = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
 
-    var imageCapture  by remember { mutableStateOf<ImageCapture?>(null) }
-    var capturado     by remember { mutableStateOf(false) }
-    var errorMsg      by remember { mutableStateOf<String?>(null) }
+    var imageCapture by remember { mutableStateOf<ImageCapture?>(null) }
+    var capturado    by remember { mutableStateOf(false) }
+    var errorMsg     by remember { mutableStateOf<String?>(null) }
 
     HadesBackground {
         Column(
@@ -53,7 +52,6 @@ fun CameraCaptureView(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
 
-            // --- Encabezado ---
             Text(
                 text          = "VERIFICACIÓN",
                 fontSize      = 22.sp,
@@ -63,16 +61,15 @@ fun CameraCaptureView(
             )
             Spacer(modifier = Modifier.height(4.dp))
             Text(
-                text          = "Encuadra tu cédula en el recuadro",
-                fontSize      = 12.sp,
-                color         = HadesCyan.copy(alpha = 0.8f),
+                text      = "Encuadra tu cédula en el recuadro",
+                fontSize  = 12.sp,
+                color     = HadesCyan.copy(alpha = 0.8f),
                 letterSpacing = 1.sp,
-                textAlign     = TextAlign.Center
+                textAlign = TextAlign.Center
             )
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // --- Preview de la cámara o confirmación ---
             if (!capturado) {
                 Box(
                     modifier = Modifier
@@ -101,7 +98,7 @@ fun CameraCaptureView(
                                         capture
                                     )
                                 } catch (e: Exception) {
-                                    Log.e("CameraCapture", "Error al iniciar cámara", e)
+                                    errorMsg = "Error al iniciar cámara: ${e.message}"
                                 }
                             }, ContextCompat.getMainExecutor(ctx))
                             previewView
@@ -121,22 +118,21 @@ fun CameraCaptureView(
 
                 Spacer(modifier = Modifier.height(24.dp))
 
-                // --- Botón capturar ---
                 Button(
                     onClick = {
                         capturarFoto(
-                            imageCapture  = imageCapture,
-                            context       = context,
-                            executor      = ContextCompat.getMainExecutor(context),
-                            onSuccess     = { capturado = true },
-                            onError       = { errorMsg = it }
+                            imageCapture = imageCapture,
+                            context      = context,
+                            executor     = ContextCompat.getMainExecutor(context),
+                            onSuccess    = { capturado = true },
+                            onError      = { errorMsg = it }
                         )
                     },
-                    colors = ButtonDefaults.buttonColors(
+                    colors   = ButtonDefaults.buttonColors(
                         containerColor = HadesCyan,
-                        contentColor   = HadesDark
+                        contentColor   = HadesBlack
                     ),
-                    shape  = RoundedCornerShape(10.dp),
+                    shape    = RoundedCornerShape(10.dp),
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(52.dp)
@@ -144,30 +140,29 @@ fun CameraCaptureView(
                     Icon(Icons.Filled.CameraAlt, contentDescription = null)
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text       = "CAPTURAR DOCUMENTO",
-                        fontWeight = FontWeight.Bold,
-                        fontSize   = 14.sp,
+                        text          = "CAPTURAR DOCUMENTO",
+                        fontWeight    = FontWeight.Bold,
+                        fontSize      = 14.sp,
                         letterSpacing = 1.sp
                     )
                 }
 
             } else {
-                // --- Estado: capturado ---
                 Column(
-                    modifier            = Modifier
+                    modifier = Modifier
                         .fillMaxWidth()
                         .height(260.dp)
                         .clip(RoundedCornerShape(12.dp))
-                        .background(HadesDark)
+                        .background(HadesBlack)
                         .border(2.dp, HadesCyan, RoundedCornerShape(12.dp)),
-                    verticalArrangement = Arrangement.Center,
-                    horizontalAlignment = Alignment.CenterHorizontally
+                    verticalArrangement   = Arrangement.Center,
+                    horizontalAlignment   = Alignment.CenterHorizontally
                 ) {
                     Icon(
-                        imageVector = Icons.Filled.CheckCircle,
+                        imageVector        = Icons.Filled.CheckCircle,
                         contentDescription = null,
-                        tint    = HadesCyan,
-                        modifier = Modifier.size(64.dp)
+                        tint               = HadesCyan,
+                        modifier           = Modifier.size(64.dp)
                     )
                     Spacer(modifier = Modifier.height(12.dp))
                     Text(
@@ -184,7 +179,7 @@ fun CameraCaptureView(
                     onClick  = onDocumentCaptured,
                     colors   = ButtonDefaults.buttonColors(
                         containerColor = HadesCyan,
-                        contentColor   = HadesDark
+                        contentColor   = HadesBlack
                     ),
                     shape    = RoundedCornerShape(10.dp),
                     modifier = Modifier
@@ -200,7 +195,6 @@ fun CameraCaptureView(
                 }
             }
 
-            // --- Error de cámara ---
             errorMsg?.let {
                 Spacer(modifier = Modifier.height(12.dp))
                 Text(text = it, color = MaterialTheme.colorScheme.error, fontSize = 12.sp)
@@ -210,8 +204,8 @@ fun CameraCaptureView(
 
             TextButton(onClick = onBack) {
                 Text(
-                    text  = "Cancelar",
-                    color = HadesOrange,
+                    text     = "Cancelar",
+                    color    = HadesOrange,
                     fontSize = 13.sp
                 )
             }
@@ -226,7 +220,7 @@ private fun capturarFoto(
     onSuccess: () -> Unit,
     onError: (String) -> Unit
 ) {
-    val photoFile = File(context.cacheDir, "cedula_captura.jpg")
+    val photoFile     = File(context.cacheDir, "cedula_captura.jpg")
     val outputOptions = ImageCapture.OutputFileOptions.Builder(photoFile).build()
 
     imageCapture?.takePicture(
