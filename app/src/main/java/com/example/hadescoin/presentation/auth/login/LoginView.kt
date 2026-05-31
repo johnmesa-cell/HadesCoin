@@ -3,7 +3,9 @@ package com.example.hadescoin.presentation.auth.login
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Fingerprint
 import androidx.compose.material3.*
@@ -37,7 +39,6 @@ fun LoginView(
     viewModel: LoginViewModel = viewModel()
 ) {
     val context  = LocalContext.current
-    // MainActivity ahora extiende FragmentActivity — este cast siempre es exitoso
     val activity = context as? FragmentActivity
 
     val telefonoGuardado by viewModel.telefonoGuardado.observeAsState("")
@@ -52,7 +53,6 @@ fun LoginView(
         if (telefonoGuardado.isNotBlank()) phoneNumber = telefonoGuardado
     }
 
-    // Lanza el prompt biométrico automáticamente al abrir si hay sesión + biometría activa
     LaunchedEffect(haySession, biometriaActiva) {
         if (haySession && biometriaActiva && activity != null &&
             BiometricHelper.isDisponible(context)) {
@@ -159,29 +159,41 @@ fun LoginContent(
     onHuellaClick: () -> Unit = {}
 ) {
     HadesBackground {
+        // safeDrawingPadding: respeta barra de estado (arriba) y barra de navegación (abajo)
+        // verticalScroll: si el contenido es más alto que la pantalla, permite hacer scroll
+        //                 en lugar de cortar o invadir las barras del sistema
         Column(
-            modifier            = Modifier.fillMaxSize().padding(horizontal = 28.dp),
+            modifier = Modifier
+                .fillMaxSize()
+                .safeDrawingPadding()
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 28.dp),
             verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
+            Spacer(Modifier.height(24.dp))
+
             Image(
                 painter            = painterResource(R.drawable.ic_hadescoin_logo),
                 contentDescription = stringResource(R.string.cd_logo),
-                modifier           = Modifier.size(110.dp)
+                modifier           = Modifier.size(100.dp)
             )
-            Spacer(Modifier.height(12.dp))
+            Spacer(Modifier.height(10.dp))
             Text(
                 text          = stringResource(R.string.login_title),
-                fontSize      = 34.sp,
+                fontSize      = 32.sp,
                 fontWeight    = FontWeight.Black,
                 letterSpacing = 6.sp,
                 color         = HadesPurple,
                 textAlign     = TextAlign.Center
             )
             Spacer(Modifier.height(6.dp))
-            Box(modifier = Modifier.width(180.dp).height(2.dp).background(
-                Brush.horizontalGradient(listOf(Color.Transparent, HadesCyan, HadesOrange, Color.Transparent))
-            ))
+            Box(
+                modifier = Modifier
+                    .width(180.dp)
+                    .height(2.dp)
+                    .background(Brush.horizontalGradient(listOf(Color.Transparent, HadesCyan, HadesOrange, Color.Transparent)))
+            )
             Spacer(Modifier.height(6.dp))
             Text(
                 text          = stringResource(R.string.login_subtitle),
@@ -192,13 +204,18 @@ fun LoginContent(
                 textAlign     = TextAlign.Center
             )
             Spacer(Modifier.height(6.dp))
-            Box(modifier = Modifier.width(100.dp).height(1.dp).background(
-                Brush.horizontalGradient(listOf(Color.Transparent, HadesPurple.copy(alpha = 0.5f), Color.Transparent))
-            ))
-            Spacer(Modifier.height(32.dp))
+            Box(
+                modifier = Modifier
+                    .width(100.dp)
+                    .height(1.dp)
+                    .background(Brush.horizontalGradient(listOf(Color.Transparent, HadesPurple.copy(alpha = 0.5f), Color.Transparent)))
+            )
+            Spacer(Modifier.height(24.dp))
 
+            // ── Card principal ─────────────────────────────────────────────
             HadesCardBox {
                 if (haySession && nombreGuardado.isNotBlank()) {
+                    // ── Login inteligente: saludo ──
                     Text(
                         text          = "¡Bienvenido de nuevo,",
                         fontSize      = 11.sp,
@@ -211,8 +228,9 @@ fun LoginContent(
                         fontWeight = FontWeight.Black,
                         color      = HadesCyan
                     )
-                    Spacer(Modifier.height(16.dp))
+                    Spacer(Modifier.height(14.dp))
 
+                    // ── Botón de huella (solo si biometría activa) ──
                     if (biometriaActiva) {
                         Box(
                             modifier         = Modifier.fillMaxWidth(),
@@ -221,7 +239,7 @@ fun LoginContent(
                             IconButton(
                                 onClick  = onHuellaClick,
                                 modifier = Modifier
-                                    .size(72.dp)
+                                    .size(68.dp)
                                     .clip(CircleShape)
                                     .background(HadesCyan.copy(alpha = 0.10f))
                             ) {
@@ -229,7 +247,7 @@ fun LoginContent(
                                     imageVector        = Icons.Filled.Fingerprint,
                                     contentDescription = "Autenticar con huella",
                                     tint               = HadesCyan,
-                                    modifier           = Modifier.size(40.dp)
+                                    modifier           = Modifier.size(38.dp)
                                 )
                             }
                         }
@@ -240,7 +258,7 @@ fun LoginContent(
                             textAlign = TextAlign.Center,
                             modifier  = Modifier.fillMaxWidth()
                         )
-                        Spacer(Modifier.height(16.dp))
+                        Spacer(Modifier.height(12.dp))
                         Text(
                             text      = "— o ingresa tu PIN —",
                             fontSize  = 10.sp,
@@ -251,6 +269,7 @@ fun LoginContent(
                         Spacer(Modifier.height(8.dp))
                     }
                 } else {
+                    // ── Login normal: header ──
                     Text(
                         text          = stringResource(R.string.login_section_header),
                         fontSize      = 12.sp,
@@ -260,6 +279,7 @@ fun LoginContent(
                     )
                 }
 
+                // ── Campos comunes ──
                 HadesTextField(
                     value         = phoneNumber,
                     onValueChange = onPhoneChange,
@@ -291,6 +311,7 @@ fun LoginContent(
                     Text("¿Olvidaste tu PIN?", color = HadesCyan, fontSize = 12.sp, fontWeight = FontWeight.Medium)
                 }
 
+                // ── "Iniciar como otro usuario" — solo en login inteligente ──
                 if (haySession) {
                     Spacer(Modifier.height(4.dp))
                     TextButton(
@@ -307,8 +328,9 @@ fun LoginContent(
                 }
             }
 
+            // ── ¿No tienes cuenta? — solo en login normal ──
             if (!haySession) {
-                Spacer(Modifier.height(20.dp))
+                Spacer(Modifier.height(16.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
                         text     = stringResource(R.string.text_no_account),
@@ -329,6 +351,8 @@ fun LoginContent(
                     }
                 }
             }
+
+            Spacer(Modifier.height(24.dp))
         }
     }
 }
