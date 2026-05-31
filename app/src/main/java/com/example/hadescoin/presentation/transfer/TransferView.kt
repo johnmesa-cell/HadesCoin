@@ -17,16 +17,19 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.example.hadescoin.R
 import com.example.hadescoin.presentation.components.*
+import com.example.hadescoin.presentation.utils.BiometricHelper
 import com.example.hadescoin.ui.theme.*
 import java.util.Locale
 
@@ -36,6 +39,9 @@ fun TransferView(
     navController: NavController,
     viewModel: TransferViewModel = viewModel()
 ) {
+    val context  = LocalContext.current
+    val activity = context as? FragmentActivity
+
     var receiverPhone by remember { mutableStateOf("") }
     var amount        by remember { mutableStateOf("") }
     var pin           by remember { mutableStateOf("") }
@@ -45,6 +51,10 @@ fun TransferView(
     val senderBalance   by viewModel.senderBalance.observeAsState(0.0)
     val transferExitosa by viewModel.transferExitosa.observeAsState()
     val transferError   by viewModel.transferError.observeAsState()
+    val biometriaActiva by viewModel.biometriaActiva.observeAsState(false)
+
+    // biometría disponible en este dispositivo Y activada por el usuario
+    val usarHuella = biometriaActiva && BiometricHelper.isDisponible(context)
 
     var mensajeError by remember { mutableStateOf("") }
     var showError    by remember { mutableStateOf(false) }
@@ -55,14 +65,20 @@ fun TransferView(
     LaunchedEffect(transferError) { transferError?.let { mensajeError = it; showError = true; showConfirm = false } }
 
     TransferViewContent(
-        senderPhone = senderPhone, senderBalance = senderBalance,
-        receiverPhone = receiverPhone, amount = amount, pin = pin,
-        cargando = cargando, showConfirm = showConfirm,
+        senderPhone     = senderPhone,
+        senderBalance   = senderBalance,
+        receiverPhone   = receiverPhone,
+        amount          = amount,
+        pin             = pin,
+        cargando        = cargando,
+        showConfirm     = showConfirm,
+        usarHuella      = usarHuella,
+        activity        = activity,
         onReceiverChange  = { receiverPhone = it },
         onAmountChange    = { amount = it },
         onPinChange       = { pin = it },
         onReviewClick     = { showConfirm = true },
-        onConfirmTransfer = { val parsedAmount = amount.toDoubleOrNull() ?: 0.0; viewModel.transfer(senderPhone, receiverPhone, parsedAmount, pin) },
+        onConfirmTransfer = { viewModel.transfer(senderPhone, receiverPhone, amount.toDoubleOrNull() ?: 0.0, pin) },
         onDismissConfirm  = { showConfirm = false },
         onBackClick       = { navController.popBackStack() }
     )
@@ -77,6 +93,8 @@ fun TransferViewContent(
     senderPhone: String, senderBalance: Double,
     receiverPhone: String, amount: String, pin: String,
     cargando: Boolean, showConfirm: Boolean,
+    usarHuella: Boolean = false,
+    activity: FragmentActivity? = null,
     onReceiverChange: (String) -> Unit, onAmountChange: (String) -> Unit,
     onPinChange: (String) -> Unit, onReviewClick: () -> Unit,
     onConfirmTransfer: () -> Unit, onDismissConfirm: () -> Unit, onBackClick: () -> Unit
@@ -149,21 +167,37 @@ fun TransferViewContent(
         }
 
         if (showConfirm) {
-            ConfirmTransferSheet(senderPhone = senderPhone, receiverPhone = receiverPhone, amount = parsedAmount, onConfirm = onConfirmTransfer, onDismiss = onDismissConfirm)
+            ConfirmTransferSheet(
+                senderPhone   = senderPhone,
+                receiverPhone = receiverPhone,
+                amount        = parsedAmount,
+                usarHuella    = usarHuella,
+                activity      = activity,
+                onConfirm     = onConfirmTransfer,
+                onDismiss     = onDismissConfirm
+            )
         }
     }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun ConfirmTransferSheet(senderPhone: String, receiverPhone: String, amount: Double, onConfirm: () -> Unit, onDismiss: () -> Unit) {
+private fun ConfirmTransferSheet(
+    senderPhone: String,
+    receiverPhone: String,
+    amount: Double,
+    usarHuella: Boolean = false,
+    activity: FragmentActivity? = null,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit
+) {
     ModalBottomSheet(onDismissRequest = onDismiss, containerColor = HadesNavyDark) {
         Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp).padding(bottom = 40.dp), horizontalAlignment = Alignment.CenterHorizontally) {
             Box(modifier = Modifier.size(64.dp).clip(CircleShape).background(HadesOrange.copy(alpha = 0.15f)), contentAlignment = Alignment.Center) {
                 Icon(imageVector = Icons.Filled.SwapHoriz, contentDescription = null, tint = HadesOrange, modifier = Modifier.size(30.dp))
             }
             Spacer(modifier = Modifier.height(16.dp))
-            Text(text = stringResource(R.string.confirm_transfer_title), fontSize = 18.sp, fontWeight = FontWeight.Black, color = HadesOnDark, textAlign = TextAlign.Center)
+            Text(text = stringResource(R.string.confirm_transfer_title),    fontSize = 18.sp, fontWeight = FontWeight.Black, color = HadesOnDark, textAlign = TextAlign.Center)
             Spacer(modifier = Modifier.height(4.dp))
             Text(text = stringResource(R.string.confirm_transfer_subtitle), fontSize = 12.sp, color = HadesOnDark.copy(alpha = 0.45f), textAlign = TextAlign.Center)
             Spacer(modifier = Modifier.height(24.dp))
@@ -183,9 +217,33 @@ private fun ConfirmTransferSheet(senderPhone: String, receiverPhone: String, amo
                 }
             }
             Spacer(modifier = Modifier.height(24.dp))
+
+            // ── Botón de huella — solo visible si biometría activa ───────────
+            if (usarHuella) {
+                HuellaAlternativaButton(
+                    habilitado    = true,
+                    cargando      = false,
+                    onHuellaClick = {
+                        if (activity != null) {
+                            BiometricHelper.mostrar(
+                                activity  = activity,
+                                titulo    = "Confirmar transferencia",
+                                subtitulo = "Usa tu huella para autorizar el envío",
+                                onExito   = onConfirm,
+                                onError   = { /* el sistema ya muestra el feedback */ }
+                            )
+                        }
+                    },
+                    subtexto = "o confirma con el botón"
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+            }
+
             HadesButton(text = stringResource(R.string.btn_confirm_transfer), onClick = onConfirm)
             Spacer(modifier = Modifier.height(12.dp))
-            TextButton(onClick = onDismiss, modifier = Modifier.fillMaxWidth()) { Text(text = stringResource(R.string.btn_cancel), color = HadesOnDark.copy(alpha = 0.45f), fontSize = 14.sp) }
+            TextButton(onClick = onDismiss, modifier = Modifier.fillMaxWidth()) {
+                Text(text = stringResource(R.string.btn_cancel), color = HadesOnDark.copy(alpha = 0.45f), fontSize = 14.sp)
+            }
         }
     }
 }

@@ -19,18 +19,21 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.example.hadescoin.R
 import com.example.hadescoin.domain.model.AppUser
 import com.example.hadescoin.domain.model.WalletTransaction
 import com.example.hadescoin.presentation.components.*
+import com.example.hadescoin.presentation.utils.BiometricHelper
 import com.example.hadescoin.presentation.utils.HadesIcons
 import com.example.hadescoin.presentation.utils.formatTimestamp
 import com.example.hadescoin.presentation.utils.getInitials
@@ -42,7 +45,7 @@ import java.util.Locale
 
 private fun txIcon(type: String, direction: String): ImageVector {
     return when (type.uppercase()) {
-        "DEPOSIT"                                                         -> HadesIcons.ArrowDownToLine
+        "DEPOSIT"                                                          -> HadesIcons.ArrowDownToLine
         "WITHDRAW",
         "WITHDRAWAL_PENDING", "WITHDRAWAL_COMPLETED", "WITHDRAWAL_FAILED" -> HadesIcons.ArrowUpFromLine
         else -> if (direction == "IN") Icons.Filled.ArrowDownward else Icons.Filled.ArrowUpward
@@ -55,12 +58,19 @@ fun HomeView(
     navController: NavController,
     viewModel: HomeViewModel = viewModel()
 ) {
-    val cargando      by viewModel.cargando.observeAsState(false)
-    val appUser       by viewModel.appUser.observeAsState()
-    val transactions  by viewModel.transactions.observeAsState(emptyList())
-    val error         by viewModel.error.observeAsState()
-    val codigoRetiro  by viewModel.codigoRetiro.observeAsState()
-    val noLeidas      by viewModel.notificacionesNoLeidas.observeAsState(0)
+    val context  = LocalContext.current
+    val activity = context as? FragmentActivity
+
+    val cargando        by viewModel.cargando.observeAsState(false)
+    val appUser         by viewModel.appUser.observeAsState()
+    val transactions    by viewModel.transactions.observeAsState(emptyList())
+    val error           by viewModel.error.observeAsState()
+    val codigoRetiro    by viewModel.codigoRetiro.observeAsState()
+    val noLeidas        by viewModel.notificacionesNoLeidas.observeAsState(0)
+    val biometriaActiva by viewModel.biometriaActiva.observeAsState(false)
+
+    // biometría disponible en este dispositivo Y activada por el usuario
+    val usarHuella = biometriaActiva && BiometricHelper.isDisponible(context)
 
     var mensajeError       by remember { mutableStateOf("") }
     var showError          by remember { mutableStateOf(false) }
@@ -76,28 +86,35 @@ fun HomeView(
     }
 
     LaunchedEffect(phoneNumber) { viewModel.loadWalletData(phoneNumber) }
-    LaunchedEffect(error) { error?.let { mensajeError = it; showError = true } }
+    LaunchedEffect(error)       { error?.let { mensajeError = it; showError = true } }
 
     HomeViewContent(
         appUser = appUser, transactions = transactions, noLeidas = noLeidas, cargando = cargando,
-        menuExpanded = menuExpanded,
-        onMenuToggle   = { menuExpanded = !menuExpanded },
-        onMenuCollapse = { menuExpanded = false },
-        onRefresh      = { viewModel.refresh(); viewModel.cargarNoLeidas(phoneNumber) },
-        onLogout       = { navController.navigate("login") { popUpTo(0) { inclusive = true } } },
-        onTransfer     = { menuExpanded = false; navController.navigate("transfer/$phoneNumber") },
-        onProfile      = { navController.navigate("profile/$phoneNumber") },
+        menuExpanded    = menuExpanded,
+        onMenuToggle    = { menuExpanded = !menuExpanded },
+        onMenuCollapse  = { menuExpanded = false },
+        onRefresh       = { viewModel.refresh(); viewModel.cargarNoLeidas(phoneNumber) },
+        onLogout        = { navController.navigate("login") { popUpTo(0) { inclusive = true } } },
+        onTransfer      = { menuExpanded = false; navController.navigate("transfer/$phoneNumber") },
+        onProfile       = { navController.navigate("profile/$phoneNumber") },
         onNotifications = { navController.navigate("notifications/$phoneNumber") },
-        onWithdrawAtm  = { menuExpanded = false; showWithdrawDialog = true }
+        onWithdrawAtm   = { menuExpanded = false; showWithdrawDialog = true }
     )
 
     if (cargando && !showWithdrawDialog) ShowLoadingAlertDialog()
-    if (showError) ShowMessageAlertDialog(onConfirmation = { viewModel.clearError(); showError = false }, dialogTitle = stringResource(R.string.dialog_error_title), dialogText = mensajeError)
+    if (showError) ShowMessageAlertDialog(
+        onConfirmation = { viewModel.clearError(); showError = false },
+        dialogTitle    = stringResource(R.string.dialog_error_title),
+        dialogText     = mensajeError
+    )
     if (showWithdrawDialog) {
         WithdrawCodeDialog(
-            cargando = cargando, codigoRetiro = codigoRetiro,
-            onGenerate = { amount, pin -> viewModel.generarCodigoRetiro(phoneNumber, pin, amount) },
-            onDismiss  = { showWithdrawDialog = false; viewModel.clearCodigoRetiro() }
+            cargando        = cargando,
+            codigoRetiro    = codigoRetiro,
+            biometriaActiva = usarHuella,
+            activity        = activity,
+            onGenerate      = { amount, pin -> viewModel.generarCodigoRetiro(phoneNumber, pin, amount) },
+            onDismiss       = { showWithdrawDialog = false; viewModel.clearCodigoRetiro() }
         )
     }
 }
@@ -118,14 +135,14 @@ fun HomeViewContent(
     onNotifications: () -> Unit = {},
     onWithdrawAtm: () -> Unit = {}
 ) {
-    var showUserPanel by remember { mutableStateOf(false) }
-    var saldoVisible  by remember { mutableStateOf(true) }
-    var filtroActivo  by remember { mutableStateOf("TODOS") }
-    var searchQuery     by remember { mutableStateOf("") }
-    var filtroDireccion by remember { mutableStateOf("TODOS") }
+    var showUserPanel    by remember { mutableStateOf(false) }
+    var saldoVisible     by remember { mutableStateOf(true) }
+    var filtroActivo     by remember { mutableStateOf("TODOS") }
+    var searchQuery      by remember { mutableStateOf("") }
+    var filtroDireccion  by remember { mutableStateOf("TODOS") }
     var fechaSeleccionada by remember { mutableStateOf<String?>(null) }
-    var showDatePicker    by remember { mutableStateOf(false) }
-    var selectedTx        by remember { mutableStateOf<WalletTransaction?>(null) }
+    var showDatePicker   by remember { mutableStateOf(false) }
+    var selectedTx       by remember { mutableStateOf<WalletTransaction?>(null) }
 
     val transaccionesFiltradas = transactions.filter { tx ->
         val matchesType = when (filtroActivo) {
@@ -143,10 +160,10 @@ fun HomeViewContent(
     val totalEgresos  = transactions.filter { tx -> tx.direction == "OUT" && tx.type.uppercase() !in setOf("WITHDRAWAL_PENDING", "WITHDRAWAL_FAILED") }.sumOf { it.amount }
 
     val speedDialItems = listOf(
-        SpeedDialItem(label = stringResource(R.string.action_transfer), icon = Icons.Filled.SwapHoriz,    color = HadesCyan,    onClick = { onTransfer() }),
-        SpeedDialItem(label = stringResource(R.string.action_deposit),  icon = HadesIcons.ArrowDownToLine, color = HadesCyan,    onClick = {}, enabled = false),
-        SpeedDialItem(label = "Retirar en Cajero",                       icon = HadesIcons.Landmark,        color = HadesOrange,  onClick = { onWithdrawAtm() }),
-        SpeedDialItem(label = stringResource(R.string.action_pay),      icon = Icons.Filled.CreditCard,    color = HadesPurple,  onClick = {}, enabled = false)
+        SpeedDialItem(label = stringResource(R.string.action_transfer), icon = Icons.Filled.SwapHoriz,    color = HadesCyan,   onClick = { onTransfer() }),
+        SpeedDialItem(label = stringResource(R.string.action_deposit),  icon = HadesIcons.ArrowDownToLine, color = HadesCyan,   onClick = {}, enabled = false),
+        SpeedDialItem(label = "Retirar en Cajero",                       icon = HadesIcons.Landmark,        color = HadesOrange, onClick = { onWithdrawAtm() }),
+        SpeedDialItem(label = stringResource(R.string.action_pay),      icon = Icons.Filled.CreditCard,    color = HadesPurple, onClick = {}, enabled = false)
     )
 
     HadesScreen {
@@ -202,7 +219,7 @@ fun HomeViewContent(
                     item {
                         Box(modifier = Modifier.fillMaxWidth().padding(vertical = 48.dp), contentAlignment = Alignment.Center) {
                             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                Text(text = stringResource(R.string.home_empty_title), color = HadesOnDark.copy(alpha = 0.3f), fontSize = 13.sp, fontWeight = FontWeight.Bold, letterSpacing = 2.sp)
+                                Text(text = stringResource(R.string.home_empty_title),    color = HadesOnDark.copy(alpha = 0.3f), fontSize = 13.sp, fontWeight = FontWeight.Bold, letterSpacing = 2.sp)
                                 Spacer(modifier = Modifier.height(4.dp))
                                 Text(text = stringResource(R.string.home_empty_subtitle), color = HadesOnDark.copy(alpha = 0.25f), fontSize = 12.sp, textAlign = TextAlign.Center)
                             }
@@ -213,13 +230,11 @@ fun HomeViewContent(
                 item { Spacer(modifier = Modifier.height(120.dp)) }
             }
 
-            if (menuExpanded) {
-                Box(modifier = Modifier.fillMaxSize().background(HadesNavyDark.copy(alpha = 0.6f)).clickable { onMenuCollapse() })
-            }
+            if (menuExpanded) Box(modifier = Modifier.fillMaxSize().background(HadesNavyDark.copy(alpha = 0.6f)).clickable { onMenuCollapse() })
             HadesSpeedDial(expanded = menuExpanded, onToggle = onMenuToggle, items = speedDialItems, modifier = Modifier.align(Alignment.BottomEnd))
         }
 
-        if (showUserPanel) UserPanelSheet(appUser = appUser, onDismiss = { showUserPanel = false }, onLogout = onLogout, onProfile = { showUserPanel = false; onProfile() })
+        if (showUserPanel)  UserPanelSheet(appUser = appUser, onDismiss = { showUserPanel = false }, onLogout = onLogout, onProfile = { showUserPanel = false; onProfile() })
         if (showDatePicker) HadesDatePickerDialog(onDateSelected = { date -> fechaSeleccionada = date; showDatePicker = false }, onDismiss = { showDatePicker = false })
         if (selectedTx != null) TransactionDetailDialog(tx = selectedTx!!, onDismiss = { selectedTx = null })
     }
@@ -269,15 +284,21 @@ private fun BalanceCard(appUser: AppUser?, saldoVisible: Boolean, onToggleSaldo:
 
 @Composable
 private fun TransactionRow(tx: WalletTransaction, onClick: () -> Unit) {
-    val isIncome = tx.direction == "IN"; val amountColor = if (isIncome) HadesCyan else HadesOrange
-    val prefix = if (isIncome) "+" else "-"; val icon = txIcon(tx.type, tx.direction); val typeLabel = translateTransactionType(tx.type)
+    val isIncome    = tx.direction == "IN"
+    val amountColor = if (isIncome) HadesCyan else HadesOrange
+    val prefix      = if (isIncome) "+" else "-"
+    val icon        = txIcon(tx.type, tx.direction)
+    val typeLabel   = translateTransactionType(tx.type)
     Row(modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(HadesNavyDark).clickable { onClick() }.padding(horizontal = 16.dp, vertical = 14.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Box(modifier = Modifier.size(36.dp).clip(CircleShape).background(amountColor.copy(alpha = 0.12f)), contentAlignment = Alignment.Center) {
                 Icon(imageVector = icon, contentDescription = typeLabel, tint = amountColor, modifier = Modifier.size(18.dp))
             }
             Spacer(modifier = Modifier.width(12.dp))
-            Column { Text(text = typeLabel, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = HadesOnDark); Text(text = formatTimestamp(tx.timestamp), fontSize = 11.sp, color = HadesOnDark.copy(alpha = 0.45f)) }
+            Column {
+                Text(text = typeLabel,                   fontSize = 14.sp, fontWeight = FontWeight.Bold,   color = HadesOnDark)
+                Text(text = formatTimestamp(tx.timestamp), fontSize = 11.sp,                               color = HadesOnDark.copy(alpha = 0.45f))
+            }
         }
         Text(text = "$prefix$ ${String.format(Locale.US, "%,.2f", tx.amount)}", fontWeight = FontWeight.Black, color = amountColor, fontSize = 15.sp)
     }

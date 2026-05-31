@@ -7,6 +7,7 @@ import androidx.lifecycle.viewModelScope
 import com.example.hadescoin.di.ServiceLocator
 import com.example.hadescoin.domain.model.AppUser
 import com.example.hadescoin.domain.model.WalletTransaction
+import com.example.hadescoin.domain.repository.SessionRepository
 import com.example.hadescoin.domain.usecase.CreateNotificationUseCase
 import com.example.hadescoin.domain.usecase.GenerateWithdrawalCodeUseCase
 import com.example.hadescoin.domain.usecase.GetUnreadNotificationsCountUseCase
@@ -17,12 +18,13 @@ import kotlinx.coroutines.launch
 import java.util.Locale
 
 class HomeViewModel(
-    private val getWalletDataUseCase:       GetWalletDataUseCase       = ServiceLocator.provideGetWalletDataUseCase(),
-    private val generateWithdrawalCodeUseCase: GenerateWithdrawalCodeUseCase = ServiceLocator.provideGenerateWithdrawalCodeUseCase(),
-    private val createNotificationUseCase: CreateNotificationUseCase = ServiceLocator.provideCreateNotificationUseCase(),
+    private val getWalletDataUseCase:             GetWalletDataUseCase             = ServiceLocator.provideGetWalletDataUseCase(),
+    private val generateWithdrawalCodeUseCase:    GenerateWithdrawalCodeUseCase    = ServiceLocator.provideGenerateWithdrawalCodeUseCase(),
+    private val createNotificationUseCase:        CreateNotificationUseCase        = ServiceLocator.provideCreateNotificationUseCase(),
     private val getUnreadNotificationsCountUseCase: GetUnreadNotificationsCountUseCase = ServiceLocator.provideGetUnreadNotificationsCountUseCase(),
-    private val observeNotificationsUseCase: ObserveNotificationsUseCase = ServiceLocator.provideObserveNotificationsUseCase(),
-    private val stopObservingNotificationsUseCase: StopObservingNotificationsUseCase = ServiceLocator.provideStopObservingNotificationsUseCase()
+    private val observeNotificationsUseCase:      ObserveNotificationsUseCase      = ServiceLocator.provideObserveNotificationsUseCase(),
+    private val stopObservingNotificationsUseCase: StopObservingNotificationsUseCase = ServiceLocator.provideStopObservingNotificationsUseCase(),
+    private val sessionRepository:                SessionRepository                = ServiceLocator.provideSessionRepository()
 ) : ViewModel() {
 
     private val _cargando     = MutableLiveData(false)
@@ -37,23 +39,27 @@ class HomeViewModel(
     private val _error        = MutableLiveData<String?>()
     val error: LiveData<String?> = _error
 
-    // Código generado para retiro en cajero
     private val _codigoRetiro = MutableLiveData<String?>()
     val codigoRetiro: LiveData<String?> = _codigoRetiro
 
     private val _notificacionesNoLeidas = MutableLiveData(0)
     val notificacionesNoLeidas: LiveData<Int> = _notificacionesNoLeidas
 
+    // ── Biometría — expuesto para que HomeView lo pase a los diálogos ──────
+    private val _biometriaActiva = MutableLiveData(sessionRepository.isBiometriaActiva())
+    val biometriaActiva: LiveData<Boolean> = _biometriaActiva
+
     private var phoneNumberCache: String = ""
     private var notificationsSubscription: Any? = null
     private var lastNotificationsList: List<com.example.hadescoin.domain.model.AppNotification> = emptyList()
 
     fun loadWalletData(phoneNumber: String) {
-        // Limpiar datos previos antes de cargar el nuevo usuario
-        _appUser.value = null
-        _transactions.value = emptyList()
+        _appUser.value                = null
+        _transactions.value           = emptyList()
         _notificacionesNoLeidas.value = 0
-        _error.value = null
+        _error.value                  = null
+        // Refrescar estado de biometría en cada carga (puede haber cambiado en Perfil)
+        _biometriaActiva.value        = sessionRepository.isBiometriaActiva()
 
         phoneNumberCache = phoneNumber
         fetchData(phoneNumber)
@@ -61,23 +67,16 @@ class HomeViewModel(
     }
 
     private fun startObservingNotifications(phoneNumber: String) {
-        // Detener subscripción previa si existe
         notificationsSubscription?.let { stopObservingNotificationsUseCase(phoneNumber, it) }
-
         notificationsSubscription = observeNotificationsUseCase(phoneNumber) { newList ->
-            // Calcular no leídas
-            val unreadCount = newList.count { !it.read }
-            _notificacionesNoLeidas.postValue(unreadCount)
-
+            _notificacionesNoLeidas.postValue(newList.count { !it.read })
             lastNotificationsList = newList
         }
     }
 
     override fun onCleared() {
         super.onCleared()
-        notificationsSubscription?.let {
-            stopObservingNotificationsUseCase(phoneNumberCache, it)
-        }
+        notificationsSubscription?.let { stopObservingNotificationsUseCase(phoneNumberCache, it) }
     }
 
     fun refresh() {
@@ -89,11 +88,8 @@ class HomeViewModel(
     fun cargarNoLeidas(phoneNumber: String = phoneNumberCache) {
         if (phoneNumber.isBlank()) return
         viewModelScope.launch {
-            try {
-                _notificacionesNoLeidas.value = getUnreadNotificationsCountUseCase(phoneNumber)
-            } catch (_: Exception) {
-                _notificacionesNoLeidas.value = 0
-            }
+            try { _notificacionesNoLeidas.value = getUnreadNotificationsCountUseCase(phoneNumber) }
+            catch (_: Exception) { _notificacionesNoLeidas.value = 0 }
         }
     }
 
@@ -124,7 +120,7 @@ class HomeViewModel(
                 onSuccess = { code ->
                     _codigoRetiro.value = code
                     registrarNotificacionRetiro(phoneNumber, code, amount)
-                    refresh()  // Refresca saldo y transacciones
+                    refresh()
                 },
                 onFailure = { _error.value = it.message }
             )
@@ -136,14 +132,12 @@ class HomeViewModel(
         val monto = String.format(Locale.US, "%,.2f", amount)
         createNotificationUseCase(
             phoneNumber = phoneNumber,
-            title = "Codigo de retiro generado",
-            message = "Tu codigo $code fue creado para retirar $$monto en cajero.",
-            type = "WITHDRAW"
+            title       = "Codigo de retiro generado",
+            message     = "Tu codigo $code fue creado para retirar $$monto en cajero.",
+            type        = "WITHDRAW"
         )
     }
 
     fun clearCodigoRetiro() { _codigoRetiro.value = null }
-
-
-    fun clearError() { _error.value = null }
+    fun clearError()        { _error.value = null }
 }
