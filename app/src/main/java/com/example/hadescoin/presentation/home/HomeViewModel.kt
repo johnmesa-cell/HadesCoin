@@ -18,13 +18,13 @@ import kotlinx.coroutines.launch
 import java.util.Locale
 
 class HomeViewModel(
-    private val getWalletDataUseCase:             GetWalletDataUseCase             = ServiceLocator.provideGetWalletDataUseCase(),
-    private val generateWithdrawalCodeUseCase:    GenerateWithdrawalCodeUseCase    = ServiceLocator.provideGenerateWithdrawalCodeUseCase(),
-    private val createNotificationUseCase:        CreateNotificationUseCase        = ServiceLocator.provideCreateNotificationUseCase(),
+    private val getWalletDataUseCase:               GetWalletDataUseCase               = ServiceLocator.provideGetWalletDataUseCase(),
+    private val generateWithdrawalCodeUseCase:      GenerateWithdrawalCodeUseCase      = ServiceLocator.provideGenerateWithdrawalCodeUseCase(),
+    private val createNotificationUseCase:          CreateNotificationUseCase          = ServiceLocator.provideCreateNotificationUseCase(),
     private val getUnreadNotificationsCountUseCase: GetUnreadNotificationsCountUseCase = ServiceLocator.provideGetUnreadNotificationsCountUseCase(),
-    private val observeNotificationsUseCase:      ObserveNotificationsUseCase      = ServiceLocator.provideObserveNotificationsUseCase(),
-    private val stopObservingNotificationsUseCase: StopObservingNotificationsUseCase = ServiceLocator.provideStopObservingNotificationsUseCase(),
-    private val sessionRepository:                SessionRepository                = ServiceLocator.provideSessionRepository()
+    private val observeNotificationsUseCase:        ObserveNotificationsUseCase        = ServiceLocator.provideObserveNotificationsUseCase(),
+    private val stopObservingNotificationsUseCase:  StopObservingNotificationsUseCase  = ServiceLocator.provideStopObservingNotificationsUseCase(),
+    private val sessionRepository:                  SessionRepository                  = ServiceLocator.provideSessionRepository()
 ) : ViewModel() {
 
     private val _cargando     = MutableLiveData(false)
@@ -45,7 +45,7 @@ class HomeViewModel(
     private val _notificacionesNoLeidas = MutableLiveData(0)
     val notificacionesNoLeidas: LiveData<Int> = _notificacionesNoLeidas
 
-    // ── Biometría — expuesto para que HomeView lo pase a los diálogos ──────
+    // ── Biometría ───────────────────────────────────────────────────
     private val _biometriaActiva = MutableLiveData(sessionRepository.isBiometriaActiva())
     val biometriaActiva: LiveData<Boolean> = _biometriaActiva
 
@@ -58,7 +58,6 @@ class HomeViewModel(
         _transactions.value           = emptyList()
         _notificacionesNoLeidas.value = 0
         _error.value                  = null
-        // Refrescar estado de biometría en cada carga (puede haber cambiado en Perfil)
         _biometriaActiva.value        = sessionRepository.isBiometriaActiva()
 
         phoneNumberCache = phoneNumber
@@ -112,10 +111,25 @@ class HomeViewModel(
         }
     }
 
-    fun generarCodigoRetiro(phoneNumber: String, pin: String, amount: Double) {
+    /**
+     * [autenticadoConHuella] = true cuando el usuario pasó la biometría.
+     * En ese caso pin puede ser vacío y se propaga al UseCase para omitir
+     * la validación de PIN contra Firebase.
+     */
+    fun generarCodigoRetiro(
+        phoneNumber:          String,
+        pin:                  String,
+        amount:               Double,
+        autenticadoConHuella: Boolean = false
+    ) {
         viewModelScope.launch {
             _cargando.value = true
-            val result = generateWithdrawalCodeUseCase(phoneNumber, pin, amount)
+            val result = generateWithdrawalCodeUseCase(
+                phoneNumber          = phoneNumber,
+                pin                  = pin,
+                amount               = amount,
+                autenticadoConHuella = autenticadoConHuella
+            )
             result.fold(
                 onSuccess = { code ->
                     _codigoRetiro.value = code
