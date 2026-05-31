@@ -13,12 +13,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
+import com.example.hadescoin.R
 import com.example.hadescoin.presentation.components.*
 import com.example.hadescoin.presentation.utils.BiometricHelper
 import com.example.hadescoin.ui.theme.*
@@ -58,27 +60,27 @@ fun ProfileView(
 
             user?.let { u ->
                 val displayGreeting = u.nickname.ifBlank { u.fullName.split(" ").firstOrNull() ?: "" }
-                Text(text = "HOLA, $displayGreeting".uppercase(), fontSize = 28.sp, fontWeight = FontWeight.Black, color = HadesPurple, letterSpacing = 4.sp)
-            } ?: Text(text = "MI PERFIL", fontSize = 28.sp, fontWeight = FontWeight.Black, color = HadesPurple, letterSpacing = 4.sp)
+                Text(text = stringResource(R.string.profile_greeting, displayGreeting.uppercase()), fontSize = 28.sp, fontWeight = FontWeight.Black, color = HadesPurple, letterSpacing = 4.sp)
+            } ?: Text(text = stringResource(R.string.profile_title), fontSize = 28.sp, fontWeight = FontWeight.Black, color = HadesPurple, letterSpacing = 4.sp)
 
             Spacer(modifier = Modifier.height(24.dp))
 
             user?.let { u ->
                 HadesCardBox {
-                    ProfileItem(label = "Nombre Completo",     value = u.fullName)
-                    ProfileItem(label = "Apodo",               value = u.nickname.ifBlank { "No asignado" }, isMissing = u.nickname.isBlank())
-                    ProfileItem(label = "Número de Documento", value = u.documentNumber, isMissing = u.documentNumber.isBlank())
-                    ProfileItem(label = "Teléfono",            value = u.phoneNumber)
-                    ProfileItem(label = "Miembro desde",       value = u.createdAt.take(10))
-                    ProfileItem(label = "PIN",                 value = "****")
+                    ProfileItem(label = stringResource(R.string.label_full_name_profile),     value = u.fullName)
+                    ProfileItem(label = stringResource(R.string.label_nickname_profile),               value = u.nickname.ifBlank { stringResource(R.string.profile_nickname_not_assigned) }, isMissing = u.nickname.isBlank())
+                    ProfileItem(label = stringResource(R.string.label_document_profile), value = u.documentNumber, isMissing = u.documentNumber.isBlank())
+                    ProfileItem(label = stringResource(R.string.label_phone_profile),            value = u.phoneNumber)
+                    ProfileItem(label = stringResource(R.string.label_member_since_profile),       value = u.createdAt.take(10))
+                    ProfileItem(label = stringResource(R.string.label_pin_profile),                 value = "****")
                     Spacer(modifier = Modifier.height(16.dp))
 
-                    Text(text = "SEGURIDAD", fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 2.sp, color = HadesCyan)
+                    Text(text = stringResource(R.string.profile_security_section), fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 2.sp, color = HadesCyan)
                     Spacer(modifier = Modifier.height(8.dp))
-                    HadesButton(text = "Cambiar PIN", onClick = { showPinDialog = true }, modifier = Modifier.fillMaxWidth())
+                    HadesButton(text = stringResource(R.string.btn_change_pin), onClick = { showPinDialog = true }, modifier = Modifier.fillMaxWidth())
                     Spacer(modifier = Modifier.height(4.dp))
                     TextButton(onClick = { showRecoveryFlow = true }, modifier = Modifier.align(Alignment.End)) {
-                        Text("¿Olvidaste tu PIN?", color = HadesCyan, fontSize = 12.sp, fontWeight = FontWeight.Medium)
+                        Text(stringResource(R.string.btn_forgot_pin), color = HadesCyan, fontSize = 12.sp, fontWeight = FontWeight.Medium)
                     }
 
                     if (dispositivoTieneBiometria) {
@@ -88,8 +90,8 @@ fun ProfileView(
                                 Icon(imageVector = Icons.Filled.Fingerprint, contentDescription = null, tint = if (biometriaActiva) HadesCyan else HadesOnDark.copy(alpha = 0.4f), modifier = Modifier.size(22.dp))
                                 Spacer(Modifier.width(10.dp))
                                 Column {
-                                    Text(text = "Desbloqueo con huella", fontSize = 14.sp, fontWeight = FontWeight.Medium, color = HadesOnDark)
-                                    Text(text = if (biometriaActiva) "Activo" else "Inactivo", fontSize = 11.sp, color = if (biometriaActiva) HadesCyan else HadesOnDark.copy(alpha = 0.4f))
+                                    Text(text = stringResource(R.string.profile_biometry_title), fontSize = 14.sp, fontWeight = FontWeight.Medium, color = HadesOnDark)
+                                    Text(text = if (biometriaActiva) stringResource(R.string.profile_biometry_active) else stringResource(R.string.profile_biometry_inactive), fontSize = 11.sp, color = if (biometriaActiva) HadesCyan else HadesOnDark.copy(alpha = 0.4f))
                                 }
                             }
                             Switch(checked = biometriaActiva, onCheckedChange = { viewModel.setBiometriaActiva(it) }, colors = SwitchDefaults.colors(checkedThumbColor = HadesCyan, checkedTrackColor = HadesCyan.copy(alpha = 0.3f), uncheckedThumbColor = HadesOnDark.copy(alpha = 0.4f), uncheckedTrackColor = HadesOnDark.copy(alpha = 0.1f)))
@@ -97,27 +99,27 @@ fun ProfileView(
                     }
 
                     Spacer(modifier = Modifier.height(16.dp))
-                    Text(text = "PERSONALIZAR", fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 2.sp, color = HadesCyan)
+                    Text(text = stringResource(R.string.profile_customize_section), fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 2.sp, color = HadesCyan)
                     Spacer(modifier = Modifier.height(8.dp))
-                    HadesButton(text = if (u.nickname.isBlank()) "Agregar Apodo" else "Cambiar Apodo", onClick = { showNicknameDialog = true }, modifier = Modifier.fillMaxWidth())
+                    HadesButton(text = if (u.nickname.isBlank()) stringResource(R.string.btn_add_nickname) else stringResource(R.string.btn_edit_nickname), onClick = { showNicknameDialog = true }, modifier = Modifier.fillMaxWidth())
                     Spacer(modifier = Modifier.height(10.dp))
                     OutlinedButton(onClick = { navController.navigate("notifications/$phoneNumber") }, modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.outlinedButtonColors(contentColor = HadesCyan)) {
                         BadgedBox(badge = { if (noLeidas > 0) Badge { Text(noLeidas.toString()) } }) { Icon(imageVector = Icons.Filled.Notifications, contentDescription = null, modifier = Modifier.size(18.dp)) }
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text("Notificaciones")
+                        Text(stringResource(R.string.btn_notifications))
                     }
                 }
             }
 
             Spacer(modifier = Modifier.height(24.dp))
-            HadesButton(text = "Volver", onClick = { navController.popBackStack() }, modifier = Modifier.width(150.dp))
+            HadesButton(text = stringResource(R.string.btn_back), onClick = { navController.popBackStack() }, modifier = Modifier.width(150.dp))
             Spacer(modifier = Modifier.height(40.dp))
         }
     }
 
     if (cargando) ShowLoadingAlertDialog()
-    mensajeExito?.let { ShowMessageAlertDialog(onConfirmation = { viewModel.clearMessages() }, dialogTitle = "Exito",  dialogText = it) }
-    mensajeError?.let { ShowMessageAlertDialog(onConfirmation = { viewModel.clearMessages() }, dialogTitle = "Error", dialogText = it) }
+    mensajeExito?.let { ShowMessageAlertDialog(onConfirmation = { viewModel.clearMessages() }, dialogTitle = stringResource(R.string.dialog_success_title),  dialogText = it) }
+    mensajeError?.let { ShowMessageAlertDialog(onConfirmation = { viewModel.clearMessages() }, dialogTitle = stringResource(R.string.dialog_error_title), dialogText = it) }
 
     if (showPinDialog) ChangePinDialog(onDismiss = { showPinDialog = false }, onConfirm = { actual, nuevo, confirm -> viewModel.cambiarPin(phoneNumber, actual, nuevo, confirm); showPinDialog = false })
     if (showRecoveryFlow) PinRecoveryFlow(codigoGenerado = codigoGenerado, codigoValidado = codigoValidado, onDismiss = { showRecoveryFlow = false }, onGenerate = { phone, doc -> viewModel.generarCodigoVerificacion(phone, doc) }, onValidate = { code -> viewModel.validarCodigo(code) }, onReset = { newPin -> viewModel.resetearPin(newPin) }, onClearState = { viewModel.clearMessages() })
@@ -128,7 +130,7 @@ fun ProfileView(
 fun ProfileItem(label: String, value: String, isMissing: Boolean = false) {
     Column(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
         Text(text = label, fontSize = 12.sp, fontWeight = FontWeight.Bold, color = HadesCyan, letterSpacing = 1.sp)
-        Text(text = if (isMissing) "$value (Pendiente)" else value, fontSize = 16.sp, fontWeight = FontWeight.Medium, color = if (isMissing) HadesOrange else HadesOnDark)
+        Text(text = if (isMissing) "$value ${stringResource(R.string.profile_pending_status)}" else value, fontSize = 16.sp, fontWeight = FontWeight.Medium, color = if (isMissing) HadesOrange else HadesOnDark)
     }
 }
 
@@ -139,14 +141,14 @@ fun ChangePinDialog(onDismiss: () -> Unit, onConfirm: (String, String, String) -
     var confirmacion by remember { mutableStateOf("") }
     AlertDialog(
         onDismissRequest = onDismiss, containerColor = HadesNavyDark,
-        title = { Text("Cambiar PIN", color = HadesPurple) },
+        title = { Text(stringResource(R.string.dialog_change_pin_title), color = HadesPurple) },
         text  = { Column {
-            HadesTextField(value = pinActual,    onValueChange = { if (it.length <= 4 && it.all { c -> c.isDigit() }) pinActual    = it }, label = "PIN Actual",          isPassword = true, keyboardType = KeyboardType.NumberPassword)
-            HadesTextField(value = pinNuevo,     onValueChange = { if (it.length <= 4 && it.all { c -> c.isDigit() }) pinNuevo     = it }, label = "Nuevo PIN",           isPassword = true, keyboardType = KeyboardType.NumberPassword)
-            HadesTextField(value = confirmacion, onValueChange = { if (it.length <= 4 && it.all { c -> c.isDigit() }) confirmacion = it }, label = "Confirmar Nuevo PIN", isPassword = true, keyboardType = KeyboardType.NumberPassword)
+            HadesTextField(value = pinActual,    onValueChange = { if (it.length <= 4 && it.all { c -> c.isDigit() }) pinActual    = it }, label = stringResource(R.string.label_current_pin),          isPassword = true, keyboardType = KeyboardType.NumberPassword)
+            HadesTextField(value = pinNuevo,     onValueChange = { if (it.length <= 4 && it.all { c -> c.isDigit() }) pinNuevo     = it }, label = stringResource(R.string.label_new_pin),           isPassword = true, keyboardType = KeyboardType.NumberPassword)
+            HadesTextField(value = confirmacion, onValueChange = { if (it.length <= 4 && it.all { c -> c.isDigit() }) confirmacion = it }, label = stringResource(R.string.label_confirm_pin), isPassword = true, keyboardType = KeyboardType.NumberPassword)
         } },
-        confirmButton = { TextButton(onClick = { onConfirm(pinActual, pinNuevo, confirmacion) }) { Text("ACEPTAR",   color = HadesCyan) } },
-        dismissButton = { TextButton(onClick = onDismiss)                                        { Text("CANCELAR", color = Color.Gray) } }
+        confirmButton = { TextButton(onClick = { onConfirm(pinActual, pinNuevo, confirmacion) }) { Text(stringResource(R.string.btn_accept),   color = HadesCyan) } },
+        dismissButton = { TextButton(onClick = onDismiss)                                        { Text(stringResource(R.string.btn_cancel), color = Color.Gray) } }
     )
 }
 
@@ -155,9 +157,9 @@ fun ChangeNicknameDialog(currentNickname: String, onDismiss: () -> Unit, onConfi
     var nuevoApodo by remember { mutableStateOf(currentNickname) }
     AlertDialog(
         onDismissRequest = onDismiss, containerColor = HadesNavyDark,
-        title = { Text("Actualizar Apodo", color = HadesPurple) },
-        text  = { HadesTextField(value = nuevoApodo, onValueChange = { nuevoApodo = it }, label = "Tu Apodo") },
-        confirmButton = { TextButton(onClick = { onConfirm(nuevoApodo) }) { Text("GUARDAR",   color = HadesCyan) } },
-        dismissButton = { TextButton(onClick = onDismiss)                  { Text("CANCELAR", color = Color.Gray) } }
+        title = { Text(stringResource(R.string.dialog_update_nickname_title), color = HadesPurple) },
+        text  = { HadesTextField(value = nuevoApodo, onValueChange = { nuevoApodo = it }, label = stringResource(R.string.label_your_nickname)) },
+        confirmButton = { TextButton(onClick = { onConfirm(nuevoApodo) }) { Text(stringResource(R.string.btn_save),   color = HadesCyan) } },
+        dismissButton = { TextButton(onClick = onDismiss)                  { Text(stringResource(R.string.btn_cancel), color = Color.Gray) } }
     )
 }

@@ -110,4 +110,104 @@
     <string name="btn_cancel">Cancelar</string>
     <string name="transfer_success_message">Transferencia de $%s enviada correctamente.</string>
 
+
+    <!-- ══════════════════════════════════════════════
+         QR — Códigos QR (Bottom Sheet)
+    ══════════════════════════════════════════════ -->
+    <string name="qr_title">CÓDIGOS QR</string>
+    <string name="qr_subtitle">Elige qué quieres hacer con tu código QR.</string>
+    <string name="qr_scan_title">Escanear QR</string>
+    <string name="qr_scan_description">Lee el código QR de otra persona para enviarle dinero al instante.</string>
+    <string name="qr_generate_title">Generar mi QR</string>
+    <string name="qr_generate_description">Muestra tu código QR personal para que otros te envíen dinero.</string>
+    <string name="qr_coming_soon">Próximamente</string>
+
+
+    <!-- ══════════════════════════════════════════════
+         WITHDRAW — Diálogo de código de retiro
+    ══════════════════════════════════════════════ -->
+    <string name="withdraw_title">GENERAR CÓDIGO DE RETIRO</string>
+    <string name="withdraw_biometry_mode">Autorización por huella</string>
+    <string name="withdraw_expiry_info">El código expira en 25 minutos.</string>
+    <string name="withdraw_amount_label">Monto máximo a retirar</string>
+    <string name="withdraw_pin_label">Tu PIN</string>
+    <string name="withdraw_fingerprint_action">Toca para generar con huella</string>
+    <string name="withdraw_amount_required">Ingresa el monto primero</string>
+    <string name="btn_generate">GENERAR</string>
+    <string name="btn_generate_loading">GENERANDO...</string>
+    <string name="btn_copy_code">COPIAR CÓDIGO</string>
+    <string name="btn_code_copied">¡COPIADO! ✓</string>
+    <string name="btn_understood">ENTENDIDO</string>
+    <string name="withdraw_success_title">¡CÓDIGO GENERADO!</string>
+    <string name="withdraw_success_subtitle">Preséntalo en el cajero HadesCoin.</string>
+    <string name="withdraw_authorized_amount">Monto autorizado: $%s</string>
+    <string name="withdraw_expiry_timer">⏱ Expira en 25 minutos</string>
+    <string name="withdraw_biometry_confirmation_title">Confirmar retiro</string>
+    <string name="withdraw_biometry_confirmation_subtitle">Usa tu huella para generar el código de retiro</string>
+    <string name="cd_generate_fingerprint">Generar con huella</string>
+    <string name="cd_authenticate_fingerprint">Autenticar con huella</string>
+    <string name="withdrawal_alternative_text">o usa tu huella digital</string>
+
+
+    <!-- ══════════════════════════════════════════════
+         PIN RECOVERY — Recuperación de PIN
+    ══════════════════════════════════════════════ -->
+    <string name="recovery_title">Olvidé mi PIN</string>
+    <string name="recovery_identity_subtitle">Ingresa tu teléfono y número de cédula para verificar tu identidad.</string>
+    <string name="label_phone_recovery">Teléfono (10 dígitos)</string>
+    <string name="label_document_recovery">Número de Cédula</string>
+    <string name="btn_verify_identity">VERIFICAR IDENTIDAD</string>
+    <string name="recovery_code_title">Tu código de verificación</string>
+    <string name="recovery_code_subtitle">Usa este código para confirmar tu identidad en el siguiente paso:</string>
+    <string name="btn_copy">Copiar código</string>
+    <string name="btn_copied">¡Copiado!</string>
+    <string name="recovery_code_reminder">Tendrás que ingresarlo en el próximo paso.</string>
+    <string name="btn_continue">CONTINUAR</string>
+    <string name="recovery_confirm_title">Confirmar código</string>
+    <string name="recovery_confirm_subtitle">Ingresa el código de 6 dígitos que se te mostró:</string>
+    <string name="label_verification_code">Código de verificación</string>
+    <string name="btn_verify">VERIFICAR</string>
+    <string name="recovery_reset_title">Nuevo PIN</string>
+    <string name="recovery_reset_subtitle">Elige un PIN seguro de 4 dígitos</string>
+    <string name="label_new_pin">Nuevo PIN</string>
+    <string name="btn_update">ACTUALIZAR</string>
+
+
+    <!-- ══════════════════════════════════════════════
+         NOTIFICATIONS — Notificaciones
+    ══════════════════════════════════════════════ -->
+    <string name="notifications_title">NOTIFICACIONES</string>
+    <string name="notifications_empty">No tienes notificaciones aún</string>
+
+
+    <!-- ══════════════════════════════════════════════
+         PROFILE — Perfil de usuario
+    ══════════════════════════════════════════════ -->
+    <string name="profile_greeting">HOLA, %s</string>
+    <string name="profile_title">MI PERFIL</string>
+    <string name="label_full_name_profile">Nombre Completo</string>
+    <string name="label_nickname_profile">Apodo</string>
+    <string name="profile_nickname_not_assigned">No asignado</string>
+    <string name="label_document_profile">Número de Documento</string>
+    <string name="label_phone_profile">Teléfono</string>
+    <string name="label_member_since_profile">Miembro desde</string>
+    <string name="label_pin_profile">PIN</string>
+    <string name="profile_pending_status">(Pendiente)</string>
+    <string name="profile_security_section">SEGURIDAD</string>
+    <string name="profile_customize_section">PERSONALIZAR</string>
+    <string name="btn_change_pin">Cambiar PIN</string>
+    <string name="btn_forgot_pin">¿Olvidaste tu PIN?</string>
+    <string name="profile_biometry_title">Desbloqueo con huella</string>
+    <string name="profile_biometry_active">Activo</string>
+    <string name="profile_biometry_inactive">Inactivo</string>
+    <string name="btn_add_nickname">Agregar Apodo</string>
+    <string name="btn_edit_nickname">Cambiar Apodo</string>
+    <string name="btn_notifications">Notificaciones</string>
+    <string name="btn_back">Volver</string>
+    <string name="dialog_change_pin_title">Cambiar PIN</string>
+    <string name="label_current_pin">PIN Actual</string>
+    <string name="dialog_update_nickname_title">Actualizar Apodo</string>
+    <string name="label_your_nickname">Tu Apodo</string>
+    <string name="btn_save">GUARDAR</string>
+
 </resources>

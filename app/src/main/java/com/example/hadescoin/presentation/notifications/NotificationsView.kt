@@ -16,11 +16,13 @@ import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
+import com.example.hadescoin.R
 import com.example.hadescoin.domain.model.AppNotification
 import com.example.hadescoin.presentation.components.HadesScreen
 import com.example.hadescoin.presentation.components.ShowLoadingAlertDialog
@@ -49,9 +51,9 @@ fun NotificationsView(
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Volver", tint = HadesCyan)
+                        Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.cd_back), tint = HadesCyan)
                     }
-                    Text(text = "NOTIFICACIONES", fontSize = 16.sp, fontWeight = FontWeight.Black, color = HadesPurple, letterSpacing = 2.sp)
+                    Text(text = stringResource(R.string.notifications_title), fontSize = 16.sp, fontWeight = FontWeight.Black, color = HadesPurple, letterSpacing = 2.sp)
                 }
                 BadgedBox(badge = { if (noLeidas > 0) Badge { Text(noLeidas.toString()) } }) {
                     Icon(imageVector = Icons.Filled.Notifications, contentDescription = null, tint = HadesCyan)
@@ -61,7 +63,7 @@ fun NotificationsView(
 
             if (notificaciones.isEmpty() && !cargando) {
                 Box(modifier = Modifier.fillMaxWidth().padding(vertical = 48.dp), contentAlignment = Alignment.Center) {
-                    Text(text = "No tienes notificaciones aún", color = HadesOnDark.copy(alpha = 0.6f), fontSize = 14.sp)
+                    Text(text = stringResource(R.string.notifications_empty), color = HadesOnDark.copy(alpha = 0.6f), fontSize = 14.sp)
                 }
             } else {
                 LazyColumn(verticalArrangement = Arrangement.spacedBy(10.dp)) {

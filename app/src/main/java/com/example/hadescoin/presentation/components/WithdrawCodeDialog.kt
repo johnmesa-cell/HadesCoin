@@ -16,6 +16,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.runtime.rememberCoroutineScope
 import kotlinx.coroutines.delay
@@ -28,6 +29,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.fragment.app.FragmentActivity
+import com.example.hadescoin.R
 import com.example.hadescoin.presentation.utils.BiometricHelper
 import com.example.hadescoin.ui.theme.*
 
@@ -61,6 +63,10 @@ fun WithdrawCodeDialog(
     // Modo PIN: necesita monto + PIN de 4 dígitos
     val formularioListo  = !biometriaActiva && montoValido && pin.length == 4
 
+    // Guardar strings aquí en el contexto Composable
+    val bioConfirmTitle = stringResource(R.string.withdraw_biometry_confirmation_title)
+    val bioConfirmSubtitle = stringResource(R.string.withdraw_biometry_confirmation_subtitle)
+
     Dialog(onDismissRequest = { if (!cargando) onDismiss() }) {
         Surface(
             shape          = RoundedCornerShape(20.dp),
@@ -89,17 +95,17 @@ fun WithdrawCodeDialog(
                         onMontoChange   = { v -> if (v.all { c -> c.isDigit() || c == '.' } && v.length <= 12) monto = v },
                         onPinChange     = { v -> if (v.length <= 4 && v.all { c -> c.isDigit() }) pin = v },
                         onGenerate      = { onGenerate(monto.toDouble(), pin, false) },
-                        onHuellaClick   = {
-                            if (activity != null) {
-                                BiometricHelper.mostrar(
-                                    activity  = activity,
-                                    titulo    = "Confirmar retiro",
-                                    subtitulo = "Usa tu huella para generar el código de retiro",
-                                    onExito   = { onGenerate(monto.toDouble(), "", true) },
-                                    onError   = { }
-                                )
-                            }
-                        },
+                         onHuellaClick   = {
+                             if (activity != null) {
+                                 BiometricHelper.mostrar(
+                                     activity  = activity,
+                                     titulo    = bioConfirmTitle,
+                                     subtitulo = bioConfirmSubtitle,
+                                     onExito   = { onGenerate(monto.toDouble(), "", true) },
+                                     onError   = { }
+                                 )
+                             }
+                         },
                         onDismiss = onDismiss
                     )
                 }
@@ -130,8 +136,8 @@ private fun FormularioRetiroContent(
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         // ── Encabezado ────────────────────────────────────────────────────
-        Text(
-            text      = "GENERAR CÓDIGO DE RETIRO",
+         Text(
+            text      = stringResource(R.string.withdraw_title),
             fontSize  = 13.sp,
             fontWeight = FontWeight.Bold,
             letterSpacing = 1.5.sp,
@@ -150,27 +156,27 @@ private fun FormularioRetiroContent(
             ) {
                 Icon(imageVector = Icons.Filled.Fingerprint, contentDescription = null, tint = HadesCyan, modifier = Modifier.size(13.dp))
                 Spacer(modifier = Modifier.width(5.dp))
-                Text(text = "Autorización por huella", fontSize = 10.sp, color = HadesCyan, fontWeight = FontWeight.Medium)
+                Text(text = stringResource(R.string.withdraw_biometry_mode), fontSize = 10.sp, color = HadesCyan, fontWeight = FontWeight.Medium)
             }
         }
 
         Text(
-            text      = "El código expira en 25 minutos.",
+            text      = stringResource(R.string.withdraw_expiry_info),
             fontSize  = 11.sp,
             color     = HadesOnDark.copy(alpha = 0.5f),
             textAlign = TextAlign.Center
         )
 
         // ── Campo monto — siempre visible ─────────────────────────────────
-        HadesTextField(
+         HadesTextField(
             value         = monto,
             onValueChange = onMontoChange,
-            label         = "Monto máximo a retirar",
+            label         = stringResource(R.string.withdraw_amount_label),
             keyboardType  = KeyboardType.Decimal
         )
 
         // ── Campo PIN — solo visible cuando NO hay huella ─────────────────
-        AnimatedVisibility(
+         AnimatedVisibility(
             visible = !biometriaActiva,
             enter   = fadeIn() + expandVertically(),
             exit    = fadeOut() + shrinkVertically()
@@ -178,14 +184,14 @@ private fun FormularioRetiroContent(
             HadesTextField(
                 value         = pin,
                 onValueChange = onPinChange,
-                label         = "Tu PIN",
+                label         = stringResource(R.string.withdraw_pin_label),
                 isPassword    = true,
                 keyboardType  = KeyboardType.NumberPassword
             )
         }
 
         // ── Modo huella: botón grande como acción principal ───────────────
-        AnimatedVisibility(
+         AnimatedVisibility(
             visible = biometriaActiva,
             enter   = fadeIn() + expandVertically(),
             exit    = fadeOut() + shrinkVertically()
@@ -205,7 +211,7 @@ private fun FormularioRetiroContent(
                     ) {
                         Icon(
                             imageVector        = Icons.Filled.Fingerprint,
-                            contentDescription = "Generar con huella",
+                            contentDescription = stringResource(R.string.cd_generate_fingerprint),
                             tint               = if (huellaLista) HadesCyan else HadesOnDark.copy(alpha = 0.2f),
                             modifier           = Modifier.size(40.dp)
                         )
@@ -213,8 +219,8 @@ private fun FormularioRetiroContent(
                 }
                 Spacer(modifier = Modifier.height(6.dp))
                 Text(
-                    text      = if (montoValido) "Toca para generar con huella"
-                                else "Ingresa el monto primero",
+                    text      = if (montoValido) stringResource(R.string.withdraw_fingerprint_action)
+                                else stringResource(R.string.withdraw_amount_required),
                     fontSize  = 11.sp,
                     color     = if (montoValido) HadesOnDark.copy(alpha = 0.4f)
                                 else HadesOrange.copy(alpha = 0.6f),
@@ -225,7 +231,7 @@ private fun FormularioRetiroContent(
         }
 
         // ── Botones inferiores ────────────────────────────────────────────
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Button(
                 onClick  = onDismiss,
                 modifier = Modifier.weight(1f).height(48.dp),
@@ -235,18 +241,18 @@ private fun FormularioRetiroContent(
                 ),
                 shape = RoundedCornerShape(10.dp)
             ) {
-                Text(text = "CANCELAR", fontSize = 13.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+                Text(text = stringResource(R.string.btn_cancel), fontSize = 13.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
             }
 
             // Botón GENERAR — solo en modo PIN (modo huella usa el botón de huella de arriba)
-            AnimatedVisibility(
+             AnimatedVisibility(
                 visible = !biometriaActiva,
                 enter   = fadeIn() + expandHorizontally(),
                 exit    = fadeOut() + shrinkHorizontally()
             ) {
                 HadesButton(
-                    text         = "GENERAR",
-                    textCargando = "GENERANDO...",
+                    text         = stringResource(R.string.btn_generate),
+                    textCargando = stringResource(R.string.btn_generate_loading),
                     onClick      = onGenerate,
                     enabled      = formularioListo,
                     cargando     = cargando,
@@ -263,10 +269,11 @@ fun HuellaAlternativaButton(
     habilitado:    Boolean,
     cargando:      Boolean,
     onHuellaClick: () -> Unit,
-    subtexto:      String = "o usa tu huella digital"
+    subtexto:      String = ""
 ) {
     Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
-        Text(text = "— $subtexto —", fontSize = 10.sp, color = HadesOnDark.copy(alpha = 0.35f), textAlign = TextAlign.Center)
+        val textoFinal = if (subtexto.isBlank()) stringResource(R.string.withdrawal_alternative_text) else subtexto
+        Text(text = "— $textoFinal —", fontSize = 10.sp, color = HadesOnDark.copy(alpha = 0.35f), textAlign = TextAlign.Center)
         Spacer(modifier = Modifier.height(8.dp))
         IconButton(
             onClick  = onHuellaClick,
@@ -281,7 +288,7 @@ fun HuellaAlternativaButton(
         ) {
             Icon(
                 imageVector        = Icons.Filled.Fingerprint,
-                contentDescription = "Autenticar con huella",
+                contentDescription = stringResource(R.string.cd_authenticate_fingerprint),
                 tint               = if (habilitado) HadesCyan else HadesOnDark.copy(alpha = 0.25f),
                 modifier           = Modifier.size(30.dp)
             )
@@ -300,8 +307,8 @@ private fun CodigoRetiroContent(codigo: String, monto: String, onCerrar: () -> U
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        Text(text = "¡CÓDIGO GENERADO!", fontSize = 13.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.5.sp, color = HadesCyan)
-        Text(text = "Preséntalo en el cajero HadesCoin.", fontSize = 11.sp, color = HadesOnDark.copy(alpha = 0.5f), textAlign = TextAlign.Center)
+        Text(text = stringResource(R.string.withdraw_success_title), fontSize = 13.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.5.sp, color = HadesCyan)
+        Text(text = stringResource(R.string.withdraw_success_subtitle), fontSize = 11.sp, color = HadesOnDark.copy(alpha = 0.5f), textAlign = TextAlign.Center)
 
         Box(
             modifier = Modifier
@@ -329,12 +336,12 @@ private fun CodigoRetiroContent(codigo: String, monto: String, onCerrar: () -> U
 
         if (monto.isNotBlank())
             Text(
-                text       = "Monto autorizado: $${monto.toDoubleOrNull()?.let { "%,.0f".format(it) } ?: monto}",
+                text       = stringResource(R.string.withdraw_authorized_amount, monto.toDoubleOrNull()?.let { "%,.0f".format(it) } ?: monto),
                 fontSize   = 13.sp,
                 color      = HadesOrange,
                 fontWeight = FontWeight.Bold
             )
-        Text(text = "⏱ Expira en 25 minutos", fontSize = 11.sp, color = HadesOnDark.copy(alpha = 0.45f))
+        Text(text = stringResource(R.string.withdraw_expiry_timer), fontSize = 11.sp, color = HadesOnDark.copy(alpha = 0.45f))
 
         Button(
             onClick  = {
@@ -349,9 +356,9 @@ private fun CodigoRetiroContent(codigo: String, monto: String, onCerrar: () -> U
             ),
             shape = RoundedCornerShape(10.dp)
         ) {
-            Text(text = if (copiado) "¡COPIADO! ✓" else "COPIAR CÓDIGO", fontWeight = FontWeight.Bold, fontSize = 12.sp, letterSpacing = 1.sp)
+            Text(text = if (copiado) stringResource(R.string.btn_code_copied) else stringResource(R.string.btn_copy_code), fontWeight = FontWeight.Bold, fontSize = 12.sp, letterSpacing = 1.sp)
         }
 
-        HadesButton(text = "ENTENDIDO", onClick = onCerrar, modifier = Modifier.fillMaxWidth())
+        HadesButton(text = stringResource(R.string.btn_understood), onClick = onCerrar, modifier = Modifier.fillMaxWidth())
     }
 }

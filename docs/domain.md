@@ -42,5 +42,45 @@ Es la capa central (el núcleo) de la Clean Architecture. Aquí residen las regl
 
 ### TransferUseCase.kt
 - **Qué es:** Caso de uso que maneja las transferencias de fondos.
-- **Qué hace:** Ejecuta la lógica para enviar dinero entre usuarios, validando el monto a transferir y el PIN de seguridad.
+- **Qué hace:** Ejecuta la lógica para enviar dinero entre usuarios. Acepta un parámetro nuevo `autenticadoConHuella: Boolean` que permite omitir la validación de PIN cuando el usuario se autenticó con biometría. Valida el monto a transferir y determina si se requiere PIN basándose en el flag de autenticación biométrica.
+- **Interactúa con:** La interfaz `WalletRepository`.
+
+### GetUserProfileUseCase.kt
+- **Qué es:** Caso de uso para obtener los datos completos del perfil de un usuario.
+- **Qué hace:** Recupera la información del usuario (nombre, teléfono, email, apodo, etc.) y está disponible en la pantalla de perfil para visualización y edición.
+- **Interactúa con:** La interfaz `WalletRepository`.
+
+### UpdateUserPinUseCase.kt
+- **Qué es:** Caso de uso para cambiar el PIN del usuario.
+- **Qué hace:** Valida un PIN anterior y permite actualizar a uno nuevo mediante el flujo de recuperación de PIN con código de verificación.
+- **Interactúa con:** La interfaz `WalletRepository`.
+
+### UpdateUserNicknameUseCase.kt
+- **Qué es:** Caso de uso para actualizar el apodo del usuario.
+- **Qué hace:** Guarda un apodo personalizado (alias visual) para el usuario en la base de datos.
+- **Interactúa con:** La interfaz `WalletRepository`.
+
+### GenerateVerificationCodeUseCase.kt
+- **Qué es:** Caso de uso para generar códigos de verificación.
+- **Qué hace:** Genera un código de 6 dígitos aleatorio y lo guarda de forma temporal en Firebase asociado al teléfono del usuario. Utilizado en flujos de recuperación de PIN y validación de identidad.
+- **Interactúa con:** La interfaz `WalletRepository`.
+
+### ValidateVerificationCodeUseCase.kt
+- **Qué es:** Caso de uso para validar códigos de verificación.
+- **Qué hace:** Verifica que el código ingresado por el usuario coincida con el generado y guardado en Firebase. Si es correcto, marca el código como validado.
+- **Interactúa con:** La interfaz `WalletRepository`.
+
+### GenerateWithdrawalCodeUseCase.kt
+- **Qué es:** Caso de uso para generar códigos temporales de retiro en cajero.
+- **Qué hace:** Genera un código alfanumérico de 6 caracteres con validez de 10 minutos. Acepta parámetro `autenticadoConHuella` para omitir validación de PIN cuando el usuario se autenticó biométricamente. El código se guarda con un monto máximo autorizado.
+- **Interactúa con:** La interfaz `WalletRepository`.
+
+### CreateNotificationUseCase.kt
+- **Qué es:** Caso de uso para crear notificaciones.
+- **Qué hace:** Genera notificaciones transaccionales y las guarda asociadas al usuario para que las visualice en el panel de notificaciones.
+- **Interactúa con:** La interfaz `WalletRepository`.
+
+### GetUnreadNotificationsCountUseCase.kt
+- **Qué es:** Caso de uso para obtener el contador de notificaciones no leídas.
+- **Qué hace:** Consulta cuántas notificaciones no marcadas como leídas tiene el usuario, útil para la UI del badge en el botón de acceso a notificaciones.
 - **Interactúa con:** La interfaz `WalletRepository`.

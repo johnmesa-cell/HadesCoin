@@ -13,10 +13,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.hadescoin.R
 import com.example.hadescoin.ui.theme.*
 
 /**
@@ -62,14 +64,14 @@ fun QrSheet(onDismiss: () -> Unit) {
             }
             Spacer(modifier = Modifier.height(4.dp))
             Text(
-                text          = "CÓDIGOS QR",
+                text          = stringResource(R.string.qr_title),
                 fontSize      = 13.sp,
                 fontWeight    = FontWeight.Bold,
                 letterSpacing = 2.sp,
                 color         = HadesPurple
             )
             Text(
-                text      = "Elige qué quieres hacer con tu código QR.",
+                text      = stringResource(R.string.qr_subtitle),
                 fontSize  = 12.sp,
                 color     = HadesOnDark.copy(alpha = 0.45f),
                 textAlign = TextAlign.Center
@@ -78,18 +80,18 @@ fun QrSheet(onDismiss: () -> Unit) {
             Spacer(modifier = Modifier.height(16.dp))
 
             // ── Opción: Escanear QR ─────────────────────────────────────
-            QrOptionCard(
+             QrOptionCard(
                 icon        = Icons.Filled.QrCodeScanner,
-                title       = "Escanear QR",
-                description = "Lee el código QR de otra persona para enviarle dinero al instante.",
+                title       = stringResource(R.string.qr_scan_title),
+                description = stringResource(R.string.qr_scan_description),
                 onClick     = { /* Próximamente */ }
             )
 
             // ── Opción: Generar QR ───────────────────────────────────────
             QrOptionCard(
                 icon        = Icons.Filled.QrCode,
-                title       = "Generar mi QR",
-                description = "Muestra tu código QR personal para que otros te envíen dinero.",
+                title       = stringResource(R.string.qr_generate_title),
+                description = stringResource(R.string.qr_generate_description),
                 onClick     = { /* Próximamente */ }
             )
         }
@@ -151,7 +153,7 @@ private fun QrOptionCard(
                             .padding(horizontal = 7.dp, vertical = 2.dp)
                     ) {
                         Text(
-                            text      = "Próximamente",
+                            text      = stringResource(R.string.qr_coming_soon),
                             fontSize  = 9.sp,
                             fontWeight = FontWeight.Bold,
                             color     = HadesPurple.copy(alpha = 0.6f),

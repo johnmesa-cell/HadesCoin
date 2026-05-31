@@ -58,12 +58,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.hadescoin.R
 import com.example.hadescoin.ui.theme.*
 
 // ─── Orquestador del flujo ────────────────────────────────────────────────
@@ -128,13 +130,13 @@ fun VerifyIdentityDialog(
         title = {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Icon(Icons.Filled.Lock, contentDescription = null, tint = HadesPurple, modifier = Modifier.size(20.dp))
-                Text("Olvidé mi PIN", color = HadesPurple, fontWeight = FontWeight.Bold)
+                Text(stringResource(R.string.recovery_title), color = HadesPurple, fontWeight = FontWeight.Bold)
             }
         },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Text(
-                    text      = "Ingresa tu teléfono y número de cédula para verificar tu identidad.",
+                    text      = stringResource(R.string.recovery_identity_subtitle),
                     color     = HadesOnDark.copy(alpha = 0.7f),
                     fontSize  = 13.sp,
                     textAlign = TextAlign.Center,
@@ -143,13 +145,13 @@ fun VerifyIdentityDialog(
                 HadesTextField(
                     value         = phone,
                     onValueChange = { if (it.length <= 10 && it.all { c -> c.isDigit() }) phone = it },
-                    label         = "Teléfono (10 dígitos)",
+                    label         = stringResource(R.string.label_phone_recovery),
                     keyboardType  = KeyboardType.Number
                 )
                 HadesTextField(
                     value         = document,
                     onValueChange = { if (it.length <= 12 && it.all { c -> c.isDigit() }) document = it },
-                    label         = "Número de Cédula",
+                    label         = stringResource(R.string.label_document_recovery),
                     keyboardType  = KeyboardType.Number
                 )
             }
@@ -160,14 +162,14 @@ fun VerifyIdentityDialog(
                 onClick = { onGenerate(phone, document) }
             ) {
                 Text(
-                    "VERIFICAR IDENTIDAD",
+                    stringResource(R.string.btn_verify_identity),
                     color      = if (habilitado) HadesCyan else HadesOnDark.copy(alpha = 0.3f),
                     fontWeight = FontWeight.Bold
                 )
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text("CANCELAR", color = HadesOnDark.copy(alpha = 0.5f)) }
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.btn_cancel), color = HadesOnDark.copy(alpha = 0.5f)) }
         }
     )
 }
@@ -190,7 +192,7 @@ fun CodeRevealDialog(
         title = {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Icon(Icons.Filled.Key, contentDescription = null, tint = HadesCyan, modifier = Modifier.size(20.dp))
-                Text("Tu código de verificación", color = HadesPurple, fontWeight = FontWeight.Bold)
+                Text(stringResource(R.string.recovery_code_title), color = HadesPurple, fontWeight = FontWeight.Bold)
             }
         },
         text = {
@@ -200,7 +202,7 @@ fun CodeRevealDialog(
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Text(
-                    text      = "Usa este código para confirmar tu identidad en el siguiente paso:",
+                    text      = stringResource(R.string.recovery_code_subtitle),
                     color     = HadesOnDark.copy(alpha = 0.7f),
                     fontSize  = 13.sp,
                     textAlign = TextAlign.Center
@@ -265,13 +267,13 @@ fun CodeRevealDialog(
                     shape    = RoundedCornerShape(10.dp),
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Icon(Icons.Filled.ContentCopy, contentDescription = "Copiar", modifier = Modifier.size(16.dp))
+                    Icon(Icons.Filled.ContentCopy, contentDescription = stringResource(R.string.btn_copy), modifier = Modifier.size(16.dp))
                     Spacer(Modifier.width(6.dp))
-                    Text(if (copiado) "¡Copiado!" else "Copiar código", fontSize = 13.sp)
+                    Text(if (copiado) stringResource(R.string.btn_copied) else stringResource(R.string.btn_copy), fontSize = 13.sp)
                 }
 
                 Text(
-                    text      = "Tendrás que ingresarlo en el próximo paso.",
+                    text      = stringResource(R.string.recovery_code_reminder),
                     color     = HadesOnDark.copy(alpha = 0.4f),
                     fontSize  = 11.sp,
                     textAlign = TextAlign.Center
@@ -280,11 +282,11 @@ fun CodeRevealDialog(
         },
         confirmButton = {
             TextButton(onClick = onContinue) {
-                Text("CONTINUAR", color = HadesOrange, fontWeight = FontWeight.Bold)
+                Text(stringResource(R.string.btn_continue), color = HadesOrange, fontWeight = FontWeight.Bold)
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text("CANCELAR", color = HadesOnDark.copy(alpha = 0.5f)) }
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.btn_cancel), color = HadesOnDark.copy(alpha = 0.5f)) }
         }
     )
 }
@@ -303,13 +305,13 @@ fun ConfirmCodeDialog(
         title = {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Icon(Icons.Filled.LockOpen, contentDescription = null, tint = HadesCyan, modifier = Modifier.size(20.dp))
-                Text("Confirmar código", color = HadesPurple, fontWeight = FontWeight.Bold)
+                Text(stringResource(R.string.recovery_confirm_title), color = HadesPurple, fontWeight = FontWeight.Bold)
             }
         },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Text(
-                    text      = "Ingresa el código de 6 dígitos que se te mostró:",
+                    text      = stringResource(R.string.recovery_confirm_subtitle),
                     color     = HadesOnDark.copy(alpha = 0.7f),
                     fontSize  = 13.sp,
                     textAlign = TextAlign.Center,
@@ -318,7 +320,7 @@ fun ConfirmCodeDialog(
                 HadesTextField(
                     value         = code,
                     onValueChange = { if (it.length <= 6 && it.all { c -> c.isDigit() }) code = it },
-                    label         = "Código de verificación",
+                    label         = stringResource(R.string.label_verification_code),
                     keyboardType  = KeyboardType.Number
                 )
             }
@@ -329,14 +331,14 @@ fun ConfirmCodeDialog(
                 onClick = { onValidate(code) }
             ) {
                 Text(
-                    text       = "VERIFICAR",
+                    text       = stringResource(R.string.btn_verify),
                     color      = if (code.length == 6) HadesCyan else HadesOnDark.copy(alpha = 0.3f),
                     fontWeight = FontWeight.Bold
                 )
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text("CANCELAR", color = HadesOnDark.copy(alpha = 0.5f)) }
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.btn_cancel), color = HadesOnDark.copy(alpha = 0.5f)) }
         }
     )
 }
@@ -352,7 +354,7 @@ fun ResetPinStepDialog(
 
     val coincide   = nuevoPin.length == 4 && nuevoPin == confirmacion
     val errorTexto = if (nuevoPin.length == 4 && confirmacion.length == 4 && !coincide)
-        "Los PINs no coinciden" else null
+        stringResource(R.string.error_pins_no_match) else null
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -360,27 +362,27 @@ fun ResetPinStepDialog(
         title = {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Icon(Icons.Filled.Lock, contentDescription = null, tint = HadesOrange, modifier = Modifier.size(20.dp))
-                Text("Nuevo PIN", color = HadesPurple, fontWeight = FontWeight.Bold)
+                Text(stringResource(R.string.recovery_reset_title), color = HadesPurple, fontWeight = FontWeight.Bold)
             }
         },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Text(
-                    text     = "Elige un PIN seguro de 4 dígitos",
+                    text     = stringResource(R.string.recovery_reset_subtitle),
                     color    = HadesOnDark.copy(alpha = 0.7f),
                     fontSize = 13.sp
                 )
                 HadesTextField(
                     value         = nuevoPin,
                     onValueChange = { if (it.length <= 4 && it.all { c -> c.isDigit() }) nuevoPin = it },
-                    label         = "Nuevo PIN",
+                    label         = stringResource(R.string.label_new_pin),
                     isPassword    = true,
                     keyboardType  = KeyboardType.NumberPassword
                 )
                 HadesTextField(
                     value         = confirmacion,
                     onValueChange = { if (it.length <= 4 && it.all { c -> c.isDigit() }) confirmacion = it },
-                    label         = "Confirmar PIN",
+                    label         = stringResource(R.string.label_confirm_pin),
                     isPassword    = true,
                     keyboardType  = KeyboardType.NumberPassword,
                     isError       = errorTexto != null
@@ -393,13 +395,13 @@ fun ResetPinStepDialog(
         },
         confirmButton = {
             TextButton(enabled = coincide, onClick = { onReset(nuevoPin) }) {
-                Text("ACTUALIZAR",
+                Text(stringResource(R.string.btn_update),
                     color      = if (coincide) HadesCyan else HadesOnDark.copy(alpha = 0.3f),
                     fontWeight = FontWeight.Bold)
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text("CANCELAR", color = HadesOnDark.copy(alpha = 0.5f)) }
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.btn_cancel), color = HadesOnDark.copy(alpha = 0.5f)) }
         }
     )
 }
