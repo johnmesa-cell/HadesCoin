@@ -15,12 +15,12 @@ import kotlinx.coroutines.launch
 import java.util.Locale
 
 class TransferViewModel(
-    private val transferUseCase:              TransferUseCase              = ServiceLocator.provideTransferUseCase(),
-    private val getWalletDataUseCase:         GetWalletDataUseCase         = ServiceLocator.provideGetWalletDataUseCase(),
-    private val getUserProfileUseCase:        GetUserProfileUseCase        = ServiceLocator.provideGetUserProfileUseCase(),
-    private val createNotificationUseCase:    CreateNotificationUseCase    = ServiceLocator.provideCreateNotificationUseCase(),
+    private val transferUseCase:               TransferUseCase               = ServiceLocator.provideTransferUseCase(),
+    private val getWalletDataUseCase:          GetWalletDataUseCase          = ServiceLocator.provideGetWalletDataUseCase(),
+    private val getUserProfileUseCase:         GetUserProfileUseCase         = ServiceLocator.provideGetUserProfileUseCase(),
+    private val createNotificationUseCase:     CreateNotificationUseCase     = ServiceLocator.provideCreateNotificationUseCase(),
     private val queueNotificationEmailUseCase: QueueNotificationEmailUseCase = ServiceLocator.provideQueueNotificationEmailUseCase(),
-    private val sessionRepository:            SessionRepository            = ServiceLocator.provideSessionRepository()
+    private val sessionRepository:             SessionRepository             = ServiceLocator.provideSessionRepository()
 ) : ViewModel() {
 
     private val _cargando        = MutableLiveData(false)
@@ -35,12 +35,10 @@ class TransferViewModel(
     private val _transferError   = MutableLiveData<String?>(null)
     val transferError: LiveData<String?> = _transferError
 
-    // ── Biometría ────────────────────────────────────────────────────────────
     private val _biometriaActiva = MutableLiveData(sessionRepository.isBiometriaActiva())
     val biometriaActiva: LiveData<Boolean> = _biometriaActiva
 
     fun loadSenderBalance(phoneNumber: String) {
-        // Refrescar estado de biometría (puede haber cambiado en Perfil)
         _biometriaActiva.value = sessionRepository.isBiometriaActiva()
         viewModelScope.launch {
             try {
@@ -52,19 +50,15 @@ class TransferViewModel(
         }
     }
 
-    /**
-     * [autenticadoConHuella] = true cuando el usuario pasó la biometría del dispositivo.
-     * En ese caso el PIN puede ser vacío y la validación de longitud se omite.
-     */
     fun transfer(
-        senderPhone:           String,
-        receiverPhone:         String,
-        amount:                Double,
-        pin:                   String,
-        autenticadoConHuella:  Boolean = false
+        senderPhone:          String,
+        receiverPhone:        String,
+        amount:               Double,
+        pin:                  String,
+        autenticadoConHuella: Boolean = false
     ) {
-        if (amount <= 0)                  { _transferError.value = "El monto debe ser mayor a cero.";    return }
-        if (receiverPhone.length != 10)   { _transferError.value = "Teléfono destinatario inválido.";    return }
+        if (amount <= 0)                { _transferError.value = "El monto debe ser mayor a cero.";    return }
+        if (receiverPhone.length != 10) { _transferError.value = "Teléfono destinatario inválido.";     return }
         if (!autenticadoConHuella && pin.length != 4) {
             _transferError.value = "El PIN debe tener 4 dígitos."
             return
@@ -73,7 +67,13 @@ class TransferViewModel(
 
         viewModelScope.launch {
             _cargando.value = true
-            val result = transferUseCase(senderPhone, receiverPhone, amount, pin)
+            val result = transferUseCase(
+                senderPhone          = senderPhone,
+                receiverPhone        = receiverPhone,
+                amount               = amount,
+                pin                  = pin,
+                autenticadoConHuella = autenticadoConHuella
+            )
             result.fold(
                 onSuccess = {
                     val (updatedUser, _) = getWalletDataUseCase(senderPhone)
@@ -90,46 +90,17 @@ class TransferViewModel(
     }
 
     private suspend fun registrarNotificacionesTransferencia(
-        senderPhone: String,
+        senderPhone:   String,
         receiverPhone: String,
-        amount: Double
+        amount:        Double
     ) {
         val monto = String.format(Locale.US, "%,.2f", amount)
-
-        createNotificationUseCase(
-            phoneNumber = senderPhone,
-            title   = "Transferencia enviada",
-            message = "Enviaste $$monto al numero $receiverPhone.",
-            type    = "TRANSFER"
-        )
-
-        createNotificationUseCase(
-            phoneNumber = receiverPhone,
-            title   = "Transferencia recibida",
-            message = "Recibiste $$monto del numero $senderPhone.",
-            type    = "TRANSFER"
-        )
-
+        createNotificationUseCase(phoneNumber = senderPhone,   title = "Transferencia enviada",   message = "Enviaste $$monto al numero $receiverPhone.",   type = "TRANSFER")
+        createNotificationUseCase(phoneNumber = receiverPhone, title = "Transferencia recibida", message = "Recibiste $$monto del numero $senderPhone.", type = "TRANSFER")
         val sender   = getUserProfileUseCase(senderPhone)
         val receiver = getUserProfileUseCase(receiverPhone)
-
-        if (!sender?.email.isNullOrBlank()) {
-            queueNotificationEmailUseCase(
-                phoneNumber = senderPhone,
-                toEmail     = sender.email,
-                subject     = "HadesCoin - Transferencia enviada",
-                body        = "Se registro una transferencia enviada por $$monto al numero $receiverPhone."
-            )
-        }
-
-        if (!receiver?.email.isNullOrBlank()) {
-            queueNotificationEmailUseCase(
-                phoneNumber = receiverPhone,
-                toEmail     = receiver.email,
-                subject     = "HadesCoin - Transferencia recibida",
-                body        = "Se registro una transferencia recibida por $$monto del numero $senderPhone."
-            )
-        }
+        if (!sender?.email.isNullOrBlank())   queueNotificationEmailUseCase(phoneNumber = senderPhone,   toEmail = sender.email,   subject = "HadesCoin - Transferencia enviada",   body = "Se registro una transferencia enviada por $$monto al numero $receiverPhone.")
+        if (!receiver?.email.isNullOrBlank()) queueNotificationEmailUseCase(phoneNumber = receiverPhone, toEmail = receiver.email, subject = "HadesCoin - Transferencia recibida", body = "Se registro una transferencia recibida por $$monto del numero $senderPhone.")
     }
 
     fun clearExito() { _transferExitosa.value = null }

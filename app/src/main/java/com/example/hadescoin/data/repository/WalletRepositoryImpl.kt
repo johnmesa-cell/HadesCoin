@@ -36,14 +36,11 @@ class WalletRepositoryImpl(
         val senderId  = snapshot.child("senderId").getValue(String::class.java)  ?: ""
         val type      = snapshot.child("type").getValue(String::class.java)      ?: "TRANSFER"
         val direction = when (type.uppercase()) {
-            // Depósito: siempre entra dinero al usuario
             "DEPOSIT"            -> "IN"
-            // Retiros ATM: siempre sale dinero del usuario
             "WITHDRAW",
             "WITHDRAWAL_PENDING",
             "WITHDRAWAL_COMPLETED",
             "WITHDRAWAL_FAILED"  -> "OUT"
-            // Transferencias y cualquier otro tipo: depende del rol
             else                 -> if (senderId == currentPhone) "OUT" else "IN"
         }
         return WalletTransaction(
@@ -76,19 +73,25 @@ class WalletRepositoryImpl(
     }
 
     override suspend fun transferFunds(
-        senderPhone:   String,
-        receiverPhone: String,
-        amount:        Double,
-        pin:           String
+        senderPhone:          String,
+        receiverPhone:        String,
+        amount:               Double,
+        pin:                  String,
+        autenticadoConHuella: Boolean
     ): Result<Unit> {
         return try {
             val senderSnapshot = userDataSource.getUser(senderPhone)
                 ?: return Result.failure(Exception("Usuario no encontrado"))
             val sender = mapUser(senderSnapshot)
 
-            if (sender.pin != pin)            return Result.failure(Exception("PIN incorrecto"))
-            if (sender.balance < amount)      return Result.failure(Exception("Saldo insuficiente"))
-            if (senderPhone == receiverPhone) return Result.failure(Exception("No puedes transferirte a ti mismo"))
+            // Validar PIN solo si NO se autenticó con huella
+            if (!autenticadoConHuella && sender.pin != pin)
+                return Result.failure(Exception("PIN incorrecto"))
+
+            if (sender.balance < amount)
+                return Result.failure(Exception("Saldo insuficiente"))
+            if (senderPhone == receiverPhone)
+                return Result.failure(Exception("No puedes transferirte a ti mismo"))
 
             val receiverSnapshot = userDataSource.getUser(receiverPhone)
                 ?: return Result.failure(Exception("El destinatario no existe"))

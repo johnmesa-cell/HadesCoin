@@ -6,14 +6,15 @@ import com.example.hadescoin.domain.model.WalletTransaction
 interface WalletRepository {
     suspend fun getWalletData(phoneNumber: String): Pair<AppUser?, List<WalletTransaction>>
 
-    suspend fun transferFunds(
-        senderPhone:   String,
-        receiverPhone: String,
-        amount:        Double,
-        pin:           String
-    ): Result<Unit>
-
     suspend fun getUserByPhone(phoneNumber: String): AppUser?
+
+    suspend fun transferFunds(
+        senderPhone:          String,
+        receiverPhone:        String,
+        amount:               Double,
+        pin:                  String,
+        autenticadoConHuella: Boolean = false
+    ): Result<Unit>
 
     suspend fun updatePin(phoneNumber: String, newPin: String): Boolean
 
@@ -23,13 +24,6 @@ interface WalletRepository {
 
     suspend fun validateAndClearCode(phoneNumber: String, code: String): Boolean
 
-    /**
-     * Guarda en Firebase una transacción WITHDRAWAL_PENDING con:
-     * - verificationCode: código de 6 dígitos
-     * - withdrawalAmount: monto máximo autorizado
-     * - expiresAt: timestamp ISO 8601 de expiración (now + 25 min)
-     * Retorna el txId generado por Firebase, o null si falla.
-     */
     suspend fun saveWithdrawalCode(
         phoneNumber: String,
         code:        String,
