@@ -11,25 +11,20 @@ import androidx.fragment.app.FragmentActivity
 /**
  * Núcleo de biometría de HadesCoin.
  *
- * Encapsula toda la lógica de BiometricPrompt de AndroidX.
- * Se reutiliza desde LoginView, WithdrawCodeDialog, TransferView y ProfileView
- * sin duplicar código.
+ * IMPORTANTE: BiometricPrompt de AndroidX requiere una FragmentActivity.
+ * ComponentActivity (base de MainActivity en Compose) NO extiende FragmentActivity.
  *
- * Uso:
- *   val disponible = BiometricHelper.isDisponible(context)
- *   BiometricHelper.mostrar(
- *       activity  = requireActivity() as FragmentActivity,
- *       titulo    = "Confirmar retiro",
- *       subtitulo = "Usa tu huella para autorizar",
- *       onExito   = { /* continuar */ },
- *       onError   = { msg -> /* mostrar error o fallback a PIN */ }
- *   )
+ * Solución: MainActivity debe extender FragmentActivity en lugar de ComponentActivity.
+ * FragmentActivity extiende ComponentActivity, por lo que es 100% compatible con Compose.
+ *
+ * Uso desde cualquier Composable:
+ *   val activity = LocalContext.current as FragmentActivity
+ *   BiometricHelper.mostrar(activity, ...)
  */
 object BiometricHelper {
 
     /**
      * Verifica si el dispositivo tiene biometría disponible y registrada.
-     * Retorna true solo si hay hardware Y al menos una huella/cara enrollada.
      */
     fun isDisponible(context: Context): Boolean {
         val manager = BiometricManager.from(context)
@@ -40,11 +35,11 @@ object BiometricHelper {
     /**
      * Muestra el diálogo nativo de biometría del sistema operativo.
      *
-     * @param activity   FragmentActivity requerida por BiometricPrompt
-     * @param titulo     Título del diálogo (ej: "Iniciar sesión")
-     * @param subtitulo  Subtítulo descriptivo (ej: "Usa tu huella para entrar")
+     * @param activity   FragmentActivity — MainActivity ya la extiende tras el fix
+     * @param titulo     Título del diálogo
+     * @param subtitulo  Subtítulo descriptivo
      * @param onExito    Callback cuando la autenticación es exitosa
-     * @param onError    Callback cuando falla o el usuario cancela — recibe el mensaje de error
+     * @param onError    Callback cuando falla o el usuario cancela
      */
     fun mostrar(
         activity:  FragmentActivity,
@@ -60,15 +55,13 @@ object BiometricHelper {
                 onExito()
             }
             override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
-                // Código 10 = el usuario canceló manualmente → no es un error real
                 if (errorCode != BiometricPrompt.ERROR_USER_CANCELED &&
                     errorCode != BiometricPrompt.ERROR_NEGATIVE_BUTTON) {
                     onError(errString.toString())
                 }
             }
             override fun onAuthenticationFailed() {
-                // Huella no reconocida — el sistema ya muestra el mensaje nativo,
-                // no necesitamos hacer nada adicional aquí
+                // El sistema ya muestra el feedback nativo, no se hace nada adicional
             }
         }
 

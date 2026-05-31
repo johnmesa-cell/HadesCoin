@@ -1,11 +1,9 @@
 package com.example.hadescoin.presentation.auth.login
 
-import androidx.biometric.BiometricPrompt
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Fingerprint
 import androidx.compose.material3.*
@@ -38,13 +36,14 @@ fun LoginView(
     navController: NavController,
     viewModel: LoginViewModel = viewModel()
 ) {
-    val context          = LocalContext.current
-    val activity         = context as? FragmentActivity
+    val context  = LocalContext.current
+    // MainActivity ahora extiende FragmentActivity — este cast siempre es exitoso
+    val activity = context as? FragmentActivity
 
-    val telefonoGuardado  by viewModel.telefonoGuardado.observeAsState("")
-    val nombreGuardado    by viewModel.nombreGuardado.observeAsState("")
-    val haySession        by viewModel.haySessionGuardada.observeAsState(false)
-    val biometriaActiva   by viewModel.biometriaActiva.observeAsState(false)
+    val telefonoGuardado by viewModel.telefonoGuardado.observeAsState("")
+    val nombreGuardado   by viewModel.nombreGuardado.observeAsState("")
+    val haySession       by viewModel.haySessionGuardada.observeAsState(false)
+    val biometriaActiva  by viewModel.biometriaActiva.observeAsState(false)
 
     var phoneNumber by remember { mutableStateOf("") }
     var pin         by remember { mutableStateOf("") }
@@ -62,7 +61,7 @@ fun LoginView(
                 titulo    = "HadesCoin",
                 subtitulo = "Usa tu huella para iniciar sesión",
                 onExito   = { viewModel.loginConBiometria() },
-                onError   = { /* el usuario cierra el prompt → queda el campo de PIN visible */ }
+                onError   = { }
             )
         }
     }
@@ -113,7 +112,7 @@ fun LoginView(
                     titulo    = "HadesCoin",
                     subtitulo = "Usa tu huella para iniciar sesión",
                     onExito   = { viewModel.loginConBiometria() },
-                    onError   = { /* fallback: el usuario escribe el PIN */ }
+                    onError   = { }
                 )
             }
         }
@@ -199,7 +198,6 @@ fun LoginContent(
             Spacer(Modifier.height(32.dp))
 
             HadesCardBox {
-                // ── Saludo personalizado cuando hay sesión guardada ──────────────────
                 if (haySession && nombreGuardado.isNotBlank()) {
                     Text(
                         text          = "¡Bienvenido de nuevo,",
@@ -215,7 +213,6 @@ fun LoginContent(
                     )
                     Spacer(Modifier.height(16.dp))
 
-                    // ── Botón de huella cuando biometría está activa ─────────────
                     if (biometriaActiva) {
                         Box(
                             modifier         = Modifier.fillMaxWidth(),
@@ -263,14 +260,13 @@ fun LoginContent(
                     )
                 }
 
-                // ── Campos de autenticación ────────────────────────────────────
                 HadesTextField(
-                    value          = phoneNumber,
-                    onValueChange  = onPhoneChange,
-                    label          = stringResource(R.string.label_phone_number),
-                    keyboardType   = KeyboardType.Number,
-                    isError        = loginError != null && phoneNumber.isBlank(),
-                    enabled        = !haySession  // precargado y bloqueado en login inteligente
+                    value         = phoneNumber,
+                    onValueChange = onPhoneChange,
+                    label         = stringResource(R.string.label_phone_number),
+                    keyboardType  = KeyboardType.Number,
+                    isError       = loginError != null && phoneNumber.isBlank(),
+                    enabled       = !haySession
                 )
                 HadesTextField(
                     value         = pin,
@@ -295,7 +291,6 @@ fun LoginContent(
                     Text("¿Olvidaste tu PIN?", color = HadesCyan, fontSize = 12.sp, fontWeight = FontWeight.Medium)
                 }
 
-                // ── Opción de cambiar de usuario en login inteligente ───────────
                 if (haySession) {
                     Spacer(Modifier.height(4.dp))
                     TextButton(
@@ -312,7 +307,6 @@ fun LoginContent(
                 }
             }
 
-            // ── Registro — solo visible en login normal (sin sesión guardada) ──
             if (!haySession) {
                 Spacer(Modifier.height(20.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -322,8 +316,8 @@ fun LoginContent(
                         color    = HadesOnDark.copy(alpha = 0.5f)
                     )
                     TextButton(
-                        onClick         = onRegisterClick,
-                        contentPadding  = PaddingValues(horizontal = 4.dp)
+                        onClick        = onRegisterClick,
+                        contentPadding = PaddingValues(horizontal = 4.dp)
                     ) {
                         Text(
                             text          = stringResource(R.string.btn_register_link),
