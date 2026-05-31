@@ -5,9 +5,12 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Fingerprint
+import androidx.compose.material.icons.filled.PersonAdd
+import androidx.compose.material.icons.filled.SwapHoriz
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.livedata.observeAsState
@@ -169,6 +172,7 @@ fun LoginContent(
         ) {
             Spacer(Modifier.height(24.dp))
 
+            // ── Logo + título ────────────────────────────────────────────────
             Image(
                 painter            = painterResource(R.drawable.ic_hadescoin_logo),
                 contentDescription = stringResource(R.string.cd_logo),
@@ -208,52 +212,187 @@ fun LoginContent(
             )
             Spacer(Modifier.height(24.dp))
 
+            // ── Tarjeta principal ────────────────────────────────────────────
             HadesCardBox {
-                if (haySession && nombreGuardado.isNotBlank()) {
-                    Text(text = "¡Bienvenido de nuevo,", fontSize = 11.sp, letterSpacing = 1.sp, color = HadesOnDark.copy(alpha = 0.55f))
-                    Text(text = nombreGuardado, fontSize = 18.sp, fontWeight = FontWeight.Black, color = HadesCyan)
-                    Spacer(Modifier.height(14.dp))
 
+                // ── Cabecera inteligente: saludo cuando hay sesión guardada ──
+                if (haySession && nombreGuardado.isNotBlank()) {
+                    Column(
+                        modifier            = Modifier.fillMaxWidth(),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text(
+                            text          = "¡Hola de nuevo!",
+                            fontSize      = 11.sp,
+                            letterSpacing = 1.sp,
+                            color         = HadesOnDark.copy(alpha = 0.45f),
+                            textAlign     = TextAlign.Center
+                        )
+                        Spacer(Modifier.height(2.dp))
+                        Text(
+                            text          = nombreGuardado,
+                            fontSize      = 20.sp,
+                            fontWeight    = FontWeight.Black,
+                            color         = HadesCyan,
+                            textAlign     = TextAlign.Center,
+                            letterSpacing = 0.5.sp
+                        )
+                    }
+                    Spacer(Modifier.height(16.dp))
+
+                    // Botón de huella (solo si biometría activa)
                     if (biometriaActiva) {
                         Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
                             IconButton(
                                 onClick  = onHuellaClick,
-                                modifier = Modifier.size(68.dp).clip(CircleShape).background(HadesCyan.copy(alpha = 0.10f))
+                                modifier = Modifier
+                                    .size(68.dp)
+                                    .clip(CircleShape)
+                                    .background(HadesCyan.copy(alpha = 0.10f))
                             ) {
-                                Icon(imageVector = Icons.Filled.Fingerprint, contentDescription = "Autenticar con huella", tint = HadesCyan, modifier = Modifier.size(38.dp))
+                                Icon(
+                                    imageVector        = Icons.Filled.Fingerprint,
+                                    contentDescription = "Autenticar con huella",
+                                    tint               = HadesCyan,
+                                    modifier           = Modifier.size(38.dp)
+                                )
                             }
                         }
-                        Text(text = "Toca para usar tu huella", fontSize = 11.sp, color = HadesOnDark.copy(alpha = 0.4f), textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth())
-                        Spacer(Modifier.height(12.dp))
-                        Text(text = "— o ingresa tu PIN —", fontSize = 10.sp, color = HadesOnDark.copy(alpha = 0.3f), textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth())
+                        Text(
+                            text      = "Toca para usar tu huella",
+                            fontSize  = 11.sp,
+                            color     = HadesOnDark.copy(alpha = 0.4f),
+                            textAlign = TextAlign.Center,
+                            modifier  = Modifier.fillMaxWidth()
+                        )
+                        Spacer(Modifier.height(14.dp))
+                        Text(
+                            text      = "— o ingresa tu PIN —",
+                            fontSize  = 10.sp,
+                            color     = HadesOnDark.copy(alpha = 0.3f),
+                            textAlign = TextAlign.Center,
+                            modifier  = Modifier.fillMaxWidth()
+                        )
                         Spacer(Modifier.height(8.dp))
+                    } else {
+                        Text(
+                            text      = "Ingresa tu PIN para continuar",
+                            fontSize  = 11.sp,
+                            color     = HadesOnDark.copy(alpha = 0.35f),
+                            textAlign = TextAlign.Center,
+                            modifier  = Modifier.fillMaxWidth()
+                        )
+                        Spacer(Modifier.height(12.dp))
                     }
+
                 } else {
-                    Text(text = stringResource(R.string.login_section_header), fontSize = 12.sp, fontWeight = FontWeight.Bold, letterSpacing = 2.sp, color = HadesCyan)
+                    // Cabecera normal (sin sesión guardada)
+                    Text(
+                        text          = stringResource(R.string.login_section_header),
+                        fontSize      = 12.sp,
+                        fontWeight    = FontWeight.Bold,
+                        letterSpacing = 2.sp,
+                        color         = HadesCyan
+                    )
                 }
 
-                HadesTextField(value = phoneNumber, onValueChange = onPhoneChange, label = stringResource(R.string.label_phone_number), keyboardType = KeyboardType.Number, isError = loginError != null && phoneNumber.isBlank(), enabled = !haySession)
-                HadesTextField(value = pin, onValueChange = onPinChange, label = stringResource(R.string.label_pin), isPassword = true, keyboardType = KeyboardType.NumberPassword, isError = loginError != null && pin.length < 4)
+                // ── Campos ────────────────────────────────────────────────────
+                HadesTextField(
+                    value         = phoneNumber,
+                    onValueChange = onPhoneChange,
+                    label         = stringResource(R.string.label_phone_number),
+                    keyboardType  = KeyboardType.Number,
+                    isError       = loginError != null && phoneNumber.isBlank(),
+                    enabled       = !haySession
+                )
+                HadesTextField(
+                    value         = pin,
+                    onValueChange = onPinChange,
+                    label         = stringResource(R.string.label_pin),
+                    isPassword    = true,
+                    keyboardType  = KeyboardType.NumberPassword,
+                    isError       = loginError != null && pin.length < 4
+                )
                 Spacer(Modifier.height(4.dp))
-                HadesButton(text = stringResource(R.string.btn_login), textCargando = stringResource(R.string.btn_login_loading), onClick = onLoginClick, enabled = phoneNumber.length >= 5 && pin.length == 4, cargando = cargando)
-                TextButton(onClick = onForgotPasswordClick, modifier = Modifier.align(Alignment.End)) {
+                HadesButton(
+                    text         = stringResource(R.string.btn_login),
+                    textCargando = stringResource(R.string.btn_login_loading),
+                    onClick      = onLoginClick,
+                    enabled      = phoneNumber.length >= 5 && pin.length == 4,
+                    cargando     = cargando
+                )
+                TextButton(
+                    onClick  = onForgotPasswordClick,
+                    modifier = Modifier.align(Alignment.End)
+                ) {
                     Text("¿Olvidaste tu PIN?", color = HadesCyan, fontSize = 12.sp, fontWeight = FontWeight.Medium)
                 }
 
+                // ── Opción cambiar cuenta (solo en modo inteligente) ──────────
                 if (haySession) {
                     Spacer(Modifier.height(4.dp))
-                    TextButton(onClick = onOtroUsuario, modifier = Modifier.align(Alignment.CenterHorizontally)) {
-                        Text(text = "Iniciar sesión como otro usuario", color = HadesOnDark.copy(alpha = 0.4f), fontSize = 11.sp, fontWeight = FontWeight.Medium)
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(1.dp)
+                            .background(HadesOnDark.copy(alpha = 0.07f))
+                    )
+                    Spacer(Modifier.height(4.dp))
+                    TextButton(
+                        onClick  = onOtroUsuario,
+                        modifier = Modifier.align(Alignment.CenterHorizontally)
+                    ) {
+                        Icon(
+                            imageVector        = Icons.Filled.SwapHoriz,
+                            contentDescription = null,
+                            tint               = HadesOnDark.copy(alpha = 0.35f),
+                            modifier           = Modifier.size(16.dp)
+                        )
+                        Spacer(Modifier.width(6.dp))
+                        Text(
+                            text       = "Usar otra cuenta",
+                            color      = HadesOnDark.copy(alpha = 0.4f),
+                            fontSize   = 12.sp,
+                            fontWeight = FontWeight.Medium
+                        )
                     }
                 }
             }
 
-            if (!haySession) {
-                Spacer(Modifier.height(16.dp))
+            // ── Crear cuenta — SIEMPRE visible ───────────────────────────────
+            Spacer(Modifier.height(16.dp))
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(HadesNavyDark)
+                    .padding(horizontal = 16.dp, vertical = 4.dp),
+                contentAlignment = Alignment.Center
+            ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(text = stringResource(R.string.text_no_account), fontSize = 13.sp, color = HadesOnDark.copy(alpha = 0.5f))
-                    TextButton(onClick = onRegisterClick, contentPadding = PaddingValues(horizontal = 4.dp)) {
-                        Text(text = stringResource(R.string.btn_register_link), fontSize = 13.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp, color = HadesOrange)
+                    Icon(
+                        imageVector        = Icons.Filled.PersonAdd,
+                        contentDescription = null,
+                        tint               = HadesOrange.copy(alpha = 0.7f),
+                        modifier           = Modifier.size(16.dp)
+                    )
+                    Spacer(Modifier.width(4.dp))
+                    Text(
+                        text     = stringResource(R.string.text_no_account),
+                        fontSize = 13.sp,
+                        color    = HadesOnDark.copy(alpha = 0.5f)
+                    )
+                    TextButton(
+                        onClick         = onRegisterClick,
+                        contentPadding  = PaddingValues(horizontal = 4.dp)
+                    ) {
+                        Text(
+                            text          = stringResource(R.string.btn_register_link),
+                            fontSize      = 13.sp,
+                            fontWeight    = FontWeight.Bold,
+                            letterSpacing = 1.sp,
+                            color         = HadesOrange
+                        )
                     }
                 }
             }
@@ -263,20 +402,44 @@ fun LoginContent(
     }
 }
 
+// ── Previews ─────────────────────────────────────────────────────────────────
+
 @Preview(showBackground = true, showSystemUi = true, name = "Login — normal")
 @Composable
 fun LoginViewPreview() {
-    HadesCoinTheme { LoginContent(phoneNumber = "", pin = "", cargando = false, loginError = null, onPhoneChange = {}, onPinChange = {}, onLoginClick = {}, onRegisterClick = {}, onForgotPasswordClick = {}) }
+    HadesCoinTheme {
+        LoginContent(
+            phoneNumber = "", pin = "", cargando = false, loginError = null,
+            onPhoneChange = {}, onPinChange = {}, onLoginClick = {},
+            onRegisterClick = {}, onForgotPasswordClick = {}
+        )
+    }
 }
 
 @Preview(showBackground = true, showSystemUi = true, name = "Login — inteligente con huella")
 @Composable
 fun LoginViewBiometriaPreview() {
-    HadesCoinTheme { LoginContent(phoneNumber = "3001234567", pin = "", cargando = false, loginError = null, haySession = true, nombreGuardado = "Juan Pérez", biometriaActiva = true, onPhoneChange = {}, onPinChange = {}, onLoginClick = {}, onRegisterClick = {}, onForgotPasswordClick = {}, onOtroUsuario = {}, onHuellaClick = {}) }
+    HadesCoinTheme {
+        LoginContent(
+            phoneNumber = "3001234567", pin = "", cargando = false, loginError = null,
+            haySession = true, nombreGuardado = "Juan Pérez", biometriaActiva = true,
+            onPhoneChange = {}, onPinChange = {}, onLoginClick = {},
+            onRegisterClick = {}, onForgotPasswordClick = {},
+            onOtroUsuario = {}, onHuellaClick = {}
+        )
+    }
 }
 
 @Preview(showBackground = true, showSystemUi = true, name = "Login — inteligente sin huella")
 @Composable
 fun LoginViewSinHuellaPreview() {
-    HadesCoinTheme { LoginContent(phoneNumber = "3001234567", pin = "", cargando = false, loginError = null, haySession = true, nombreGuardado = "Juan Pérez", biometriaActiva = false, onPhoneChange = {}, onPinChange = {}, onLoginClick = {}, onRegisterClick = {}, onForgotPasswordClick = {}, onOtroUsuario = {}) }
+    HadesCoinTheme {
+        LoginContent(
+            phoneNumber = "3001234567", pin = "", cargando = false, loginError = null,
+            haySession = true, nombreGuardado = "Juan Pérez", biometriaActiva = false,
+            onPhoneChange = {}, onPinChange = {}, onLoginClick = {},
+            onRegisterClick = {}, onForgotPasswordClick = {},
+            onOtroUsuario = {}
+        )
+    }
 }
