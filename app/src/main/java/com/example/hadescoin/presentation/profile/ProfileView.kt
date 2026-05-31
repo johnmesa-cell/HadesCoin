@@ -38,20 +38,15 @@ fun ProfileView(
     val codigoValidado by viewModel.codigoValidado.observeAsState(false)
     val noLeidas       by viewModel.notificacionesNoLeidas.observeAsState(0)
     val biometriaActiva by viewModel.biometriaActiva.observeAsState(false)
-
-    // El switch solo aparece si el dispositivo tiene biometría disponible
     val dispositivoTieneBiometria = remember { BiometricHelper.isDisponible(context) }
 
     var showPinDialog      by remember { mutableStateOf(false) }
     var showNicknameDialog by remember { mutableStateOf(false) }
     var showRecoveryFlow   by remember { mutableStateOf(false) }
 
-    LaunchedEffect(phoneNumber) {
-        viewModel.cargarPerfil(phoneNumber)
-        viewModel.cargarNoLeidas(phoneNumber)
-    }
+    LaunchedEffect(phoneNumber) { viewModel.cargarPerfil(phoneNumber); viewModel.cargarNoLeidas(phoneNumber) }
 
-    HadesBackground {
+    HadesScreen {
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -59,128 +54,55 @@ fun ProfileView(
                 .verticalScroll(rememberScrollState()),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Spacer(modifier = Modifier.height(60.dp))
+            Spacer(modifier = Modifier.height(24.dp))
 
             user?.let { u ->
                 val displayGreeting = u.nickname.ifBlank { u.fullName.split(" ").firstOrNull() ?: "" }
-                Text(
-                    text          = "HOLA, $displayGreeting".uppercase(),
-                    fontSize      = 28.sp,
-                    fontWeight    = FontWeight.Black,
-                    color         = HadesPurple,
-                    letterSpacing = 4.sp
-                )
+                Text(text = "HOLA, $displayGreeting".uppercase(), fontSize = 28.sp, fontWeight = FontWeight.Black, color = HadesPurple, letterSpacing = 4.sp)
             } ?: Text(text = "MI PERFIL", fontSize = 28.sp, fontWeight = FontWeight.Black, color = HadesPurple, letterSpacing = 4.sp)
 
             Spacer(modifier = Modifier.height(24.dp))
 
             user?.let { u ->
                 HadesCardBox {
-                    // ── Datos del usuario ───────────────────────────────────────
                     ProfileItem(label = "Nombre Completo",     value = u.fullName)
                     ProfileItem(label = "Apodo",               value = u.nickname.ifBlank { "No asignado" }, isMissing = u.nickname.isBlank())
                     ProfileItem(label = "Número de Documento", value = u.documentNumber, isMissing = u.documentNumber.isBlank())
                     ProfileItem(label = "Teléfono",            value = u.phoneNumber)
                     ProfileItem(label = "Miembro desde",       value = u.createdAt.take(10))
                     ProfileItem(label = "PIN",                 value = "****")
-
                     Spacer(modifier = Modifier.height(16.dp))
 
-                    // ── Sección de seguridad ──────────────────────────────────
-                    Text(
-                        text          = "SEGURIDAD",
-                        fontSize      = 11.sp,
-                        fontWeight    = FontWeight.Bold,
-                        letterSpacing = 2.sp,
-                        color         = HadesCyan
-                    )
+                    Text(text = "SEGURIDAD", fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 2.sp, color = HadesCyan)
                     Spacer(modifier = Modifier.height(8.dp))
-
                     HadesButton(text = "Cambiar PIN", onClick = { showPinDialog = true }, modifier = Modifier.fillMaxWidth())
-
                     Spacer(modifier = Modifier.height(4.dp))
-
                     TextButton(onClick = { showRecoveryFlow = true }, modifier = Modifier.align(Alignment.End)) {
                         Text("¿Olvidaste tu PIN?", color = HadesCyan, fontSize = 12.sp, fontWeight = FontWeight.Medium)
                     }
 
-                    // ── Switch de biometría — solo visible si el dispositivo lo soporta ──
                     if (dispositivoTieneBiometria) {
                         Spacer(modifier = Modifier.height(8.dp))
-                        Row(
-                            modifier          = Modifier.fillMaxWidth(),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                modifier          = Modifier.weight(1f)
-                            ) {
-                                Icon(
-                                    imageVector        = Icons.Filled.Fingerprint,
-                                    contentDescription = null,
-                                    tint               = if (biometriaActiva) HadesCyan else HadesOnDark.copy(alpha = 0.4f),
-                                    modifier           = Modifier.size(22.dp)
-                                )
+                        Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
+                            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
+                                Icon(imageVector = Icons.Filled.Fingerprint, contentDescription = null, tint = if (biometriaActiva) HadesCyan else HadesOnDark.copy(alpha = 0.4f), modifier = Modifier.size(22.dp))
                                 Spacer(Modifier.width(10.dp))
                                 Column {
-                                    Text(
-                                        text       = "Desbloqueo con huella",
-                                        fontSize   = 14.sp,
-                                        fontWeight = FontWeight.Medium,
-                                        color      = HadesOnDark
-                                    )
-                                    Text(
-                                        text     = if (biometriaActiva) "Activo" else "Inactivo",
-                                        fontSize = 11.sp,
-                                        color    = if (biometriaActiva) HadesCyan else HadesOnDark.copy(alpha = 0.4f)
-                                    )
+                                    Text(text = "Desbloqueo con huella", fontSize = 14.sp, fontWeight = FontWeight.Medium, color = HadesOnDark)
+                                    Text(text = if (biometriaActiva) "Activo" else "Inactivo", fontSize = 11.sp, color = if (biometriaActiva) HadesCyan else HadesOnDark.copy(alpha = 0.4f))
                                 }
                             }
-                            Switch(
-                                checked         = biometriaActiva,
-                                onCheckedChange = { viewModel.setBiometriaActiva(it) },
-                                colors          = SwitchDefaults.colors(
-                                    checkedThumbColor   = HadesCyan,
-                                    checkedTrackColor   = HadesCyan.copy(alpha = 0.3f),
-                                    uncheckedThumbColor = HadesOnDark.copy(alpha = 0.4f),
-                                    uncheckedTrackColor = HadesOnDark.copy(alpha = 0.1f)
-                                )
-                            )
+                            Switch(checked = biometriaActiva, onCheckedChange = { viewModel.setBiometriaActiva(it) }, colors = SwitchDefaults.colors(checkedThumbColor = HadesCyan, checkedTrackColor = HadesCyan.copy(alpha = 0.3f), uncheckedThumbColor = HadesOnDark.copy(alpha = 0.4f), uncheckedTrackColor = HadesOnDark.copy(alpha = 0.1f)))
                         }
                     }
 
                     Spacer(modifier = Modifier.height(16.dp))
-
-                    // ── Sección de perfil ──────────────────────────────────────
-                    Text(
-                        text          = "PERSONALIZAR",
-                        fontSize      = 11.sp,
-                        fontWeight    = FontWeight.Bold,
-                        letterSpacing = 2.sp,
-                        color         = HadesCyan
-                    )
+                    Text(text = "PERSONALIZAR", fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 2.sp, color = HadesCyan)
                     Spacer(modifier = Modifier.height(8.dp))
-
-                    HadesButton(
-                        text     = if (u.nickname.isBlank()) "Agregar Apodo" else "Cambiar Apodo",
-                        onClick  = { showNicknameDialog = true },
-                        modifier = Modifier.fillMaxWidth()
-                    )
-
+                    HadesButton(text = if (u.nickname.isBlank()) "Agregar Apodo" else "Cambiar Apodo", onClick = { showNicknameDialog = true }, modifier = Modifier.fillMaxWidth())
                     Spacer(modifier = Modifier.height(10.dp))
-
-                    // ── Notificaciones ──────────────────────────────────────────
-                    OutlinedButton(
-                        onClick  = { navController.navigate("notifications/$phoneNumber") },
-                        modifier = Modifier.fillMaxWidth(),
-                        colors   = ButtonDefaults.outlinedButtonColors(contentColor = HadesCyan)
-                    ) {
-                        BadgedBox(
-                            badge = { if (noLeidas > 0) Badge { Text(noLeidas.toString()) } }
-                        ) {
-                            Icon(imageVector = Icons.Filled.Notifications, contentDescription = null, modifier = Modifier.size(18.dp))
-                        }
+                    OutlinedButton(onClick = { navController.navigate("notifications/$phoneNumber") }, modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.outlinedButtonColors(contentColor = HadesCyan)) {
+                        BadgedBox(badge = { if (noLeidas > 0) Badge { Text(noLeidas.toString()) } }) { Icon(imageVector = Icons.Filled.Notifications, contentDescription = null, modifier = Modifier.size(18.dp)) }
                         Spacer(modifier = Modifier.width(8.dp))
                         Text("Notificaciones")
                     }
@@ -194,55 +116,19 @@ fun ProfileView(
     }
 
     if (cargando) ShowLoadingAlertDialog()
+    mensajeExito?.let { ShowMessageAlertDialog(onConfirmation = { viewModel.clearMessages() }, dialogTitle = "Exito",  dialogText = it) }
+    mensajeError?.let { ShowMessageAlertDialog(onConfirmation = { viewModel.clearMessages() }, dialogTitle = "Error", dialogText = it) }
 
-    mensajeExito?.let {
-        ShowMessageAlertDialog(onConfirmation = { viewModel.clearMessages() }, dialogTitle = "Exito", dialogText = it)
-    }
-    mensajeError?.let {
-        ShowMessageAlertDialog(onConfirmation = { viewModel.clearMessages() }, dialogTitle = "Error", dialogText = it)
-    }
-
-    if (showPinDialog) {
-        ChangePinDialog(
-            onDismiss = { showPinDialog = false },
-            onConfirm = { actual, nuevo, confirm ->
-                viewModel.cambiarPin(phoneNumber, actual, nuevo, confirm)
-                showPinDialog = false
-            }
-        )
-    }
-
-    if (showRecoveryFlow) {
-        PinRecoveryFlow(
-            codigoGenerado = codigoGenerado,
-            codigoValidado = codigoValidado,
-            onDismiss      = { showRecoveryFlow = false },
-            onGenerate     = { phone, doc -> viewModel.generarCodigoVerificacion(phone, doc) },
-            onValidate     = { code -> viewModel.validarCodigo(code) },
-            onReset        = { newPin -> viewModel.resetearPin(newPin) },
-            onClearState   = { viewModel.clearMessages() }
-        )
-    }
-
-    if (showNicknameDialog) {
-        ChangeNicknameDialog(
-            currentNickname = user?.nickname.orEmpty(),
-            onDismiss       = { showNicknameDialog = false },
-            onConfirm       = { nuevo -> viewModel.actualizarApodo(phoneNumber, nuevo); showNicknameDialog = false }
-        )
-    }
+    if (showPinDialog) ChangePinDialog(onDismiss = { showPinDialog = false }, onConfirm = { actual, nuevo, confirm -> viewModel.cambiarPin(phoneNumber, actual, nuevo, confirm); showPinDialog = false })
+    if (showRecoveryFlow) PinRecoveryFlow(codigoGenerado = codigoGenerado, codigoValidado = codigoValidado, onDismiss = { showRecoveryFlow = false }, onGenerate = { phone, doc -> viewModel.generarCodigoVerificacion(phone, doc) }, onValidate = { code -> viewModel.validarCodigo(code) }, onReset = { newPin -> viewModel.resetearPin(newPin) }, onClearState = { viewModel.clearMessages() })
+    if (showNicknameDialog) ChangeNicknameDialog(currentNickname = user?.nickname.orEmpty(), onDismiss = { showNicknameDialog = false }, onConfirm = { nuevo -> viewModel.actualizarApodo(phoneNumber, nuevo); showNicknameDialog = false })
 }
 
 @Composable
 fun ProfileItem(label: String, value: String, isMissing: Boolean = false) {
     Column(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
         Text(text = label, fontSize = 12.sp, fontWeight = FontWeight.Bold, color = HadesCyan, letterSpacing = 1.sp)
-        Text(
-            text       = if (isMissing) "$value (Pendiente)" else value,
-            fontSize   = 16.sp,
-            fontWeight = FontWeight.Medium,
-            color      = if (isMissing) HadesOrange else HadesOnDark
-        )
+        Text(text = if (isMissing) "$value (Pendiente)" else value, fontSize = 16.sp, fontWeight = FontWeight.Medium, color = if (isMissing) HadesOrange else HadesOnDark)
     }
 }
 
@@ -252,16 +138,13 @@ fun ChangePinDialog(onDismiss: () -> Unit, onConfirm: (String, String, String) -
     var pinNuevo     by remember { mutableStateOf("") }
     var confirmacion by remember { mutableStateOf("") }
     AlertDialog(
-        onDismissRequest = onDismiss,
-        containerColor   = HadesNavyDark,
+        onDismissRequest = onDismiss, containerColor = HadesNavyDark,
         title = { Text("Cambiar PIN", color = HadesPurple) },
-        text  = {
-            Column {
-                HadesTextField(value = pinActual,    onValueChange = { if (it.length <= 4 && it.all { c -> c.isDigit() }) pinActual    = it }, label = "PIN Actual",          isPassword = true, keyboardType = KeyboardType.NumberPassword)
-                HadesTextField(value = pinNuevo,     onValueChange = { if (it.length <= 4 && it.all { c -> c.isDigit() }) pinNuevo     = it }, label = "Nuevo PIN",           isPassword = true, keyboardType = KeyboardType.NumberPassword)
-                HadesTextField(value = confirmacion, onValueChange = { if (it.length <= 4 && it.all { c -> c.isDigit() }) confirmacion = it }, label = "Confirmar Nuevo PIN", isPassword = true, keyboardType = KeyboardType.NumberPassword)
-            }
-        },
+        text  = { Column {
+            HadesTextField(value = pinActual,    onValueChange = { if (it.length <= 4 && it.all { c -> c.isDigit() }) pinActual    = it }, label = "PIN Actual",          isPassword = true, keyboardType = KeyboardType.NumberPassword)
+            HadesTextField(value = pinNuevo,     onValueChange = { if (it.length <= 4 && it.all { c -> c.isDigit() }) pinNuevo     = it }, label = "Nuevo PIN",           isPassword = true, keyboardType = KeyboardType.NumberPassword)
+            HadesTextField(value = confirmacion, onValueChange = { if (it.length <= 4 && it.all { c -> c.isDigit() }) confirmacion = it }, label = "Confirmar Nuevo PIN", isPassword = true, keyboardType = KeyboardType.NumberPassword)
+        } },
         confirmButton = { TextButton(onClick = { onConfirm(pinActual, pinNuevo, confirmacion) }) { Text("ACEPTAR",   color = HadesCyan) } },
         dismissButton = { TextButton(onClick = onDismiss)                                        { Text("CANCELAR", color = Color.Gray) } }
     )
@@ -271,8 +154,7 @@ fun ChangePinDialog(onDismiss: () -> Unit, onConfirm: (String, String, String) -
 fun ChangeNicknameDialog(currentNickname: String, onDismiss: () -> Unit, onConfirm: (String) -> Unit) {
     var nuevoApodo by remember { mutableStateOf(currentNickname) }
     AlertDialog(
-        onDismissRequest = onDismiss,
-        containerColor   = HadesNavyDark,
+        onDismissRequest = onDismiss, containerColor = HadesNavyDark,
         title = { Text("Actualizar Apodo", color = HadesPurple) },
         text  = { HadesTextField(value = nuevoApodo, onValueChange = { nuevoApodo = it }, label = "Tu Apodo") },
         confirmButton = { TextButton(onClick = { onConfirm(nuevoApodo) }) { Text("GUARDAR",   color = HadesCyan) } },
