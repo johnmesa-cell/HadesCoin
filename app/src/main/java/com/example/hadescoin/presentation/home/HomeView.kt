@@ -69,7 +69,6 @@ fun HomeView(
     val noLeidas        by viewModel.notificacionesNoLeidas.observeAsState(0)
     val biometriaActiva by viewModel.biometriaActiva.observeAsState(false)
 
-    // biometría disponible en este dispositivo Y activada por el usuario
     val usarHuella = biometriaActiva && BiometricHelper.isDisponible(context)
 
     var mensajeError       by remember { mutableStateOf("") }
@@ -113,8 +112,15 @@ fun HomeView(
             codigoRetiro    = codigoRetiro,
             biometriaActiva = usarHuella,
             activity        = activity,
-            onGenerate      = { amount, pin -> viewModel.generarCodigoRetiro(phoneNumber, pin, amount) },
-            onDismiss       = { showWithdrawDialog = false; viewModel.clearCodigoRetiro() }
+            onGenerate      = { amount, pin, autenticadoConHuella ->
+                viewModel.generarCodigoRetiro(
+                    phoneNumber          = phoneNumber,
+                    pin                  = pin,
+                    amount               = amount,
+                    autenticadoConHuella = autenticadoConHuella
+                )
+            },
+            onDismiss = { showWithdrawDialog = false; viewModel.clearCodigoRetiro() }
         )
     }
 }
@@ -296,8 +302,8 @@ private fun TransactionRow(tx: WalletTransaction, onClick: () -> Unit) {
             }
             Spacer(modifier = Modifier.width(12.dp))
             Column {
-                Text(text = typeLabel,                   fontSize = 14.sp, fontWeight = FontWeight.Bold,   color = HadesOnDark)
-                Text(text = formatTimestamp(tx.timestamp), fontSize = 11.sp,                               color = HadesOnDark.copy(alpha = 0.45f))
+                Text(text = typeLabel,                     fontSize = 14.sp, fontWeight = FontWeight.Bold,   color = HadesOnDark)
+                Text(text = formatTimestamp(tx.timestamp), fontSize = 11.sp,                                color = HadesOnDark.copy(alpha = 0.45f))
             }
         }
         Text(text = "$prefix$ ${String.format(Locale.US, "%,.2f", tx.amount)}", fontWeight = FontWeight.Black, color = amountColor, fontSize = 15.sp)
