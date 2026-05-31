@@ -6,6 +6,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.hadescoin.di.ServiceLocator
 import com.example.hadescoin.domain.model.AppUser
+import com.example.hadescoin.domain.repository.SessionRepository
 import com.example.hadescoin.domain.usecase.CreateNotificationUseCase
 import com.example.hadescoin.domain.usecase.GenerateVerificationCodeUseCase
 import com.example.hadescoin.domain.usecase.GetUnreadNotificationsCountUseCase
@@ -17,14 +18,15 @@ import com.example.hadescoin.domain.usecase.ValidateVerificationCodeUseCase
 import kotlinx.coroutines.launch
 
 class ProfileViewModel(
-    private val getUserProfileUseCase: GetUserProfileUseCase          = ServiceLocator.provideGetUserProfileUseCase(),
-    private val updatePinUseCase:      UpdateUserPinUseCase           = ServiceLocator.provideUpdateUserPinUseCase(),
-    private val updateNicknameUseCase: UpdateUserNicknameUseCase      = ServiceLocator.provideUpdateUserNicknameUseCase(),
-    private val generateCodeUseCase:   GenerateVerificationCodeUseCase = ServiceLocator.provideGenerateVerificationCodeUseCase(),
-    private val validateCodeUseCase:   ValidateVerificationCodeUseCase = ServiceLocator.provideValidateVerificationCodeUseCase(),
-    private val createNotificationUseCase: CreateNotificationUseCase = ServiceLocator.provideCreateNotificationUseCase(),
+    private val getUserProfileUseCase:  GetUserProfileUseCase           = ServiceLocator.provideGetUserProfileUseCase(),
+    private val updatePinUseCase:       UpdateUserPinUseCase            = ServiceLocator.provideUpdateUserPinUseCase(),
+    private val updateNicknameUseCase:  UpdateUserNicknameUseCase       = ServiceLocator.provideUpdateUserNicknameUseCase(),
+    private val generateCodeUseCase:    GenerateVerificationCodeUseCase = ServiceLocator.provideGenerateVerificationCodeUseCase(),
+    private val validateCodeUseCase:    ValidateVerificationCodeUseCase = ServiceLocator.provideValidateVerificationCodeUseCase(),
+    private val createNotificationUseCase:          CreateNotificationUseCase          = ServiceLocator.provideCreateNotificationUseCase(),
     private val getUnreadNotificationsCountUseCase: GetUnreadNotificationsCountUseCase = ServiceLocator.provideGetUnreadNotificationsCountUseCase(),
-    private val queueNotificationEmailUseCase: QueueNotificationEmailUseCase = ServiceLocator.provideQueueNotificationEmailUseCase()
+    private val queueNotificationEmailUseCase:      QueueNotificationEmailUseCase      = ServiceLocator.provideQueueNotificationEmailUseCase(),
+    private val sessionRepository:                  SessionRepository                  = ServiceLocator.provideSessionRepository()
 ) : ViewModel() {
 
     private val _user = MutableLiveData<AppUser?>()
@@ -48,16 +50,24 @@ class ProfileViewModel(
     private val _notificacionesNoLeidas = MutableLiveData(0)
     val notificacionesNoLeidas: LiveData<Int> = _notificacionesNoLeidas
 
+    // ── Biometría ────────────────────────────────────────────────────────────
+    private val _biometriaActiva = MutableLiveData(sessionRepository.isBiometriaActiva())
+    val biometriaActiva: LiveData<Boolean> = _biometriaActiva
+
+    fun setBiometriaActiva(activa: Boolean) {
+        sessionRepository.setBiometriaActiva(activa)
+        _biometriaActiva.value = activa
+    }
+    // ───────────────────────────────────────────────────────────────
+
     private var phoneParaReset: String = ""
 
-    // ── Cargar perfil ──────────────────────────────────────────────────────────
+    // ── Cargar perfil ───────────────────────────────────────────────────
     fun cargarPerfil(phoneNumber: String) {
-        // Limpiar datos previos del usuario antes de cargar los nuevos
-        _user.value = null
+        _user.value           = null
         _notificacionesNoLeidas.value = 0
-        _mensajeError.value = null
-        _mensajeExito.value = null
-
+        _mensajeError.value   = null
+        _mensajeExito.value   = null
         viewModelScope.launch {
             _cargando.value = true
             try {
@@ -71,27 +81,22 @@ class ProfileViewModel(
         }
     }
 
-    // ── Cambiar PIN (requiere PIN actual) ─────────────────────────────────────
+    // ── Cambiar PIN ───────────────────────────────────────────────────
     fun cambiarPin(phoneNumber: String, pinActual: String, pinNuevo: String, confirmacion: String) {
         val userVal = _user.value ?: return
         when {
-            pinActual != userVal.pin                                  -> { _mensajeError.value = "El PIN actual es incorrecto"; return }
-            pinNuevo.length != 4 || !pinNuevo.all { it.isDigit() }   -> { _mensajeError.value = "El nuevo PIN debe tener exactamente 4 dígitos"; return }
-            pinNuevo != confirmacion                                  -> { _mensajeError.value = "La confirmación no coincide"; return }
-            pinNuevo == pinActual                                     -> { _mensajeError.value = "El nuevo PIN no puede ser igual al anterior"; return }
-            esPinObvio(pinNuevo)                                      -> { _mensajeError.value = "El PIN es muy sencillo. Usa uno más seguro."; return }
+            pinActual != userVal.pin                                -> { _mensajeError.value = "El PIN actual es incorrecto"; return }
+            pinNuevo.length != 4 || !pinNuevo.all { it.isDigit() } -> { _mensajeError.value = "El nuevo PIN debe tener exactamente 4 dígitos"; return }
+            pinNuevo != confirmacion                               -> { _mensajeError.value = "La confirmación no coincide"; return }
+            pinNuevo == pinActual                                  -> { _mensajeError.value = "El nuevo PIN no puede ser igual al anterior"; return }
+            esPinObvio(pinNuevo)                                   -> { _mensajeError.value = "El PIN es muy sencillo. Usa uno más seguro."; return }
         }
         viewModelScope.launch {
             _cargando.value = true
             try {
                 if (updatePinUseCase(phoneNumber, pinNuevo)) {
                     _mensajeExito.value = "PIN actualizado correctamente"
-                    registrarNotificacionPerfil(
-                        phoneNumber = phoneNumber,
-                        title = "PIN actualizado",
-                        message = "Tu PIN de seguridad fue actualizado correctamente.",
-                        type = "SECURITY"
-                    )
+                    registrarNotificacionPerfil(phoneNumber, "PIN actualizado", "Tu PIN de seguridad fue actualizado correctamente.", "SECURITY")
                     cargarPerfil(phoneNumber)
                 } else {
                     _mensajeError.value = "No se pudo actualizar el PIN"
@@ -104,18 +109,16 @@ class ProfileViewModel(
         }
     }
 
-    // ── Flujo verificacion: Paso 1 — verificar identidad (telefono + cedula) y generar codigo ──
+    // ── Recuperación de PIN ───────────────────────────────────────────────
     fun generarCodigoVerificacion(phoneNumber: String, documentNumber: String) {
-        if (phoneNumber.isBlank() || documentNumber.isBlank()) {
-            _mensajeError.value = "Teléfono y cédula son requeridos"; return
-        }
+        if (phoneNumber.isBlank() || documentNumber.isBlank()) { _mensajeError.value = "Teléfono y cédula son requeridos"; return }
         phoneParaReset = phoneNumber
         viewModelScope.launch {
             _cargando.value = true
             try {
                 val code = generateCodeUseCase(phoneNumber, documentNumber)
                 if (code != null) _codigoGenerado.value = code
-                else _mensajeError.value = "No se encontró un usuario con esos datos. Verifica el teléfono y la cédula."
+                else _mensajeError.value = "No se encontró un usuario con esos datos."
             } catch (e: Exception) {
                 _mensajeError.value = "Error: ${e.message}"
             } finally {
@@ -124,7 +127,6 @@ class ProfileViewModel(
         }
     }
 
-    // ── Flujo verificacion: Paso 2 — validar codigo ─────────────────────────
     fun validarCodigo(code: String) {
         viewModelScope.launch {
             _cargando.value = true
@@ -140,7 +142,6 @@ class ProfileViewModel(
         }
     }
 
-    // ── Flujo verificacion: Paso 3 — resetear PIN ────────────────────────────
     fun resetearPin(nuevoPin: String) {
         if (nuevoPin.length != 4 || !nuevoPin.all { it.isDigit() }) { _mensajeError.value = "El nuevo PIN debe tener exactamente 4 dígitos"; return }
         if (esPinObvio(nuevoPin)) { _mensajeError.value = "El PIN es muy sencillo. Usa uno más seguro."; return }
@@ -150,12 +151,7 @@ class ProfileViewModel(
             try {
                 if (updatePinUseCase(phone, nuevoPin)) {
                     _mensajeExito.value = "PIN actualizado correctamente"
-                    registrarNotificacionPerfil(
-                        phoneNumber = phone,
-                        title = "PIN restablecido",
-                        message = "Tu PIN fue restablecido mediante verificacion.",
-                        type = "SECURITY"
-                    )
+                    registrarNotificacionPerfil(phone, "PIN restablecido", "Tu PIN fue restablecido mediante verificación.", "SECURITY")
                     _codigoGenerado.value = null
                     _codigoValidado.value = false
                     cargarPerfil(phone)
@@ -170,7 +166,7 @@ class ProfileViewModel(
         }
     }
 
-    // ── Actualizar apodo ──────────────────────────────────────────────────────
+    // ── Apodo ─────────────────────────────────────────────────────────────
     fun actualizarApodo(phoneNumber: String, nuevoApodo: String) {
         if (nuevoApodo.isBlank()) { _mensajeError.value = "El apodo no puede estar vacío"; return }
         viewModelScope.launch {
@@ -178,12 +174,7 @@ class ProfileViewModel(
             try {
                 if (updateNicknameUseCase(phoneNumber, nuevoApodo)) {
                     _mensajeExito.value = "Apodo actualizado"
-                    registrarNotificacionPerfil(
-                        phoneNumber = phoneNumber,
-                        title = "Perfil actualizado",
-                        message = "Tu apodo fue actualizado a $nuevoApodo.",
-                        type = "PROFILE"
-                    )
+                    registrarNotificacionPerfil(phoneNumber, "Perfil actualizado", "Tu apodo fue actualizado a $nuevoApodo.", "PROFILE")
                     cargarPerfil(phoneNumber)
                 } else {
                     _mensajeError.value = "No se pudo actualizar el apodo"
@@ -205,35 +196,16 @@ class ProfileViewModel(
 
     fun cargarNoLeidas(phoneNumber: String) {
         viewModelScope.launch {
-            try {
-                _notificacionesNoLeidas.value = getUnreadNotificationsCountUseCase(phoneNumber)
-            } catch (_: Exception) {
-                _notificacionesNoLeidas.value = 0
-            }
+            try { _notificacionesNoLeidas.value = getUnreadNotificationsCountUseCase(phoneNumber) }
+            catch (_: Exception) { _notificacionesNoLeidas.value = 0 }
         }
     }
 
-    private suspend fun registrarNotificacionPerfil(
-        phoneNumber: String,
-        title: String,
-        message: String,
-        type: String
-    ) {
-        createNotificationUseCase(
-            phoneNumber = phoneNumber,
-            title = title,
-            message = message,
-            type = type
-        )
-
+    private suspend fun registrarNotificacionPerfil(phoneNumber: String, title: String, message: String, type: String) {
+        createNotificationUseCase(phoneNumber = phoneNumber, title = title, message = message, type = type)
         val email = _user.value?.email.orEmpty()
         if (email.isNotBlank()) {
-            queueNotificationEmailUseCase(
-                phoneNumber = phoneNumber,
-                toEmail = email,
-                subject = "HadesCoin - $title",
-                body = message
-            )
+            queueNotificationEmailUseCase(phoneNumber = phoneNumber, toEmail = email, subject = "HadesCoin - $title", body = message)
         }
     }
 

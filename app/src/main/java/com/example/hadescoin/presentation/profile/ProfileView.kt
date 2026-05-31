@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Fingerprint
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -11,6 +12,7 @@ import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
@@ -18,6 +20,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.example.hadescoin.presentation.components.*
+import com.example.hadescoin.presentation.utils.BiometricHelper
 import com.example.hadescoin.ui.theme.*
 
 @Composable
@@ -26,6 +29,7 @@ fun ProfileView(
     phoneNumber: String,
     viewModel: ProfileViewModel = viewModel()
 ) {
+    val context        = LocalContext.current
     val user           by viewModel.user.observeAsState()
     val cargando       by viewModel.cargando.observeAsState(false)
     val mensajeExito   by viewModel.mensajeExito.observeAsState()
@@ -33,6 +37,10 @@ fun ProfileView(
     val codigoGenerado by viewModel.codigoGenerado.observeAsState()
     val codigoValidado by viewModel.codigoValidado.observeAsState(false)
     val noLeidas       by viewModel.notificacionesNoLeidas.observeAsState(0)
+    val biometriaActiva by viewModel.biometriaActiva.observeAsState(false)
+
+    // El switch solo aparece si el dispositivo tiene biometría disponible
+    val dispositivoTieneBiometria = remember { BiometricHelper.isDisponible(context) }
 
     var showPinDialog      by remember { mutableStateOf(false) }
     var showNicknameDialog by remember { mutableStateOf(false) }
@@ -56,10 +64,10 @@ fun ProfileView(
             user?.let { u ->
                 val displayGreeting = u.nickname.ifBlank { u.fullName.split(" ").firstOrNull() ?: "" }
                 Text(
-                    text       = "HOLA, $displayGreeting".uppercase(),
-                    fontSize   = 28.sp,
-                    fontWeight = FontWeight.Black,
-                    color      = HadesPurple,
+                    text          = "HOLA, $displayGreeting".uppercase(),
+                    fontSize      = 28.sp,
+                    fontWeight    = FontWeight.Black,
+                    color         = HadesPurple,
                     letterSpacing = 4.sp
                 )
             } ?: Text(text = "MI PERFIL", fontSize = 28.sp, fontWeight = FontWeight.Black, color = HadesPurple, letterSpacing = 4.sp)
@@ -68,6 +76,7 @@ fun ProfileView(
 
             user?.let { u ->
                 HadesCardBox {
+                    // ── Datos del usuario ───────────────────────────────────────
                     ProfileItem(label = "Nombre Completo",     value = u.fullName)
                     ProfileItem(label = "Apodo",               value = u.nickname.ifBlank { "No asignado" }, isMissing = u.nickname.isBlank())
                     ProfileItem(label = "Número de Documento", value = u.documentNumber, isMissing = u.documentNumber.isBlank())
@@ -77,6 +86,16 @@ fun ProfileView(
 
                     Spacer(modifier = Modifier.height(16.dp))
 
+                    // ── Sección de seguridad ──────────────────────────────────
+                    Text(
+                        text          = "SEGURIDAD",
+                        fontSize      = 11.sp,
+                        fontWeight    = FontWeight.Bold,
+                        letterSpacing = 2.sp,
+                        color         = HadesCyan
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+
                     HadesButton(text = "Cambiar PIN", onClick = { showPinDialog = true }, modifier = Modifier.fillMaxWidth())
 
                     Spacer(modifier = Modifier.height(4.dp))
@@ -85,7 +104,63 @@ fun ProfileView(
                         Text("¿Olvidaste tu PIN?", color = HadesCyan, fontSize = 12.sp, fontWeight = FontWeight.Medium)
                     }
 
-                    Spacer(modifier = Modifier.height(4.dp))
+                    // ── Switch de biometría — solo visible si el dispositivo lo soporta ──
+                    if (dispositivoTieneBiometria) {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Row(
+                            modifier          = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier          = Modifier.weight(1f)
+                            ) {
+                                Icon(
+                                    imageVector        = Icons.Filled.Fingerprint,
+                                    contentDescription = null,
+                                    tint               = if (biometriaActiva) HadesCyan else HadesOnDark.copy(alpha = 0.4f),
+                                    modifier           = Modifier.size(22.dp)
+                                )
+                                Spacer(Modifier.width(10.dp))
+                                Column {
+                                    Text(
+                                        text       = "Desbloqueo con huella",
+                                        fontSize   = 14.sp,
+                                        fontWeight = FontWeight.Medium,
+                                        color      = HadesOnDark
+                                    )
+                                    Text(
+                                        text     = if (biometriaActiva) "Activo" else "Inactivo",
+                                        fontSize = 11.sp,
+                                        color    = if (biometriaActiva) HadesCyan else HadesOnDark.copy(alpha = 0.4f)
+                                    )
+                                }
+                            }
+                            Switch(
+                                checked         = biometriaActiva,
+                                onCheckedChange = { viewModel.setBiometriaActiva(it) },
+                                colors          = SwitchDefaults.colors(
+                                    checkedThumbColor   = HadesCyan,
+                                    checkedTrackColor   = HadesCyan.copy(alpha = 0.3f),
+                                    uncheckedThumbColor = HadesOnDark.copy(alpha = 0.4f),
+                                    uncheckedTrackColor = HadesOnDark.copy(alpha = 0.1f)
+                                )
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    // ── Sección de perfil ──────────────────────────────────────
+                    Text(
+                        text          = "PERSONALIZAR",
+                        fontSize      = 11.sp,
+                        fontWeight    = FontWeight.Bold,
+                        letterSpacing = 2.sp,
+                        color         = HadesCyan
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
 
                     HadesButton(
                         text     = if (u.nickname.isBlank()) "Agregar Apodo" else "Cambiar Apodo",
@@ -95,23 +170,16 @@ fun ProfileView(
 
                     Spacer(modifier = Modifier.height(10.dp))
 
+                    // ── Notificaciones ──────────────────────────────────────────
                     OutlinedButton(
-                        onClick = { navController.navigate("notifications/$phoneNumber") },
+                        onClick  = { navController.navigate("notifications/$phoneNumber") },
                         modifier = Modifier.fillMaxWidth(),
-                        colors = ButtonDefaults.outlinedButtonColors(contentColor = HadesCyan)
+                        colors   = ButtonDefaults.outlinedButtonColors(contentColor = HadesCyan)
                     ) {
                         BadgedBox(
-                            badge = {
-                                if (noLeidas > 0) {
-                                    Badge { Text(noLeidas.toString()) }
-                                }
-                            }
+                            badge = { if (noLeidas > 0) Badge { Text(noLeidas.toString()) } }
                         ) {
-                            Icon(
-                                imageVector = Icons.Filled.Notifications,
-                                contentDescription = null,
-                                modifier = Modifier.size(18.dp)
-                            )
+                            Icon(imageVector = Icons.Filled.Notifications, contentDescription = null, modifier = Modifier.size(18.dp))
                         }
                         Spacer(modifier = Modifier.width(8.dp))
                         Text("Notificaciones")
@@ -128,7 +196,7 @@ fun ProfileView(
     if (cargando) ShowLoadingAlertDialog()
 
     mensajeExito?.let {
-        ShowMessageAlertDialog(onConfirmation = { viewModel.clearMessages() }, dialogTitle = "Éxito", dialogText = it)
+        ShowMessageAlertDialog(onConfirmation = { viewModel.clearMessages() }, dialogTitle = "Exito", dialogText = it)
     }
     mensajeError?.let {
         ShowMessageAlertDialog(onConfirmation = { viewModel.clearMessages() }, dialogTitle = "Error", dialogText = it)
