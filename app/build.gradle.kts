@@ -67,6 +67,9 @@ dependencies {
     implementation("com.google.firebase:firebase-database")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services")
 
+    // Biometría — AndroidX BiometricPrompt
+    implementation("androidx.biometric:biometric:1.1.0")
+
     // CameraX
     val cameraxVersion = "1.5.0-alpha06"
     implementation("androidx.camera:camera-core:$cameraxVersion")
