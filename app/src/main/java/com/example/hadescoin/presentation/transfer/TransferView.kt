@@ -53,7 +53,6 @@ fun TransferView(
     val transferError   by viewModel.transferError.observeAsState()
     val biometriaActiva by viewModel.biometriaActiva.observeAsState(false)
 
-    // biometría disponible en este dispositivo Y activada por el usuario
     val usarHuella = biometriaActiva && BiometricHelper.isDisponible(context)
 
     var mensajeError by remember { mutableStateOf("") }
@@ -62,30 +61,46 @@ fun TransferView(
 
     LaunchedEffect(senderPhone) { viewModel.loadSenderBalance(senderPhone) }
     LaunchedEffect(transferExitosa) { if (transferExitosa == true) { showExito = true; viewModel.clearExito() } }
-    LaunchedEffect(transferError) { transferError?.let { mensajeError = it; showError = true; showConfirm = false } }
+    LaunchedEffect(transferError)   { transferError?.let { mensajeError = it; showError = true; showConfirm = false } }
 
     TransferViewContent(
-        senderPhone     = senderPhone,
-        senderBalance   = senderBalance,
-        receiverPhone   = receiverPhone,
-        amount          = amount,
-        pin             = pin,
-        cargando        = cargando,
-        showConfirm     = showConfirm,
-        usarHuella      = usarHuella,
-        activity        = activity,
+        senderPhone       = senderPhone,
+        senderBalance     = senderBalance,
+        receiverPhone     = receiverPhone,
+        amount            = amount,
+        pin               = pin,
+        cargando          = cargando,
+        showConfirm       = showConfirm,
+        usarHuella        = usarHuella,
+        activity          = activity,
         onReceiverChange  = { receiverPhone = it },
         onAmountChange    = { amount = it },
         onPinChange       = { pin = it },
         onReviewClick     = { showConfirm = true },
-        onConfirmTransfer = { viewModel.transfer(senderPhone, receiverPhone, amount.toDoubleOrNull() ?: 0.0, pin) },
+        onConfirmTransfer = {
+            viewModel.transfer(
+                senderPhone          = senderPhone,
+                receiverPhone        = receiverPhone,
+                amount               = amount.toDoubleOrNull() ?: 0.0,
+                pin                  = pin,
+                autenticadoConHuella = usarHuella
+            )
+        },
         onDismissConfirm  = { showConfirm = false },
         onBackClick       = { navController.popBackStack() }
     )
 
     if (cargando) ShowLoadingAlertDialog()
-    if (showExito) ShowMessageAlertDialog(onConfirmation = { showExito = false; navController.popBackStack() }, dialogTitle = stringResource(R.string.dialog_success_title), dialogText = stringResource(R.string.transfer_success_message, String.format(Locale.US, "%,.2f", amount.toDoubleOrNull() ?: 0.0)))
-    if (showError) ShowMessageAlertDialog(onConfirmation = { showError = false; viewModel.clearError() }, dialogTitle = stringResource(R.string.dialog_error_title), dialogText = mensajeError)
+    if (showExito) ShowMessageAlertDialog(
+        onConfirmation = { showExito = false; navController.popBackStack() },
+        dialogTitle    = stringResource(R.string.dialog_success_title),
+        dialogText     = stringResource(R.string.transfer_success_message, String.format(Locale.US, "%,.2f", amount.toDoubleOrNull() ?: 0.0))
+    )
+    if (showError) ShowMessageAlertDialog(
+        onConfirmation = { showError = false; viewModel.clearError() },
+        dialogTitle    = stringResource(R.string.dialog_error_title),
+        dialogText     = mensajeError
+    )
 }
 
 @Composable
@@ -102,7 +117,11 @@ fun TransferViewContent(
     val parsedAmount   = amount.toDoubleOrNull() ?: 0.0
     val remaining      = senderBalance - parsedAmount
     val exceedsBalance = parsedAmount > senderBalance && parsedAmount > 0.0
-    val isFormValid    = !cargando && receiverPhone.length == 10 && parsedAmount > 0.0 && !exceedsBalance && pin.length == 4
+
+    // Con huella: no se exige PIN en el formulario
+    val isFormValid = !cargando && receiverPhone.length == 10 && parsedAmount > 0.0 && !exceedsBalance &&
+            (if (usarHuella) true else pin.length == 4)
+
     var saldoVisible by remember { mutableStateOf(true) }
 
     HadesScreen {
@@ -113,16 +132,27 @@ fun TransferViewContent(
                 .padding(horizontal = 24.dp)
         ) {
             Spacer(modifier = Modifier.height(16.dp))
+
+            // ── Header ────────────────────────────────────────────────────
             Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                IconButton(onClick = onBackClick) { Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.cd_back), tint = HadesCyan, modifier = Modifier.size(24.dp)) }
+                IconButton(onClick = onBackClick) {
+                    Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.cd_back), tint = HadesCyan, modifier = Modifier.size(24.dp))
+                }
                 Spacer(modifier = Modifier.width(8.dp))
                 Column {
-                    Text(text = stringResource(R.string.transfer_title), fontSize = 18.sp, fontWeight = FontWeight.Black, letterSpacing = 3.sp, color = HadesPurple)
+                    Text(text = stringResource(R.string.transfer_title),    fontSize = 18.sp, fontWeight = FontWeight.Black, letterSpacing = 3.sp, color = HadesPurple)
                     Text(text = stringResource(R.string.transfer_subtitle), fontSize = 12.sp, color = HadesOnDark.copy(alpha = 0.45f))
                 }
             }
             Spacer(modifier = Modifier.height(24.dp))
-            Box(modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(Brush.linearGradient(colors = listOf(HadesPurple.copy(alpha = 0.6f), HadesNavyDark))).padding(horizontal = 20.dp, vertical = 16.dp)) {
+
+            // ── Tarjeta de saldo ───────────────────────────────────────────
+            Box(
+                modifier = Modifier.fillMaxWidth()
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(Brush.linearGradient(colors = listOf(HadesPurple.copy(alpha = 0.6f), HadesNavyDark)))
+                    .padding(horizontal = 20.dp, vertical = 16.dp)
+            ) {
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                     Column {
                         Text(text = stringResource(R.string.label_balance_available), fontSize = 9.sp, letterSpacing = 1.sp, color = HadesOnDark.copy(alpha = 0.5f))
@@ -135,34 +165,114 @@ fun TransferViewContent(
                 }
             }
             Spacer(modifier = Modifier.height(20.dp))
+
+            // ── Formulario ────────────────────────────────────────────────
             HadesCardBox {
-                Text(text = stringResource(R.string.transfer_section_header), fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 2.sp, color = HadesCyan)
+                Row(
+                    modifier            = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment   = Alignment.CenterVertically
+                ) {
+                    Text(text = stringResource(R.string.transfer_section_header), fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 2.sp, color = HadesCyan)
+                    // Indicador visual de modo huella activo
+                    if (usarHuella) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(20.dp))
+                                .background(HadesCyan.copy(alpha = 0.08f))
+                                .padding(horizontal = 8.dp, vertical = 3.dp)
+                        ) {
+                            Icon(imageVector = Icons.Filled.Fingerprint, contentDescription = null, tint = HadesCyan, modifier = Modifier.size(13.dp))
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(text = "Huella activa", fontSize = 10.sp, color = HadesCyan, fontWeight = FontWeight.Medium)
+                        }
+                    }
+                }
                 Spacer(modifier = Modifier.height(4.dp))
-                HadesTextField(value = senderPhone, onValueChange = {}, label = stringResource(R.string.label_from_phone), enabled = false)
-                HadesTextField(value = receiverPhone, onValueChange = { if (it.length <= 10 && it.all { c -> c.isDigit() } && (it.isEmpty() || it[0] == '3')) onReceiverChange(it) }, label = stringResource(R.string.label_receiver_phone), keyboardType = KeyboardType.Phone)
+
+                HadesTextField(value = senderPhone,   onValueChange = {}, label = stringResource(R.string.label_from_phone), enabled = false)
                 HadesTextField(
-                    value = amount, onValueChange = { if (it.length <= 12) onAmountChange(it) },
-                    label = if (exceedsBalance) stringResource(R.string.label_amount_insufficient) else stringResource(R.string.label_amount),
-                    keyboardType = KeyboardType.Decimal,
-                    prefix = { Text("$", color = if (exceedsBalance) HadesOrange else HadesCyan) }
+                    value         = receiverPhone,
+                    onValueChange = { if (it.length <= 10 && it.all { c -> c.isDigit() } && (it.isEmpty() || it[0] == '3')) onReceiverChange(it) },
+                    label         = stringResource(R.string.label_receiver_phone),
+                    keyboardType  = KeyboardType.Phone
+                )
+                HadesTextField(
+                    value         = amount,
+                    onValueChange = { if (it.length <= 12) onAmountChange(it) },
+                    label         = if (exceedsBalance) stringResource(R.string.label_amount_insufficient) else stringResource(R.string.label_amount),
+                    keyboardType  = KeyboardType.Decimal,
+                    prefix        = { Text("$", color = if (exceedsBalance) HadesOrange else HadesCyan) }
                 )
                 AnimatedVisibility(visible = exceedsBalance) {
                     Text(text = stringResource(R.string.warning_insufficient_balance), fontSize = 11.sp, color = HadesOrange, fontWeight = FontWeight.Medium, modifier = Modifier.padding(top = 2.dp, start = 4.dp))
                 }
-                HadesTextField(value = pin, onValueChange = { if (it.length <= 4 && it.all { c -> c.isDigit() }) onPinChange(it) }, label = stringResource(R.string.label_pin_confirm), isPassword = true, keyboardType = KeyboardType.NumberPassword)
+
+                // Campo PIN — solo visible cuando NO se usa huella
+                AnimatedVisibility(
+                    visible = !usarHuella,
+                    enter   = fadeIn() + expandVertically(),
+                    exit    = fadeOut() + shrinkVertically()
+                ) {
+                    HadesTextField(
+                        value         = pin,
+                        onValueChange = { if (it.length <= 4 && it.all { c -> c.isDigit() }) onPinChange(it) },
+                        label         = stringResource(R.string.label_pin_confirm),
+                        isPassword    = true,
+                        keyboardType  = KeyboardType.NumberPassword
+                    )
+                }
+
+                // Aviso cuando se usa huella (reemplaza al campo PIN)
+                AnimatedVisibility(
+                    visible = usarHuella,
+                    enter   = fadeIn() + expandVertically(),
+                    exit    = fadeOut() + shrinkVertically()
+                ) {
+                    Row(
+                        modifier          = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(HadesCyan.copy(alpha = 0.06f))
+                            .padding(horizontal = 14.dp, vertical = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(imageVector = Icons.Filled.Fingerprint, contentDescription = null, tint = HadesCyan, modifier = Modifier.size(18.dp))
+                        Spacer(modifier = Modifier.width(10.dp))
+                        Text(
+                            text     = "Autorización por huella al confirmar",
+                            fontSize = 12.sp,
+                            color    = HadesCyan.copy(alpha = 0.75f),
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
+                }
             }
-            AnimatedVisibility(visible = parsedAmount > 0.0 && !exceedsBalance, enter = fadeIn() + expandVertically(), exit = fadeOut() + shrinkVertically()) {
+
+            // ── Resumen dinámico ──────────────────────────────────────────────
+            AnimatedVisibility(
+                visible = parsedAmount > 0.0 && !exceedsBalance,
+                enter   = fadeIn() + expandVertically(),
+                exit    = fadeOut() + shrinkVertically()
+            ) {
                 Column {
                     Spacer(modifier = Modifier.height(16.dp))
                     Text(text = stringResource(R.string.transfer_summary_header), fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 2.sp, color = HadesCyan, modifier = Modifier.padding(start = 4.dp, bottom = 8.dp))
                     HadesSummaryRow(items = listOf(
-                        HadesSummaryItem(label = stringResource(R.string.label_to_send),  valor = parsedAmount,                    color = HadesOrange, prefijo = "- "),
-                        HadesSummaryItem(label = stringResource(R.string.label_remaining), valor = remaining.coerceAtLeast(0.0), color = HadesCyan,   prefijo = "  ")
+                        HadesSummaryItem(label = stringResource(R.string.label_to_send),   valor = parsedAmount,                 color = HadesOrange, prefijo = "- "),
+                        HadesSummaryItem(label = stringResource(R.string.label_remaining),  valor = remaining.coerceAtLeast(0.0), color = HadesCyan,   prefijo = "  ")
                     ))
                 }
             }
+
             Spacer(modifier = Modifier.height(24.dp))
-            HadesButton(text = stringResource(R.string.btn_review_transfer), onClick = onReviewClick, enabled = isFormValid, cargando = cargando)
+            HadesButton(
+                text     = stringResource(R.string.btn_review_transfer),
+                onClick  = onReviewClick,
+                enabled  = isFormValid,
+                cargando = cargando
+            )
             Spacer(modifier = Modifier.height(40.dp))
         }
 
@@ -192,22 +302,38 @@ private fun ConfirmTransferSheet(
     onDismiss: () -> Unit
 ) {
     ModalBottomSheet(onDismissRequest = onDismiss, containerColor = HadesNavyDark) {
-        Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp).padding(bottom = 40.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+        Column(
+            modifier            = Modifier.fillMaxWidth().padding(horizontal = 24.dp).padding(bottom = 40.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
             Box(modifier = Modifier.size(64.dp).clip(CircleShape).background(HadesOrange.copy(alpha = 0.15f)), contentAlignment = Alignment.Center) {
                 Icon(imageVector = Icons.Filled.SwapHoriz, contentDescription = null, tint = HadesOrange, modifier = Modifier.size(30.dp))
             }
             Spacer(modifier = Modifier.height(16.dp))
             Text(text = stringResource(R.string.confirm_transfer_title),    fontSize = 18.sp, fontWeight = FontWeight.Black, color = HadesOnDark, textAlign = TextAlign.Center)
             Spacer(modifier = Modifier.height(4.dp))
-            Text(text = stringResource(R.string.confirm_transfer_subtitle), fontSize = 12.sp, color = HadesOnDark.copy(alpha = 0.45f), textAlign = TextAlign.Center)
+            Text(
+                text      = if (usarHuella) "Usa tu huella para autorizar el envío"
+                            else stringResource(R.string.confirm_transfer_subtitle),
+                fontSize  = 12.sp,
+                color     = if (usarHuella) HadesCyan.copy(alpha = 0.7f) else HadesOnDark.copy(alpha = 0.45f),
+                textAlign = TextAlign.Center
+            )
             Spacer(modifier = Modifier.height(24.dp))
             Text(text = "$${String.format(Locale.US, "%,.2f", amount)}", fontSize = 36.sp, fontWeight = FontWeight.Black, color = HadesOrange)
             Spacer(modifier = Modifier.height(20.dp))
-            Box(modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(HadesNavy.copy(alpha = 0.5f)).padding(16.dp)) {
+
+            // Recuadro de oruta
+            Box(
+                modifier = Modifier.fillMaxWidth()
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(HadesNavy.copy(alpha = 0.5f))
+                    .padding(16.dp)
+            ) {
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                     Column(horizontalAlignment = Alignment.Start) {
                         Text(text = stringResource(R.string.confirm_from), fontSize = 9.sp, letterSpacing = 1.sp, color = HadesOnDark.copy(alpha = 0.45f))
-                        Text(text = senderPhone, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = HadesOnDark)
+                        Text(text = senderPhone,   fontSize = 14.sp, fontWeight = FontWeight.Bold, color = HadesOnDark)
                     }
                     Icon(imageVector = Icons.Filled.SwapHoriz, contentDescription = null, tint = HadesCyan.copy(alpha = 0.5f), modifier = Modifier.size(20.dp).align(Alignment.CenterVertically))
                     Column(horizontalAlignment = Alignment.End) {
@@ -218,28 +344,50 @@ private fun ConfirmTransferSheet(
             }
             Spacer(modifier = Modifier.height(24.dp))
 
-            // ── Botón de huella — solo visible si biometría activa ───────────
+            // ── Botón de confirmación: huella (obligatoria) o PIN (fallback) ──
             if (usarHuella) {
-                HuellaAlternativaButton(
-                    habilitado    = true,
-                    cargando      = false,
-                    onHuellaClick = {
-                        if (activity != null) {
-                            BiometricHelper.mostrar(
-                                activity  = activity,
-                                titulo    = "Confirmar transferencia",
-                                subtitulo = "Usa tu huella para autorizar el envío",
-                                onExito   = onConfirm,
-                                onError   = { /* el sistema ya muestra el feedback */ }
-                            )
-                        }
-                    },
-                    subtexto = "o confirma con el botón"
+                // Huella como único método de confirmación
+                Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                    IconButton(
+                        onClick  = {
+                            if (activity != null) {
+                                BiometricHelper.mostrar(
+                                    activity  = activity,
+                                    titulo    = "Confirmar transferencia",
+                                    subtitulo = "Usa tu huella para autorizar el envío de $${
+                                        String.format(Locale.US, "%,.2f", amount)
+                                    }",
+                                    onExito   = onConfirm,
+                                    onError   = { }
+                                )
+                            }
+                        },
+                        modifier = Modifier
+                            .size(72.dp)
+                            .clip(CircleShape)
+                            .background(HadesCyan.copy(alpha = 0.12f))
+                    ) {
+                        Icon(
+                            imageVector        = Icons.Filled.Fingerprint,
+                            contentDescription = "Confirmar con huella",
+                            tint               = HadesCyan,
+                            modifier           = Modifier.size(40.dp)
+                        )
+                    }
+                }
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text      = "Toca para autorizar",
+                    fontSize  = 11.sp,
+                    color     = HadesOnDark.copy(alpha = 0.4f),
+                    textAlign = TextAlign.Center,
+                    modifier  = Modifier.fillMaxWidth()
                 )
-                Spacer(modifier = Modifier.height(4.dp))
+            } else {
+                // Botón CONFIRMAR normal (modo PIN)
+                HadesButton(text = stringResource(R.string.btn_confirm_transfer), onClick = onConfirm)
             }
 
-            HadesButton(text = stringResource(R.string.btn_confirm_transfer), onClick = onConfirm)
             Spacer(modifier = Modifier.height(12.dp))
             TextButton(onClick = onDismiss, modifier = Modifier.fillMaxWidth()) {
                 Text(text = stringResource(R.string.btn_cancel), color = HadesOnDark.copy(alpha = 0.45f), fontSize = 14.sp)
