@@ -75,6 +75,7 @@ fun HomeView(
     var showError          by remember { mutableStateOf(false) }
     var menuExpanded       by remember { mutableStateOf(false) }
     var showWithdrawDialog by remember { mutableStateOf(false) }
+    var showQrSheet        by remember { mutableStateOf(false) }
 
     DisposableEffect(navController) {
         val listener = NavController.OnDestinationChangedListener { _, destination, _ ->
@@ -97,7 +98,8 @@ fun HomeView(
         onTransfer      = { menuExpanded = false; navController.navigate("transfer/$phoneNumber") },
         onProfile       = { navController.navigate("profile/$phoneNumber") },
         onNotifications = { navController.navigate("notifications/$phoneNumber") },
-        onWithdrawAtm   = { menuExpanded = false; showWithdrawDialog = true }
+        onWithdrawAtm   = { menuExpanded = false; showWithdrawDialog = true },
+        onQr            = { menuExpanded = false; showQrSheet = true }
     )
 
     if (cargando && !showWithdrawDialog) ShowLoadingAlertDialog()
@@ -123,6 +125,9 @@ fun HomeView(
             onDismiss = { showWithdrawDialog = false; viewModel.clearCodigoRetiro() }
         )
     }
+    if (showQrSheet) {
+        QrSheet(onDismiss = { showQrSheet = false })
+    }
 }
 
 @Composable
@@ -139,7 +144,8 @@ fun HomeViewContent(
     onTransfer: () -> Unit = {},
     onProfile: () -> Unit = {},
     onNotifications: () -> Unit = {},
-    onWithdrawAtm: () -> Unit = {}
+    onWithdrawAtm: () -> Unit = {},
+    onQr: () -> Unit = {}
 ) {
     var showUserPanel    by remember { mutableStateOf(false) }
     var saldoVisible     by remember { mutableStateOf(true) }
@@ -166,10 +172,11 @@ fun HomeViewContent(
     val totalEgresos  = transactions.filter { tx -> tx.direction == "OUT" && tx.type.uppercase() !in setOf("WITHDRAWAL_PENDING", "WITHDRAWAL_FAILED") }.sumOf { it.amount }
 
     val speedDialItems = listOf(
-        SpeedDialItem(label = stringResource(R.string.action_transfer), icon = Icons.Filled.SwapHoriz,    color = HadesCyan,   onClick = { onTransfer() }),
-        SpeedDialItem(label = stringResource(R.string.action_deposit),  icon = HadesIcons.ArrowDownToLine, color = HadesCyan,   onClick = {}, enabled = false),
-        SpeedDialItem(label = "Retirar en Cajero",                       icon = HadesIcons.Landmark,        color = HadesOrange, onClick = { onWithdrawAtm() }),
-        SpeedDialItem(label = stringResource(R.string.action_pay),      icon = Icons.Filled.CreditCard,    color = HadesPurple, onClick = {}, enabled = false)
+        SpeedDialItem(label = stringResource(R.string.action_transfer), icon = Icons.Filled.SwapHoriz,     color = HadesCyan,   onClick = { onTransfer() }),
+        SpeedDialItem(label = stringResource(R.string.action_deposit),  icon = HadesIcons.ArrowDownToLine,  color = HadesCyan,   onClick = {}, enabled = false),
+        SpeedDialItem(label = "Retirar en Cajero",                       icon = HadesIcons.Landmark,         color = HadesOrange, onClick = { onWithdrawAtm() }),
+        SpeedDialItem(label = "Códigos QR",                              icon = Icons.Filled.QrCode,         color = HadesPurple, onClick = { onQr() }),
+        SpeedDialItem(label = stringResource(R.string.action_pay),      icon = Icons.Filled.CreditCard,     color = HadesPurple, onClick = {}, enabled = false)
     )
 
     HadesScreen {
