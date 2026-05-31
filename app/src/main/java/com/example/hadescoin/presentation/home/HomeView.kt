@@ -40,14 +40,6 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
-// ── Helpers de iconos ─────────────────────────────────────────────────────────
-
-/**
- * Ícono por tipo de transacción:
- *  DEPOSIT              → HadesIcons.ArrowDownToLine  (flecha + línea base, cyan)
- *  WITHDRAW / WITHDRAWAL_* → HadesIcons.ArrowUpFromLine (flecha + línea base, naranja)
- *  TRANSFER             → ArrowDownward / ArrowUpward  (Material)
- */
 private fun txIcon(type: String, direction: String): ImageVector {
     return when (type.uppercase()) {
         "DEPOSIT"                                                         -> HadesIcons.ArrowDownToLine
@@ -83,69 +75,29 @@ fun HomeView(
         onDispose { navController.removeOnDestinationChangedListener(listener) }
     }
 
-    LaunchedEffect(phoneNumber) {
-        viewModel.loadWalletData(phoneNumber)
-    }
-
-    LaunchedEffect(error) {
-        error?.let {
-            mensajeError = it
-            showError = true
-        }
-    }
+    LaunchedEffect(phoneNumber) { viewModel.loadWalletData(phoneNumber) }
+    LaunchedEffect(error) { error?.let { mensajeError = it; showError = true } }
 
     HomeViewContent(
-        appUser               = appUser,
-        transactions          = transactions,
-        noLeidas              = noLeidas,
-        cargando              = cargando,
-        menuExpanded          = menuExpanded,
-        onMenuToggle          = { menuExpanded = !menuExpanded },
-        onMenuCollapse        = { menuExpanded = false },
-        onRefresh             = {
-            viewModel.refresh()
-            viewModel.cargarNoLeidas(phoneNumber)
-        },
-        onLogout              = {
-            navController.navigate("login") { popUpTo(0) { inclusive = true } }
-        },
-        onTransfer            = {
-            menuExpanded = false
-            navController.navigate("transfer/$phoneNumber")
-        },
-        onProfile             = {
-            navController.navigate("profile/$phoneNumber")
-        },
-        onNotifications       = {
-            navController.navigate("notifications/$phoneNumber")
-        },
-        onWithdrawAtm         = {
-            menuExpanded = false
-            showWithdrawDialog = true
-        }
+        appUser = appUser, transactions = transactions, noLeidas = noLeidas, cargando = cargando,
+        menuExpanded = menuExpanded,
+        onMenuToggle   = { menuExpanded = !menuExpanded },
+        onMenuCollapse = { menuExpanded = false },
+        onRefresh      = { viewModel.refresh(); viewModel.cargarNoLeidas(phoneNumber) },
+        onLogout       = { navController.navigate("login") { popUpTo(0) { inclusive = true } } },
+        onTransfer     = { menuExpanded = false; navController.navigate("transfer/$phoneNumber") },
+        onProfile      = { navController.navigate("profile/$phoneNumber") },
+        onNotifications = { navController.navigate("notifications/$phoneNumber") },
+        onWithdrawAtm  = { menuExpanded = false; showWithdrawDialog = true }
     )
 
     if (cargando && !showWithdrawDialog) ShowLoadingAlertDialog()
-
-    if (showError) {
-        ShowMessageAlertDialog(
-            onConfirmation = { viewModel.clearError(); showError = false },
-            dialogTitle    = stringResource(R.string.dialog_error_title),
-            dialogText     = mensajeError
-        )
-    }
-
+    if (showError) ShowMessageAlertDialog(onConfirmation = { viewModel.clearError(); showError = false }, dialogTitle = stringResource(R.string.dialog_error_title), dialogText = mensajeError)
     if (showWithdrawDialog) {
         WithdrawCodeDialog(
-            cargando      = cargando,
-            codigoRetiro  = codigoRetiro,
-            onGenerate    = { amount, pin ->
-                viewModel.generarCodigoRetiro(phoneNumber, pin, amount)
-            },
-            onDismiss     = {
-                showWithdrawDialog = false
-                viewModel.clearCodigoRetiro()
-            }
+            cargando = cargando, codigoRetiro = codigoRetiro,
+            onGenerate = { amount, pin -> viewModel.generarCodigoRetiro(phoneNumber, pin, amount) },
+            onDismiss  = { showWithdrawDialog = false; viewModel.clearCodigoRetiro() }
         )
     }
 }
@@ -169,515 +121,180 @@ fun HomeViewContent(
     var showUserPanel by remember { mutableStateOf(false) }
     var saldoVisible  by remember { mutableStateOf(true) }
     var filtroActivo  by remember { mutableStateOf("TODOS") }
-
-    // Nuevos estados para filtros mejorados
     var searchQuery     by remember { mutableStateOf("") }
-    var filtroDireccion by remember { mutableStateOf("TODOS") } // TODOS, IN, OUT
+    var filtroDireccion by remember { mutableStateOf("TODOS") }
     var fechaSeleccionada by remember { mutableStateOf<String?>(null) }
     var showDatePicker    by remember { mutableStateOf(false) }
     var selectedTx        by remember { mutableStateOf<WalletTransaction?>(null) }
 
     val transaccionesFiltradas = transactions.filter { tx ->
-        // 1. Filtro por tipo de transacción (el existente)
         val matchesType = when (filtroActivo) {
             "TODOS"    -> true
-            "WITHDRAW" -> {
-                val t = tx.type.uppercase()
-                t == "WITHDRAW" || t == "WITHDRAWAL_PENDING" ||
-                        t == "WITHDRAWAL_COMPLETED" || t == "WITHDRAWAL_FAILED"
-            }
+            "WITHDRAW" -> { val t = tx.type.uppercase(); t == "WITHDRAW" || t == "WITHDRAWAL_PENDING" || t == "WITHDRAWAL_COMPLETED" || t == "WITHDRAWAL_FAILED" }
             else       -> tx.type.uppercase() == filtroActivo
         }
-
-        // 2. Filtro por dirección (Ingreso/Egreso)
-        val matchesDirection = when (filtroDireccion) {
-            "TODOS" -> true
-            else    -> tx.direction.uppercase() == filtroDireccion
-        }
-
-        // 3. Filtro por búsqueda de teléfono
-        val matchesSearch = if (searchQuery.isBlank()) true else {
-            tx.senderId.contains(searchQuery) || tx.receiverId.contains(searchQuery)
-        }
-
-        // 4. Filtro por fecha
-        val matchesDate = if (fechaSeleccionada == null) true else {
-            tx.timestamp.startsWith(fechaSeleccionada!!)
-        }
-
+        val matchesDirection = when (filtroDireccion) { "TODOS" -> true; else -> tx.direction.uppercase() == filtroDireccion }
+        val matchesSearch    = if (searchQuery.isBlank()) true else tx.senderId.contains(searchQuery) || tx.receiverId.contains(searchQuery)
+        val matchesDate      = if (fechaSeleccionada == null) true else tx.timestamp.startsWith(fechaSeleccionada!!)
         matchesType && matchesDirection && matchesSearch && matchesDate
     }
 
-    // Solo TX reales para el resumen (excluye pendientes y fallidas)
-    val totalIngresos = transactions.filter { tx ->
-        tx.direction == "IN" &&
-                tx.type.uppercase() !in setOf("WITHDRAWAL_PENDING", "WITHDRAWAL_FAILED")
-    }.sumOf { it.amount }
-    val totalEgresos = transactions.filter { tx ->
-        tx.direction == "OUT" &&
-                tx.type.uppercase() !in setOf("WITHDRAWAL_PENDING", "WITHDRAWAL_FAILED")
-    }.sumOf { it.amount }
+    val totalIngresos = transactions.filter { tx -> tx.direction == "IN"  && tx.type.uppercase() !in setOf("WITHDRAWAL_PENDING", "WITHDRAWAL_FAILED") }.sumOf { it.amount }
+    val totalEgresos  = transactions.filter { tx -> tx.direction == "OUT" && tx.type.uppercase() !in setOf("WITHDRAWAL_PENDING", "WITHDRAWAL_FAILED") }.sumOf { it.amount }
 
     val speedDialItems = listOf(
-        SpeedDialItem(
-            label   = stringResource(R.string.action_transfer),
-            icon    = Icons.Filled.SwapHoriz,
-            color   = HadesCyan,
-            onClick = { onTransfer() }
-        ),
-        SpeedDialItem(
-            label   = stringResource(R.string.action_deposit),
-            icon    = HadesIcons.ArrowDownToLine,
-            color   = HadesCyan,
-            onClick = {},
-            enabled = false
-        ),
-        SpeedDialItem(
-            label   = "Retirar en Cajero",
-            icon    = HadesIcons.Landmark,
-            color   = HadesOrange,
-            onClick = { onWithdrawAtm() }
-        ),
-        SpeedDialItem(
-            label   = stringResource(R.string.action_pay),
-            icon    = Icons.Filled.CreditCard,
-            color   = HadesPurple,
-            onClick = {},
-            enabled = false
-        )
+        SpeedDialItem(label = stringResource(R.string.action_transfer), icon = Icons.Filled.SwapHoriz,    color = HadesCyan,    onClick = { onTransfer() }),
+        SpeedDialItem(label = stringResource(R.string.action_deposit),  icon = HadesIcons.ArrowDownToLine, color = HadesCyan,    onClick = {}, enabled = false),
+        SpeedDialItem(label = "Retirar en Cajero",                       icon = HadesIcons.Landmark,        color = HadesOrange,  onClick = { onWithdrawAtm() }),
+        SpeedDialItem(label = stringResource(R.string.action_pay),      icon = Icons.Filled.CreditCard,    color = HadesPurple,  onClick = {}, enabled = false)
     )
 
-    HadesBackground {
+    HadesScreen {
         Box(modifier = Modifier.fillMaxSize()) {
-
             LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(horizontal = 24.dp),
+                modifier = Modifier.fillMaxSize().padding(horizontal = 24.dp),
                 verticalArrangement = Arrangement.spacedBy(0.dp)
             ) {
                 item {
-                    Spacer(modifier = Modifier.height(40.dp))
-                    HomeHeader(
-                        appUser       = appUser,
-                        noLeidas      = noLeidas,
-                        onRefresh     = onRefresh,
-                        onNotifications = onNotifications,
-                        onAvatarClick = { showUserPanel = true }
-                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    HomeHeader(appUser = appUser, noLeidas = noLeidas, onRefresh = onRefresh, onNotifications = onNotifications, onAvatarClick = { showUserPanel = true })
                     Spacer(modifier = Modifier.height(24.dp))
                 }
-
                 item {
-                    BalanceCard(
-                        appUser       = appUser,
-                        saldoVisible  = saldoVisible,
-                        onToggleSaldo = { saldoVisible = !saldoVisible }
-                    )
+                    BalanceCard(appUser = appUser, saldoVisible = saldoVisible, onToggleSaldo = { saldoVisible = !saldoVisible })
                     Spacer(modifier = Modifier.height(24.dp))
                 }
-
                 item {
-                    HadesFinancialChart(
-                        ingresos = totalIngresos,
-                        egresos = totalEgresos
-                    )
+                    HadesFinancialChart(ingresos = totalIngresos, egresos = totalEgresos)
                     Spacer(modifier = Modifier.height(28.dp))
                 }
-
                 item {
-                    Text(
-                        text = "HISTORIAL DE ACTIVIDAD",
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = HadesCyan,
-                        letterSpacing = 2.sp
-                    )
+                    Text(text = "HISTORIAL DE ACTIVIDAD", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = HadesCyan, letterSpacing = 2.sp)
                     Spacer(modifier = Modifier.height(16.dp))
-
-                    HadesTextField(
-                        value = searchQuery,
-                        onValueChange = { searchQuery = it },
-                        label = "Buscar por número...",
-                        icon = Icons.Filled.Search,
-                        modifier = Modifier.fillMaxWidth()
-                    )
+                    HadesTextField(value = searchQuery, onValueChange = { searchQuery = it }, label = "Buscar por número...", icon = Icons.Filled.Search, modifier = Modifier.fillMaxWidth())
                     Spacer(modifier = Modifier.height(12.dp))
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
                         Box(modifier = Modifier.weight(1f)) {
-                            HadesFilterChipRow(
-                                opciones = listOf("TODOS", "IN", "OUT"),
-                                seleccionado = filtroDireccion,
-                                onSeleccion = { filtroDireccion = it },
-                                labelTransform = {
-                                    when (it) {
-                                        "IN" -> "Ingresos"
-                                        "OUT" -> "Egresos"
-                                        else -> "Todos"
-                                    }
-                                }
-                            )
+                            HadesFilterChipRow(opciones = listOf("TODOS", "IN", "OUT"), seleccionado = filtroDireccion, onSeleccion = { filtroDireccion = it }, labelTransform = { when (it) { "IN" -> "Ingresos"; "OUT" -> "Egresos"; else -> "Todos" } })
                         }
-
-                        IconButton(
-                            onClick = { showDatePicker = true },
-                            modifier = Modifier
-                                .size(40.dp)
-                                .clip(RoundedCornerShape(10.dp))
-                                .background(if (fechaSeleccionada != null) HadesCyan.copy(alpha = 0.2f) else HadesNavyDark)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Filled.DateRange,
-                                contentDescription = "Filtrar por fecha",
-                                tint = if (fechaSeleccionada != null) HadesCyan else HadesOnDark.copy(alpha = 0.6f),
-                                modifier = Modifier.size(20.dp)
-                            )
+                        IconButton(onClick = { showDatePicker = true }, modifier = Modifier.size(40.dp).clip(RoundedCornerShape(10.dp)).background(if (fechaSeleccionada != null) HadesCyan.copy(alpha = 0.2f) else HadesNavyDark)) {
+                            Icon(imageVector = Icons.Filled.DateRange, contentDescription = "Filtrar por fecha", tint = if (fechaSeleccionada != null) HadesCyan else HadesOnDark.copy(alpha = 0.6f), modifier = Modifier.size(20.dp))
                         }
-
                         if (fechaSeleccionada != null) {
-                            IconButton(
-                                onClick = { fechaSeleccionada = null },
-                                modifier = Modifier.size(24.dp)
-                            ) {
+                            IconButton(onClick = { fechaSeleccionada = null }, modifier = Modifier.size(24.dp)) {
                                 Icon(Icons.Filled.Close, contentDescription = "Limpiar fecha", tint = HadesOrange, modifier = Modifier.size(16.dp))
                             }
                         }
                     }
-
-                    if (fechaSeleccionada != null) {
-                        Text(
-                            text = "Fecha: $fechaSeleccionada",
-                            fontSize = 10.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = HadesCyan,
-                            modifier = Modifier.padding(top = 4.dp, start = 4.dp)
-                        )
-                    }
-
+                    if (fechaSeleccionada != null) Text(text = "Fecha: $fechaSeleccionada", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = HadesCyan, modifier = Modifier.padding(top = 4.dp, start = 4.dp))
                     Spacer(modifier = Modifier.height(12.dp))
-
-                    HadesFilterChipRow(
-                        opciones       = listOf("TODOS", "TRANSFER", "DEPOSIT", "WITHDRAW"),
-                        seleccionado   = filtroActivo,
-                        onSeleccion    = { filtroActivo = it },
-                        labelTransform = { translateTransactionType(it) }
-                    )
+                    HadesFilterChipRow(opciones = listOf("TODOS", "TRANSFER", "DEPOSIT", "WITHDRAW"), seleccionado = filtroActivo, onSeleccion = { filtroActivo = it }, labelTransform = { translateTransactionType(it) })
                     Spacer(modifier = Modifier.height(20.dp))
                 }
-
                 item {
-                    Row(
-                        modifier              = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment     = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text          = stringResource(R.string.home_movements_header),
-                            fontSize      = 12.sp,
-                            fontWeight    = FontWeight.Bold,
-                            letterSpacing = 2.sp,
-                            color         = HadesCyan
-                        )
-                        Text(
-                            text     = stringResource(R.string.label_records, transactions.size),
-                            fontSize = 11.sp,
-                            color    = HadesOnDark.copy(alpha = 0.4f)
-                        )
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                        Text(text = stringResource(R.string.home_movements_header), fontSize = 12.sp, fontWeight = FontWeight.Bold, letterSpacing = 2.sp, color = HadesCyan)
+                        Text(text = stringResource(R.string.label_records, transactions.size), fontSize = 11.sp, color = HadesOnDark.copy(alpha = 0.4f))
                     }
                     Spacer(modifier = Modifier.height(8.dp))
                 }
-
                 if (transaccionesFiltradas.isEmpty() && !cargando) {
                     item {
-                        Box(
-                            modifier         = Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = 48.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
+                        Box(modifier = Modifier.fillMaxWidth().padding(vertical = 48.dp), contentAlignment = Alignment.Center) {
                             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                Text(
-                                    text          = stringResource(R.string.home_empty_title),
-                                    color         = HadesOnDark.copy(alpha = 0.3f),
-                                    fontSize      = 13.sp,
-                                    fontWeight    = FontWeight.Bold,
-                                    letterSpacing = 2.sp
-                                )
+                                Text(text = stringResource(R.string.home_empty_title), color = HadesOnDark.copy(alpha = 0.3f), fontSize = 13.sp, fontWeight = FontWeight.Bold, letterSpacing = 2.sp)
                                 Spacer(modifier = Modifier.height(4.dp))
-                                Text(
-                                    text      = stringResource(R.string.home_empty_subtitle),
-                                    color     = HadesOnDark.copy(alpha = 0.25f),
-                                    fontSize  = 12.sp,
-                                    textAlign = TextAlign.Center
-                                )
+                                Text(text = stringResource(R.string.home_empty_subtitle), color = HadesOnDark.copy(alpha = 0.25f), fontSize = 12.sp, textAlign = TextAlign.Center)
                             }
                         }
                     }
                 }
-
-                items(transaccionesFiltradas) { tx ->
-                    TransactionRow(
-                        tx = tx,
-                        onClick = { selectedTx = tx }
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                }
-
+                items(transaccionesFiltradas) { tx -> TransactionRow(tx = tx, onClick = { selectedTx = tx }); Spacer(modifier = Modifier.height(8.dp)) }
                 item { Spacer(modifier = Modifier.height(120.dp)) }
             }
 
             if (menuExpanded) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .background(HadesNavyDark.copy(alpha = 0.6f))
-                        .clickable { onMenuCollapse() }
-                )
+                Box(modifier = Modifier.fillMaxSize().background(HadesNavyDark.copy(alpha = 0.6f)).clickable { onMenuCollapse() })
             }
-
-            HadesSpeedDial(
-                expanded = menuExpanded,
-                onToggle = onMenuToggle,
-                items    = speedDialItems,
-                modifier = Modifier.align(Alignment.BottomEnd)
-            )
+            HadesSpeedDial(expanded = menuExpanded, onToggle = onMenuToggle, items = speedDialItems, modifier = Modifier.align(Alignment.BottomEnd))
         }
 
-        if (showUserPanel) {
-            UserPanelSheet(
-                appUser   = appUser,
-                onDismiss = { showUserPanel = false },
-                onLogout  = onLogout,
-                onProfile = {
-                    showUserPanel = false
-                    onProfile()
-                }
-            )
-        }
-
-        if (showDatePicker) {
-            HadesDatePickerDialog(
-                onDateSelected = { date ->
-                    fechaSeleccionada = date
-                    showDatePicker = false
-                },
-                onDismiss = { showDatePicker = false }
-            )
-        }
-
-        if (selectedTx != null) {
-            TransactionDetailDialog(
-                tx = selectedTx!!,
-                onDismiss = { selectedTx = null }
-            )
-        }
+        if (showUserPanel) UserPanelSheet(appUser = appUser, onDismiss = { showUserPanel = false }, onLogout = onLogout, onProfile = { showUserPanel = false; onProfile() })
+        if (showDatePicker) HadesDatePickerDialog(onDateSelected = { date -> fechaSeleccionada = date; showDatePicker = false }, onDismiss = { showDatePicker = false })
+        if (selectedTx != null) TransactionDetailDialog(tx = selectedTx!!, onDismiss = { selectedTx = null })
     }
 }
 
 @Composable
-private fun HomeHeader(
-    appUser: AppUser?,
-    noLeidas: Int,
-    onRefresh: () -> Unit,
-    onNotifications: () -> Unit,
-    onAvatarClick: () -> Unit
-) {
-    Row(
-        modifier              = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment     = Alignment.CenterVertically
-    ) {
+private fun HomeHeader(appUser: AppUser?, noLeidas: Int, onRefresh: () -> Unit, onNotifications: () -> Unit, onAvatarClick: () -> Unit) {
+    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Box(
-                modifier = Modifier
-                    .size(46.dp)
-                    .clip(CircleShape)
-                    .background(Brush.radialGradient(colors = listOf(HadesPurple, HadesNavyDark)))
-                    .clickable { onAvatarClick() },
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text       = getInitials(appUser?.fullName),
-                    fontSize   = 16.sp,
-                    fontWeight = FontWeight.Black,
-                    color      = HadesOnDark
-                )
+            Box(modifier = Modifier.size(46.dp).clip(CircleShape).background(Brush.radialGradient(colors = listOf(HadesPurple, HadesNavyDark))).clickable { onAvatarClick() }, contentAlignment = Alignment.Center) {
+                Text(text = getInitials(appUser?.fullName), fontSize = 16.sp, fontWeight = FontWeight.Black, color = HadesOnDark)
             }
             Spacer(modifier = Modifier.width(12.dp))
             Column {
-                Text(
-                    text          = stringResource(R.string.home_app_label),
-                    fontSize      = 11.sp,
-                    fontWeight    = FontWeight.Black,
-                    letterSpacing = 4.sp,
-                    color         = HadesPurple
-                )
-                Text(
-                    text       = stringResource(R.string.home_greeting, appUser?.fullName ?: stringResource(R.string.home_no_data)),
-                    fontSize   = 14.sp,
-                    fontWeight = FontWeight.Medium,
-                    color      = HadesOnDark.copy(alpha = 0.8f)
-                )
+                Text(text = stringResource(R.string.home_app_label), fontSize = 11.sp, fontWeight = FontWeight.Black, letterSpacing = 4.sp, color = HadesPurple)
+                Text(text = stringResource(R.string.home_greeting, appUser?.fullName ?: stringResource(R.string.home_no_data)), fontSize = 14.sp, fontWeight = FontWeight.Medium, color = HadesOnDark.copy(alpha = 0.8f))
             }
         }
         Row(verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = onNotifications) {
-                BadgedBox(
-                    badge = {
-                        if (noLeidas > 0) {
-                            Badge(
-                                containerColor = HadesOrange,
-                                contentColor = Color.White
-                            ) {
-                                Text(noLeidas.toString())
-                            }
-                        }
-                    }
-                ) {
-                    Icon(
-                        imageVector = Icons.Filled.Notifications,
-                        contentDescription = stringResource(R.string.cd_notifications),
-                        tint = HadesCyan,
-                        modifier = Modifier.size(22.dp)
-                    )
+                BadgedBox(badge = { if (noLeidas > 0) Badge(containerColor = HadesOrange, contentColor = Color.White) { Text(noLeidas.toString()) } }) {
+                    Icon(imageVector = Icons.Filled.Notifications, contentDescription = stringResource(R.string.cd_notifications), tint = HadesCyan, modifier = Modifier.size(22.dp))
                 }
             }
-            IconButton(onClick = onRefresh) {
-                Icon(
-                    imageVector        = Icons.Filled.Refresh,
-                    contentDescription = stringResource(R.string.cd_refresh),
-                    tint               = HadesCyan,
-                    modifier           = Modifier.size(22.dp)
-                )
-            }
+            IconButton(onClick = onRefresh) { Icon(imageVector = Icons.Filled.Refresh, contentDescription = stringResource(R.string.cd_refresh), tint = HadesCyan, modifier = Modifier.size(22.dp)) }
         }
     }
 }
 
 @Composable
-private fun BalanceCard(
-    appUser: AppUser?,
-    saldoVisible: Boolean,
-    onToggleSaldo: () -> Unit
-) {
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(24.dp))
-            .background(Brush.linearGradient(colors = listOf(HadesPurple, HadesPurpleGlow, HadesNavyDark)))
-            .padding(24.dp)
-    ) {
+private fun BalanceCard(appUser: AppUser?, saldoVisible: Boolean, onToggleSaldo: () -> Unit) {
+    Box(modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp)).background(Brush.linearGradient(colors = listOf(HadesPurple, HadesPurpleGlow, HadesNavyDark))).padding(24.dp)) {
         Column {
-            Text(
-                text          = stringResource(R.string.label_available_balance),
-                fontSize      = 12.sp,
-                letterSpacing = 1.sp,
-                color         = HadesOnDark.copy(alpha = 0.7f)
-            )
+            Text(text = stringResource(R.string.label_available_balance), fontSize = 12.sp, letterSpacing = 1.sp, color = HadesOnDark.copy(alpha = 0.7f))
             Spacer(modifier = Modifier.height(4.dp))
             HadesBalanceText(balance = appUser?.balance ?: 0.0, visible = saldoVisible, onToggle = onToggleSaldo)
             Spacer(modifier = Modifier.height(16.dp))
             Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(HadesOnDark.copy(alpha = 0.15f)))
             Spacer(modifier = Modifier.height(12.dp))
-            Row(
-                modifier              = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Column {
-                    Text(text = stringResource(R.string.label_phone),    fontSize = 9.sp,  letterSpacing = 1.sp, color = HadesOnDark.copy(alpha = 0.5f))
-                    Text(text = appUser?.phoneNumber    ?: "—",           fontSize = 13.sp, fontWeight = FontWeight.Bold, color = HadesOnDark)
-                }
-                Column(horizontalAlignment = Alignment.End) {
-                    Text(text = stringResource(R.string.label_document), fontSize = 9.sp,  letterSpacing = 1.sp, color = HadesOnDark.copy(alpha = 0.5f))
-                    Text(text = appUser?.documentNumber ?: "—",           fontSize = 13.sp, fontWeight = FontWeight.Bold, color = HadesOnDark)
-                }
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                Column { Text(text = stringResource(R.string.label_phone),    fontSize = 9.sp, letterSpacing = 1.sp, color = HadesOnDark.copy(alpha = 0.5f)); Text(text = appUser?.phoneNumber    ?: "—", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = HadesOnDark) }
+                Column(horizontalAlignment = Alignment.End) { Text(text = stringResource(R.string.label_document), fontSize = 9.sp, letterSpacing = 1.sp, color = HadesOnDark.copy(alpha = 0.5f)); Text(text = appUser?.documentNumber ?: "—", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = HadesOnDark) }
             }
         }
     }
 }
 
 @Composable
-private fun TransactionRow(
-    tx: WalletTransaction,
-    onClick: () -> Unit
-) {
-    val isIncome    = tx.direction == "IN"
-    val amountColor = if (isIncome) HadesCyan else HadesOrange
-    val prefix      = if (isIncome) "+" else "-"
-    val icon        = txIcon(tx.type, tx.direction)
-    val typeLabel   = translateTransactionType(tx.type)
-
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(14.dp))
-            .background(HadesNavyDark)
-            .clickable { onClick() }
-            .padding(horizontal = 16.dp, vertical = 14.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment     = Alignment.CenterVertically
-    ) {
+private fun TransactionRow(tx: WalletTransaction, onClick: () -> Unit) {
+    val isIncome = tx.direction == "IN"; val amountColor = if (isIncome) HadesCyan else HadesOrange
+    val prefix = if (isIncome) "+" else "-"; val icon = txIcon(tx.type, tx.direction); val typeLabel = translateTransactionType(tx.type)
+    Row(modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(HadesNavyDark).clickable { onClick() }.padding(horizontal = 16.dp, vertical = 14.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Box(
-                modifier         = Modifier.size(36.dp).clip(CircleShape).background(amountColor.copy(alpha = 0.12f)),
-                contentAlignment = Alignment.Center
-            ) {
+            Box(modifier = Modifier.size(36.dp).clip(CircleShape).background(amountColor.copy(alpha = 0.12f)), contentAlignment = Alignment.Center) {
                 Icon(imageVector = icon, contentDescription = typeLabel, tint = amountColor, modifier = Modifier.size(18.dp))
             }
             Spacer(modifier = Modifier.width(12.dp))
-            Column {
-                Text(text = typeLabel,                     fontSize = 14.sp, fontWeight = FontWeight.Bold,  color = HadesOnDark)
-                Text(text = formatTimestamp(tx.timestamp), fontSize = 11.sp, color = HadesOnDark.copy(alpha = 0.45f))
-            }
+            Column { Text(text = typeLabel, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = HadesOnDark); Text(text = formatTimestamp(tx.timestamp), fontSize = 11.sp, color = HadesOnDark.copy(alpha = 0.45f)) }
         }
-        Text(
-            text       = "$prefix$ ${String.format(Locale.US, "%,.2f", tx.amount)}",
-            fontWeight = FontWeight.Black,
-            color      = amountColor,
-            fontSize   = 15.sp
-        )
+        Text(text = "$prefix$ ${String.format(Locale.US, "%,.2f", tx.amount)}", fontWeight = FontWeight.Black, color = amountColor, fontSize = 15.sp)
     }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun UserPanelSheet(
-    appUser: AppUser?,
-    onDismiss: () -> Unit,
-    onLogout: () -> Unit,
-    onProfile: () -> Unit = {}
-) {
+fun UserPanelSheet(appUser: AppUser?, onDismiss: () -> Unit, onLogout: () -> Unit, onProfile: () -> Unit = {}) {
     ModalBottomSheet(onDismissRequest = onDismiss, containerColor = HadesNavyDark) {
-        Column(
-            modifier            = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 24.dp)
-                .padding(bottom = 32.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Box(
-                modifier         = Modifier
-                    .size(72.dp)
-                    .clip(CircleShape)
-                    .background(Brush.radialGradient(colors = listOf(HadesPurple, HadesNavyDark))),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text       = getInitials(appUser?.fullName),
-                    fontSize   = 26.sp,
-                    fontWeight = FontWeight.Black,
-                    color      = HadesOnDark
-                )
+        Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp).padding(bottom = 32.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+            Box(modifier = Modifier.size(72.dp).clip(CircleShape).background(Brush.radialGradient(colors = listOf(HadesPurple, HadesNavyDark))), contentAlignment = Alignment.Center) {
+                Text(text = getInitials(appUser?.fullName), fontSize = 26.sp, fontWeight = FontWeight.Black, color = HadesOnDark)
             }
             Spacer(modifier = Modifier.height(12.dp))
-            Text(text = appUser?.fullName    ?: "...", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = HadesOnDark)
+            Text(text = appUser?.fullName ?: "...", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = HadesOnDark)
             Spacer(modifier = Modifier.height(4.dp))
-            Text(text = appUser?.phoneNumber ?: "—",   fontSize = 14.sp, color = HadesOnDark.copy(alpha = 0.6f))
+            Text(text = appUser?.phoneNumber ?: "—", fontSize = 14.sp, color = HadesOnDark.copy(alpha = 0.6f))
             Spacer(modifier = Modifier.height(24.dp))
             Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(HadesOnDark.copy(alpha = 0.1f)))
             Spacer(modifier = Modifier.height(20.dp))
@@ -685,43 +302,12 @@ fun UserPanelSheet(
             Spacer(modifier = Modifier.height(12.dp))
             UserInfoRow(label = stringResource(R.string.label_member_since), value = appUser?.createdAt?.take(10) ?: "—")
             Spacer(modifier = Modifier.height(28.dp))
-
-            Button(
-                onClick  = onProfile,
-                modifier = Modifier.fillMaxWidth(),
-                colors   = ButtonDefaults.buttonColors(
-                    containerColor = HadesPurple.copy(alpha = 0.15f),
-                    contentColor   = HadesPurple
-                ),
-                shape = RoundedCornerShape(12.dp)
-            ) {
-                Icon(
-                    imageVector        = Icons.Filled.Person,
-                    contentDescription = null,
-                    modifier           = Modifier.size(18.dp)
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(text = "Ver perfil completo", fontWeight = FontWeight.Bold)
+            Button(onClick = onProfile, modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors(containerColor = HadesPurple.copy(alpha = 0.15f), contentColor = HadesPurple), shape = RoundedCornerShape(12.dp)) {
+                Icon(imageVector = Icons.Filled.Person, contentDescription = null, modifier = Modifier.size(18.dp)); Spacer(modifier = Modifier.width(8.dp)); Text(text = "Ver perfil completo", fontWeight = FontWeight.Bold)
             }
-
             Spacer(modifier = Modifier.height(8.dp))
-
-            Button(
-                onClick  = { onDismiss(); onLogout() },
-                modifier = Modifier.fillMaxWidth(),
-                colors   = ButtonDefaults.buttonColors(
-                    containerColor = HadesOrange.copy(alpha = 0.15f),
-                    contentColor   = HadesOrange
-                ),
-                shape = RoundedCornerShape(12.dp)
-            ) {
-                Icon(
-                    imageVector        = Icons.AutoMirrored.Filled.ExitToApp,
-                    contentDescription = null,
-                    modifier           = Modifier.size(18.dp)
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(text = stringResource(R.string.btn_logout), fontWeight = FontWeight.Bold)
+            Button(onClick = { onDismiss(); onLogout() }, modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors(containerColor = HadesOrange.copy(alpha = 0.15f), contentColor = HadesOrange), shape = RoundedCornerShape(12.dp)) {
+                Icon(imageVector = Icons.AutoMirrored.Filled.ExitToApp, contentDescription = null, modifier = Modifier.size(18.dp)); Spacer(modifier = Modifier.width(8.dp)); Text(text = stringResource(R.string.btn_logout), fontWeight = FontWeight.Bold)
             }
         }
     }
@@ -729,11 +315,7 @@ fun UserPanelSheet(
 
 @Composable
 private fun UserInfoRow(label: String, value: String) {
-    Row(
-        modifier              = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment     = Alignment.CenterVertically
-    ) {
+    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
         Text(text = label, fontSize = 10.sp, letterSpacing = 1.sp, color = HadesOnDark.copy(alpha = 0.45f))
         Text(text = value, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = HadesOnDark)
     }
@@ -742,13 +324,7 @@ private fun UserInfoRow(label: String, value: String) {
 @Preview(showBackground = true, showSystemUi = true, name = "Home — vacío")
 @Composable
 fun HomeViewEmptyPreview() {
-    HadesCoinTheme {
-        HomeViewContent(
-            appUser      = AppUser(fullName = "Juan Pérez", balance = 0.0, phoneNumber = "3001234567", documentNumber = "1010101010"),
-            transactions = emptyList(),
-            cargando     = false
-        )
-    }
+    HadesCoinTheme { HomeViewContent(appUser = AppUser(fullName = "Juan Pérez", balance = 0.0, phoneNumber = "3001234567", documentNumber = "1010101010"), transactions = emptyList(), cargando = false) }
 }
 
 @Preview(showBackground = true, showSystemUi = true, name = "Home — con datos")
@@ -762,116 +338,56 @@ fun HomeViewFilledPreview() {
                 WalletTransaction(type = "WITHDRAWAL_COMPLETED", amount = 50.25,  direction = "OUT", timestamp = "2026-05-20T08:00:00Z"),
                 WalletTransaction(type = "TRANSFER",             amount = 200.0,  direction = "OUT", timestamp = "2026-05-19T15:00:00Z"),
                 WalletTransaction(type = "TRANSFER",             amount = 150.0,  direction = "IN",  timestamp = "2026-05-18T11:00:00Z")
-            ),
-            cargando = false
+            ), cargando = false
         )
     }
 }
 
 @Preview(showBackground = true, showSystemUi = true, name = "Home — cargando")
 @Composable
-fun HomeViewLoadingPreview() {
-    HadesCoinTheme { HomeViewContent(appUser = null, transactions = emptyList(), cargando = true) }
-}
+fun HomeViewLoadingPreview() { HadesCoinTheme { HomeViewContent(appUser = null, transactions = emptyList(), cargando = true) } }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun HadesDatePickerDialog(
-    onDateSelected: (String) -> Unit,
-    onDismiss: () -> Unit
-) {
+fun HadesDatePickerDialog(onDateSelected: (String) -> Unit, onDismiss: () -> Unit) {
     val datePickerState = rememberDatePickerState()
-
     DatePickerDialog(
         onDismissRequest = onDismiss,
-        confirmButton = {
-            TextButton(onClick = {
-                datePickerState.selectedDateMillis?.let { millis ->
-                    val sdf = SimpleDateFormat("yyyy-MM-dd", Locale.US)
-                    onDateSelected(sdf.format(Date(millis)))
-                }
-            }) {
-                Text("ACEPTAR", color = HadesCyan)
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text("CANCELAR", color = HadesOnDark)
-            }
-        },
-        colors = DatePickerDefaults.colors(
-            containerColor = HadesNavyDark
-        )
-    ) {
-        DatePicker(state = datePickerState)
-    }
+        confirmButton = { TextButton(onClick = { datePickerState.selectedDateMillis?.let { millis -> val sdf = SimpleDateFormat("yyyy-MM-dd", Locale.US); onDateSelected(sdf.format(Date(millis))) } }) { Text("ACEPTAR", color = HadesCyan) } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("CANCELAR", color = HadesOnDark) } },
+        colors = DatePickerDefaults.colors(containerColor = HadesNavyDark)
+    ) { DatePicker(state = datePickerState) }
 }
 
 @Composable
-fun TransactionDetailDialog(
-    tx: WalletTransaction,
-    onDismiss: () -> Unit
-) {
-    val isIncome = tx.direction == "IN"
-    val color = if (isIncome) HadesCyan else HadesOrange
-
+fun TransactionDetailDialog(tx: WalletTransaction, onDismiss: () -> Unit) {
+    val isIncome = tx.direction == "IN"; val color = if (isIncome) HadesCyan else HadesOrange
     AlertDialog(
-        onDismissRequest = onDismiss,
-        containerColor = HadesNavyDark,
+        onDismissRequest = onDismiss, containerColor = HadesNavyDark,
         title = {
             Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
-                Box(
-                    modifier = Modifier
-                        .size(60.dp)
-                        .clip(CircleShape)
-                        .background(color.copy(alpha = 0.1f)),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = if (isIncome) Icons.Filled.ArrowDownward else Icons.Filled.ArrowUpward,
-                        contentDescription = null,
-                        tint = color,
-                        modifier = Modifier.size(32.dp)
-                    )
+                Box(modifier = Modifier.size(60.dp).clip(CircleShape).background(color.copy(alpha = 0.1f)), contentAlignment = Alignment.Center) {
+                    Icon(imageVector = if (isIncome) Icons.Filled.ArrowDownward else Icons.Filled.ArrowUpward, contentDescription = null, tint = color, modifier = Modifier.size(32.dp))
                 }
                 Spacer(modifier = Modifier.height(12.dp))
-                Text(
-                    text = translateTransactionType(tx.type),
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = HadesOnDark
-                )
+                Text(text = translateTransactionType(tx.type), fontSize = 18.sp, fontWeight = FontWeight.Bold, color = HadesOnDark)
             }
         },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                DetailItem(label = "Monto", value = "$ ${String.format(Locale.US, "%,.2f", tx.amount)}", valueColor = color)
-                DetailItem(label = "Fecha", value = formatTimestamp(tx.timestamp))
+                DetailItem(label = "Monto",    value = "$ ${String.format(Locale.US, "%,.2f", tx.amount)}", valueColor = color)
+                DetailItem(label = "Fecha",    value = formatTimestamp(tx.timestamp))
                 DetailItem(label = "Dirección", value = if (isIncome) "Recibido" else "Enviado")
-
-                if (tx.type == "TRANSFER") {
-                    DetailItem(label = "Origen", value = tx.senderId)
-                    DetailItem(label = "Destino", value = tx.receiverId)
-                }
-
-                if (tx.verificationCode.isNotEmpty()) {
-                    DetailItem(label = "Código", value = tx.verificationCode, valueColor = HadesPurple)
-                }
-
+                if (tx.type == "TRANSFER") { DetailItem(label = "Origen", value = tx.senderId); DetailItem(label = "Destino", value = tx.receiverId) }
+                if (tx.verificationCode.isNotEmpty()) DetailItem(label = "Código", value = tx.verificationCode, valueColor = HadesPurple)
                 DetailItem(label = "ID Transacción", value = tx.id.take(12) + "...")
             }
         },
-        confirmButton = {
-            HadesButton(text = "CERRAR", onClick = onDismiss)
-        }
+        confirmButton = { HadesButton(text = "CERRAR", onClick = onDismiss) }
     )
 }
 
 @Composable
 private fun DetailItem(label: String, value: String, valueColor: Color = HadesOnDark) {
-    Column {
-        Text(text = label, fontSize = 10.sp, color = HadesOnDark.copy(alpha = 0.5f), letterSpacing = 1.sp)
-        Text(text = value, fontSize = 15.sp, fontWeight = FontWeight.Medium, color = valueColor)
-    }
+    Column { Text(text = label, fontSize = 10.sp, color = HadesOnDark.copy(alpha = 0.5f), letterSpacing = 1.sp); Text(text = value, fontSize = 15.sp, fontWeight = FontWeight.Medium, color = valueColor) }
 }
-
