@@ -31,6 +31,20 @@ class LoginViewModel(
     private val _nombreGuardado = MutableLiveData(sessionRepository.getName())
     val nombreGuardado: LiveData<String> = _nombreGuardado
 
+    // ── Biometría ────────────────────────────────────────────────────────────
+    // Expone si la biometría está activada para que LoginView decida si lanzar el prompt
+    private val _biometriaActiva = MutableLiveData(sessionRepository.isBiometriaActiva())
+    val biometriaActiva: LiveData<Boolean> = _biometriaActiva
+
+    // Llamado desde LoginView cuando la autenticación biométrica fue exitosa.
+    // Navega a Home igual que un login con PIN exitoso, sin tocar Firebase.
+    fun loginConBiometria() {
+        val phone = sessionRepository.getPhone()
+        if (phone.isNotBlank()) _loginExitoso.value = phone
+    }
+
+    // ──────────────────────────────────────────────────────────────────
+
     private val _cargando = MutableLiveData(false)
     val cargando: LiveData<Boolean> = _cargando
 
@@ -51,7 +65,7 @@ class LoginViewModel(
 
     private var phoneParaReset: String = ""
 
-    // ── Login ────────────────────────────────────────────────────────────────────
+    // ── Login con PIN ──────────────────────────────────────────────────────────
     fun login(phoneNumber: String, pin: String) {
         if (!esTelefonoValido(phoneNumber)) { _loginError.value = "El teléfono debe tener 10 dígitos y empezar por 3"; return }
         if (!esPinValido(pin))             { _loginError.value = "El PIN debe tener exactamente 4 dígitos"; return }
@@ -82,9 +96,10 @@ class LoginViewModel(
         _haySessionGuardada.value = false
         _telefonoGuardado.value   = ""
         _nombreGuardado.value     = ""
+        _biometriaActiva.value    = false
     }
 
-    // ── Flujo verificacion: Paso 1 — verificar identidad (telefono + cedula) y generar codigo ──
+    // ── Recuperación de PIN ───────────────────────────────────────────────────
     fun generarCodigoVerificacion(phoneNumber: String, documentNumber: String) {
         if (phoneNumber.isBlank() || documentNumber.isBlank()) {
             _errorRecuperacion.value = "Ingresa el teléfono y la cédula"; return
@@ -104,7 +119,6 @@ class LoginViewModel(
         }
     }
 
-    // ── Flujo verificacion: Paso 2 — validar codigo ────────────────────────────
     fun validarCodigo(code: String) {
         viewModelScope.launch {
             _cargando.value = true
@@ -120,7 +134,6 @@ class LoginViewModel(
         }
     }
 
-    // ── Flujo verificacion: Paso 3 — resetear PIN ─────────────────────────────
     fun resetearPin(nuevoPin: String) {
         if (!esPinValido(nuevoPin)) { _errorRecuperacion.value = "El nuevo PIN debe tener exactamente 4 dígitos"; return }
         if (esPinObvio(nuevoPin))   { _errorRecuperacion.value = "El PIN es muy sencillo. Usa uno más seguro."; return }
