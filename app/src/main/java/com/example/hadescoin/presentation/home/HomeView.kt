@@ -163,7 +163,17 @@ fun HomeViewContent(
             else       -> tx.type.uppercase() == filtroActivo
         }
         val matchesDirection = when (filtroDireccion) { "TODOS" -> true; else -> tx.direction.uppercase() == filtroDireccion }
-        val matchesSearch    = if (searchQuery.isBlank()) true else tx.senderId.contains(searchQuery) || tx.receiverId.contains(searchQuery)
+
+        val matchesSearch = if (searchQuery.length < 3) {
+            true // No se filtra si hay menos de 3 caracteres
+        } else {
+            val query = searchQuery.lowercase()
+            tx.senderId.contains(query) ||
+            tx.receiverId.contains(query) ||
+            tx.senderName.lowercase().contains(query) ||
+            tx.receiverName.lowercase().contains(query)
+        }
+
         val matchesDate      = if (fechaSeleccionada == null) true else tx.timestamp.startsWith(fechaSeleccionada!!)
         matchesType && matchesDirection && matchesSearch && matchesDate
     }
@@ -201,7 +211,21 @@ fun HomeViewContent(
                 item {
                     Text(text = "HISTORIAL DE ACTIVIDAD", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = HadesCyan, letterSpacing = 2.sp)
                     Spacer(modifier = Modifier.height(16.dp))
-                    HadesTextField(value = searchQuery, onValueChange = { searchQuery = it }, label = "Buscar por número...", icon = Icons.Filled.Search, modifier = Modifier.fillMaxWidth())
+                    HadesTextField(
+                        value = searchQuery,
+                        onValueChange = { if (it.length <= 20) searchQuery = it },
+                        label = "Buscar nombre o número...",
+                        icon = Icons.Filled.Search,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    if (searchQuery.isNotEmpty() && searchQuery.length < 3) {
+                        Text(
+                            text = "Ingresa al menos 3 caracteres para buscar",
+                            fontSize = 10.sp,
+                            color = HadesOrange.copy(alpha = 0.7f),
+                            modifier = Modifier.padding(top = 4.dp, start = 4.dp)
+                        )
+                    }
                     Spacer(modifier = Modifier.height(12.dp))
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
                         Box(modifier = Modifier.weight(1f)) {

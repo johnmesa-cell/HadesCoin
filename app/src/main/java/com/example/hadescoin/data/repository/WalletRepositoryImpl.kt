@@ -46,7 +46,9 @@ class WalletRepositoryImpl(
         return WalletTransaction(
             id               = snapshot.key ?: "",
             senderId         = senderId,
+            senderName       = snapshot.child("senderName").getValue(String::class.java)       ?: "",
             receiverId       = snapshot.child("receiverId").getValue(String::class.java)       ?: "",
+            receiverName     = snapshot.child("receiverName").getValue(String::class.java)     ?: "",
             amount           = snapshot.child("amount").getValue(Double::class.java)           ?: 0.0,
             type             = type,
             direction        = direction,
@@ -100,11 +102,13 @@ class WalletRepositoryImpl(
             userDataSource.updateBalance(senderPhone,   sender.balance   - amount)
             userDataSource.updateBalance(receiverPhone, receiver.balance + amount)
             transactionDataSource.saveTransaction(mapOf(
-                "senderId"   to senderPhone,
-                "receiverId" to receiverPhone,
-                "amount"     to amount,
-                "type"       to "TRANSFER",
-                "timestamp"  to Instant.now().toString()
+                "senderId"     to senderPhone,
+                "senderName"   to sender.fullName,
+                "receiverId"   to receiverPhone,
+                "receiverName" to receiver.fullName,
+                "amount"       to amount,
+                "type"         to "TRANSFER",
+                "timestamp"    to Instant.now().toString()
             ))
             Result.success(Unit)
         } catch (e: Exception) { Result.failure(e) }
@@ -133,11 +137,16 @@ class WalletRepositoryImpl(
         expiresAt:   String
     ): String? {
         return try {
+            val userSnapshot = userDataSource.getUser(phoneNumber)
+            val userName = userSnapshot?.child("fullName")?.getValue(String::class.java) ?: ""
+
             val ref  = FirebaseDatabase.getInstance().getReference("transactions").push()
             val txId = ref.key ?: return null
             ref.setValue(mapOf(
                 "senderId"         to phoneNumber,
+                "senderName"       to userName,
                 "receiverId"       to "ATM",
+                "receiverName"     to "Cajero Automático",
                 "amount"           to amount,
                 "type"             to "WITHDRAWAL_PENDING",
                 "verificationCode" to code,
