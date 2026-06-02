@@ -1,9 +1,12 @@
 package com.example.hadescoin.presentation.profile
 
+import android.app.Application
+import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
-import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.hadescoin.R
+import com.example.hadescoin.core.Constants
 import com.example.hadescoin.di.ServiceLocator
 import com.example.hadescoin.domain.model.AppUser
 import com.example.hadescoin.domain.repository.SessionRepository
@@ -15,9 +18,12 @@ import com.example.hadescoin.domain.usecase.QueueNotificationEmailUseCase
 import com.example.hadescoin.domain.usecase.UpdateUserNicknameUseCase
 import com.example.hadescoin.domain.usecase.UpdateUserPinUseCase
 import com.example.hadescoin.domain.usecase.ValidateVerificationCodeUseCase
+import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeout
 
-class ProfileViewModel(
+class ProfileViewModel @JvmOverloads constructor(
+    application: Application,
     private val getUserProfileUseCase:  GetUserProfileUseCase           = ServiceLocator.provideGetUserProfileUseCase(),
     private val updatePinUseCase:       UpdateUserPinUseCase            = ServiceLocator.provideUpdateUserPinUseCase(),
     private val updateNicknameUseCase:  UpdateUserNicknameUseCase       = ServiceLocator.provideUpdateUserNicknameUseCase(),
@@ -27,7 +33,7 @@ class ProfileViewModel(
     private val getUnreadNotificationsCountUseCase: GetUnreadNotificationsCountUseCase = ServiceLocator.provideGetUnreadNotificationsCountUseCase(),
     private val queueNotificationEmailUseCase:      QueueNotificationEmailUseCase      = ServiceLocator.provideQueueNotificationEmailUseCase(),
     private val sessionRepository:                  SessionRepository                  = ServiceLocator.provideSessionRepository()
-) : ViewModel() {
+) : AndroidViewModel(application) {
 
     private val _user = MutableLiveData<AppUser?>()
     val user: LiveData<AppUser?> = _user
@@ -51,12 +57,17 @@ class ProfileViewModel(
     val notificacionesNoLeidas: LiveData<Int> = _notificacionesNoLeidas
 
     // ── Biometría ────────────────────────────────────────────────────────────
-    private val _biometriaActiva = MutableLiveData(sessionRepository.isBiometriaActiva())
+    private val _biometriaActiva = MutableLiveData(sessionRepository.isBiometriaActiva(sessionRepository.getPhone()))
     val biometriaActiva: LiveData<Boolean> = _biometriaActiva
 
+    private fun timeoutMsg() = getApplication<Application>().getString(R.string.error_timeout_message)
+
     fun setBiometriaActiva(activa: Boolean) {
-        sessionRepository.setBiometriaActiva(activa)
-        _biometriaActiva.value = activa
+        val phone = sessionRepository.getPhone()
+        if (phone.isNotBlank()) {
+            sessionRepository.setBiometriaActiva(phone, activa)
+            _biometriaActiva.value = activa
+        }
     }
     // ───────────────────────────────────────────────────────────────
 
@@ -71,8 +82,12 @@ class ProfileViewModel(
         viewModelScope.launch {
             _cargando.value = true
             try {
-                _user.value = getUserProfileUseCase(phoneNumber)
-                cargarNoLeidas(phoneNumber)
+                withTimeout(Constants.NETWORK_TIMEOUT_MS) {
+                    _user.value = getUserProfileUseCase(phoneNumber)
+                    cargarNoLeidas(phoneNumber)
+                }
+            } catch (e: TimeoutCancellationException) {
+                _mensajeError.value = timeoutMsg()
             } catch (e: Exception) {
                 _mensajeError.value = "Error al cargar el perfil"
             } finally {
@@ -94,13 +109,17 @@ class ProfileViewModel(
         viewModelScope.launch {
             _cargando.value = true
             try {
-                if (updatePinUseCase(phoneNumber, pinNuevo)) {
-                    _mensajeExito.value = "PIN actualizado correctamente"
-                    registrarNotificacionPerfil(phoneNumber, "PIN actualizado", "Tu PIN de seguridad fue actualizado correctamente.", "SECURITY")
-                    cargarPerfil(phoneNumber)
-                } else {
-                    _mensajeError.value = "No se pudo actualizar el PIN"
+                withTimeout(Constants.NETWORK_TIMEOUT_MS) {
+                    if (updatePinUseCase(phoneNumber, pinNuevo)) {
+                        _mensajeExito.value = "PIN actualizado correctamente"
+                        registrarNotificacionPerfil(phoneNumber, "PIN actualizado", "Tu PIN de seguridad fue actualizado correctamente.", "SECURITY")
+                        cargarPerfil(phoneNumber)
+                    } else {
+                        _mensajeError.value = "No se pudo actualizar el PIN"
+                    }
                 }
+            } catch (e: TimeoutCancellationException) {
+                _mensajeError.value = timeoutMsg()
             } catch (e: Exception) {
                 _mensajeError.value = "Error: ${e.message}"
             } finally {
@@ -116,9 +135,13 @@ class ProfileViewModel(
         viewModelScope.launch {
             _cargando.value = true
             try {
-                val code = generateCodeUseCase(phoneNumber, documentNumber)
-                if (code != null) _codigoGenerado.value = code
-                else _mensajeError.value = "No se encontró un usuario con esos datos."
+                withTimeout(Constants.NETWORK_TIMEOUT_MS) {
+                    val code = generateCodeUseCase(phoneNumber, documentNumber)
+                    if (code != null) _codigoGenerado.value = code
+                    else _mensajeError.value = "No se encontró un usuario con esos datos."
+                }
+            } catch (e: TimeoutCancellationException) {
+                _mensajeError.value = timeoutMsg()
             } catch (e: Exception) {
                 _mensajeError.value = "Error: ${e.message}"
             } finally {
@@ -131,9 +154,13 @@ class ProfileViewModel(
         viewModelScope.launch {
             _cargando.value = true
             try {
-                val ok = validateCodeUseCase(phoneParaReset, code)
-                if (ok) _codigoValidado.value = true
-                else _mensajeError.value = "Código incorrecto."
+                withTimeout(Constants.NETWORK_TIMEOUT_MS) {
+                    val ok = validateCodeUseCase(phoneParaReset, code)
+                    if (ok) _codigoValidado.value = true
+                    else _mensajeError.value = "Código incorrecto."
+                }
+            } catch (e: TimeoutCancellationException) {
+                _mensajeError.value = timeoutMsg()
             } catch (e: Exception) {
                 _mensajeError.value = "Error al validar: ${e.message}"
             } finally {
@@ -149,15 +176,19 @@ class ProfileViewModel(
         viewModelScope.launch {
             _cargando.value = true
             try {
-                if (updatePinUseCase(phone, nuevoPin)) {
-                    _mensajeExito.value = "PIN actualizado correctamente"
-                    registrarNotificacionPerfil(phone, "PIN restablecido", "Tu PIN fue restablecido mediante verificación.", "SECURITY")
-                    _codigoGenerado.value = null
-                    _codigoValidado.value = false
-                    cargarPerfil(phone)
-                } else {
-                    _mensajeError.value = "No se pudo actualizar el PIN"
+                withTimeout(Constants.NETWORK_TIMEOUT_MS) {
+                    if (updatePinUseCase(phone, nuevoPin)) {
+                        _mensajeExito.value = "PIN actualizado correctamente"
+                        registrarNotificacionPerfil(phone, "PIN restablecido", "Tu PIN fue restablecido mediante verificación.", "SECURITY")
+                        _codigoGenerado.value = null
+                        _codigoValidado.value = false
+                        cargarPerfil(phone)
+                    } else {
+                        _mensajeError.value = "No se pudo actualizar el PIN"
+                    }
                 }
+            } catch (e: TimeoutCancellationException) {
+                _mensajeError.value = timeoutMsg()
             } catch (e: Exception) {
                 _mensajeError.value = "Error: ${e.message}"
             } finally {
@@ -172,13 +203,17 @@ class ProfileViewModel(
         viewModelScope.launch {
             _cargando.value = true
             try {
-                if (updateNicknameUseCase(phoneNumber, nuevoApodo)) {
-                    _mensajeExito.value = "Apodo actualizado"
-                    registrarNotificacionPerfil(phoneNumber, "Perfil actualizado", "Tu apodo fue actualizado a $nuevoApodo.", "PROFILE")
-                    cargarPerfil(phoneNumber)
-                } else {
-                    _mensajeError.value = "No se pudo actualizar el apodo"
+                withTimeout(Constants.NETWORK_TIMEOUT_MS) {
+                    if (updateNicknameUseCase(phoneNumber, nuevoApodo)) {
+                        _mensajeExito.value = "Apodo actualizado"
+                        registrarNotificacionPerfil(phoneNumber, "Perfil actualizado", "Tu apodo fue actualizado a $nuevoApodo.", "PROFILE")
+                        cargarPerfil(phoneNumber)
+                    } else {
+                        _mensajeError.value = "No se pudo actualizar el apodo"
+                    }
                 }
+            } catch (e: TimeoutCancellationException) {
+                _mensajeError.value = timeoutMsg()
             } catch (e: Exception) {
                 _mensajeError.value = "Error: ${e.message}"
             } finally {
@@ -196,8 +231,15 @@ class ProfileViewModel(
 
     fun cargarNoLeidas(phoneNumber: String) {
         viewModelScope.launch {
-            try { _notificacionesNoLeidas.value = getUnreadNotificationsCountUseCase(phoneNumber) }
-            catch (_: Exception) { _notificacionesNoLeidas.value = 0 }
+            try {
+                withTimeout(Constants.NETWORK_TIMEOUT_MS) {
+                    _notificacionesNoLeidas.value = getUnreadNotificationsCountUseCase(phoneNumber)
+                }
+            } catch (e: TimeoutCancellationException) {
+                // Notificaciones son secundarias
+            } catch (_: Exception) { 
+                _notificacionesNoLeidas.value = 0 
+            }
         }
     }
 

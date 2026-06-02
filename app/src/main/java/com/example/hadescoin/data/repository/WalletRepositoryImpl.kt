@@ -177,4 +177,42 @@ class WalletRepositoryImpl(
             userDataSource.updateUserField(phoneNumber, "withdrawalTxId",   "")
         } catch (_: Exception) {}
     }
+
+    override suspend fun payment(
+        phoneNumber:          String,
+        amount:               Double,
+        referencia:           String,
+        pin:                  String,
+        autenticadoConHuella: Boolean
+    ): Result<Unit> {
+        return try {
+            val userSnapshot = userDataSource.getUser(phoneNumber)
+                ?: return Result.failure(Exception("Usuario no encontrado"))
+            val user = mapUser(userSnapshot)
+
+            // Validar PIN solo si NO se autenticó con huella
+            if (!autenticadoConHuella && user.pin != pin)
+                return Result.failure(Exception("PIN incorrecto"))
+
+            if (user.balance < amount)
+                return Result.failure(Exception("Saldo insuficiente"))
+
+            // Descontar saldo
+            userDataSource.updateBalance(phoneNumber, user.balance - amount)
+
+            // Guardar transacción de pago
+            transactionDataSource.saveTransaction(mapOf(
+                "senderId"     to phoneNumber,
+                "senderName"   to user.fullName,
+                "receiverId"   to "SERVICE_PROVIDER",
+                "receiverName" to "Proveedor de Servicios",
+                "amount"       to -amount,  // Negativo — es egreso
+                "type"         to "PAYMENT",
+                "reference"    to referencia,
+                "timestamp"    to Instant.now().toString(),
+                "source"       to "app"
+            ))
+            Result.success(Unit)
+        } catch (e: Exception) { Result.failure(e) }
+    }
 }

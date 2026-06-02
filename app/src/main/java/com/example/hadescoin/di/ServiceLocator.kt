@@ -21,6 +21,7 @@ import com.example.hadescoin.domain.usecase.GetWalletDataUseCase
 import com.example.hadescoin.domain.usecase.LoginUseCase
 import com.example.hadescoin.domain.usecase.MarkNotificationAsReadUseCase
 import com.example.hadescoin.domain.usecase.ObserveNotificationsUseCase
+import com.example.hadescoin.domain.usecase.PayServiceUseCase
 import com.example.hadescoin.domain.usecase.QueueNotificationEmailUseCase
 import com.example.hadescoin.domain.usecase.RecoverPinUseCase
 import com.example.hadescoin.domain.usecase.RegisterUseCase
@@ -67,8 +68,9 @@ object ServiceLocator {
     fun provideCreateNotificationUseCase():       CreateNotificationUseCase        = CreateNotificationUseCase(notificationRepository)
     fun provideGetNotificationsUseCase():         GetNotificationsUseCase          = GetNotificationsUseCase(notificationRepository)
     fun provideMarkNotificationAsReadUseCase():   MarkNotificationAsReadUseCase    = MarkNotificationAsReadUseCase(notificationRepository)
-    fun provideGetUnreadNotificationsCountUseCase(): GetUnreadNotificationsCountUseCase = GetUnreadNotificationsCountUseCase(notificationRepository)
-    fun provideObserveNotificationsUseCase():     ObserveNotificationsUseCase      = ObserveNotificationsUseCase(notificationRepository)
-    fun provideStopObservingNotificationsUseCase(): StopObservingNotificationsUseCase = StopObservingNotificationsUseCase(notificationRepository)
-    fun provideQueueNotificationEmailUseCase():   QueueNotificationEmailUseCase    = QueueNotificationEmailUseCase(notificationEmailRepository)
+     fun provideGetUnreadNotificationsCountUseCase(): GetUnreadNotificationsCountUseCase = GetUnreadNotificationsCountUseCase(notificationRepository)
+     fun provideObserveNotificationsUseCase():     ObserveNotificationsUseCase      = ObserveNotificationsUseCase(notificationRepository)
+     fun provideStopObservingNotificationsUseCase(): StopObservingNotificationsUseCase = StopObservingNotificationsUseCase(notificationRepository)
+     fun provideQueueNotificationEmailUseCase():   QueueNotificationEmailUseCase    = QueueNotificationEmailUseCase(notificationEmailRepository)
+     fun providePayServiceUseCase():               PayServiceUseCase                = PayServiceUseCase(walletRepository)
 }

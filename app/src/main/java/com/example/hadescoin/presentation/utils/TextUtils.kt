@@ -25,7 +25,7 @@ fun translateTransactionType(type: String): String {
         "WITHDRAWAL_FAILED"    -> "Retiro (fallido)"
         "TRANSFER"             -> "Transferencia"
         "INCOME"               -> "Ingreso"
-        "PAYMENT"              -> "Pago"
+        "PAYMENT"              -> "Pagos"
         else                   -> type
     }
 }

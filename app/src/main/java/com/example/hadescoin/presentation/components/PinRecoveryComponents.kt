@@ -169,7 +169,7 @@ fun VerifyIdentityDialog(
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text(stringResource(R.string.btn_cancel), color = HadesOnDark.copy(alpha = 0.5f)) }
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.btn_cancel), color = HadesOnDark.copy(alpha = 0.6f)) }
         }
     )
 }
@@ -219,14 +219,14 @@ fun CodeRevealDialog(
                                 brush = Brush.horizontalGradient(
                                     listOf(HadesPurple.copy(alpha = 0.12f), HadesCyan.copy(alpha = 0.06f))
                                 ),
-                                shape = RoundedCornerShape(16.dp)
+                                shape = RoundedCornerShape(14.dp)
                             )
                             .border(
                                 width = 1.5.dp,
                                 brush = Brush.horizontalGradient(
                                     listOf(HadesPurple.copy(alpha = 0.5f), HadesCyan.copy(alpha = 0.35f))
                                 ),
-                                shape = RoundedCornerShape(16.dp)
+                                shape = RoundedCornerShape(14.dp)
                             )
                             .padding(vertical = 20.dp),
                         contentAlignment = Alignment.Center
@@ -286,7 +286,7 @@ fun CodeRevealDialog(
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text(stringResource(R.string.btn_cancel), color = HadesOnDark.copy(alpha = 0.5f)) }
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.btn_cancel), color = HadesOnDark.copy(alpha = 0.6f)) }
         }
     )
 }
@@ -338,7 +338,7 @@ fun ConfirmCodeDialog(
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text(stringResource(R.string.btn_cancel), color = HadesOnDark.copy(alpha = 0.5f)) }
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.btn_cancel), color = HadesOnDark.copy(alpha = 0.6f)) }
         }
     )
 }
@@ -401,7 +401,7 @@ fun ResetPinStepDialog(
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text(stringResource(R.string.btn_cancel), color = HadesOnDark.copy(alpha = 0.5f)) }
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.btn_cancel), color = HadesOnDark.copy(alpha = 0.6f)) }
         }
     )
 }

@@ -1,9 +1,12 @@
 package com.example.hadescoin.presentation.auth.login
 
+import android.app.Application
+import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
-import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.hadescoin.R
+import com.example.hadescoin.core.Constants
 import com.example.hadescoin.di.ServiceLocator
 import com.example.hadescoin.domain.repository.SessionRepository
 import com.example.hadescoin.domain.usecase.GenerateVerificationCodeUseCase
@@ -11,16 +14,19 @@ import com.example.hadescoin.domain.usecase.GetUserProfileUseCase
 import com.example.hadescoin.domain.usecase.LoginUseCase
 import com.example.hadescoin.domain.usecase.UpdateUserPinUseCase
 import com.example.hadescoin.domain.usecase.ValidateVerificationCodeUseCase
+import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeout
 
-class LoginViewModel(
+class LoginViewModel @JvmOverloads constructor(
+    application: Application,
     private val loginUseCase:          LoginUseCase                    = ServiceLocator.provideLoginUseCase(),
     private val getUserProfileUseCase: GetUserProfileUseCase           = ServiceLocator.provideGetUserProfileUseCase(),
     private val generateCodeUseCase:   GenerateVerificationCodeUseCase = ServiceLocator.provideGenerateVerificationCodeUseCase(),
     private val validateCodeUseCase:   ValidateVerificationCodeUseCase = ServiceLocator.provideValidateVerificationCodeUseCase(),
     private val updateUserPinUseCase:  UpdateUserPinUseCase            = ServiceLocator.provideUpdateUserPinUseCase(),
     private val sessionRepository:     SessionRepository               = ServiceLocator.provideSessionRepository()
-) : ViewModel() {
+) : AndroidViewModel(application) {
 
     private val _haySessionGuardada = MutableLiveData(sessionRepository.hasSession())
     val haySessionGuardada: LiveData<Boolean> = _haySessionGuardada
@@ -31,19 +37,22 @@ class LoginViewModel(
     private val _nombreGuardado = MutableLiveData(sessionRepository.getName())
     val nombreGuardado: LiveData<String> = _nombreGuardado
 
-    // ── Biometría ────────────────────────────────────────────────────────────
-    // Expone si la biometría está activada para que LoginView decida si lanzar el prompt
-    private val _biometriaActiva = MutableLiveData(sessionRepository.isBiometriaActiva())
+    private val _biometriaActiva = MutableLiveData(sessionRepository.isBiometriaActiva(sessionRepository.getPhone()))
     val biometriaActiva: LiveData<Boolean> = _biometriaActiva
 
-    // Llamado desde LoginView cuando la autenticación biométrica fue exitosa.
-    // Navega a Home igual que un login con PIN exitoso, sin tocar Firebase.
+    private fun timeoutMsg() = getApplication<Application>().getString(R.string.error_timeout_message)
+
     fun loginConBiometria() {
         val phone = sessionRepository.getPhone()
         if (phone.isNotBlank()) _loginExitoso.value = phone
     }
 
-    // ──────────────────────────────────────────────────────────────────
+    fun refrescarDatos() {
+        _telefonoGuardado.value   = sessionRepository.getPhone()
+        _nombreGuardado.value     = sessionRepository.getName()
+        _haySessionGuardada.value = sessionRepository.hasSession()
+        _biometriaActiva.value    = sessionRepository.isBiometriaActiva(sessionRepository.getPhone())
+    }
 
     private val _cargando = MutableLiveData(false)
     val cargando: LiveData<Boolean> = _cargando
@@ -65,24 +74,28 @@ class LoginViewModel(
 
     private var phoneParaReset: String = ""
 
-    // ── Login con PIN ──────────────────────────────────────────────────────────
     fun login(phoneNumber: String, pin: String) {
         if (!esTelefonoValido(phoneNumber)) { _loginError.value = "El teléfono debe tener 10 dígitos y empezar por 3"; return }
         if (!esPinValido(pin))             { _loginError.value = "El PIN debe tener exactamente 4 dígitos"; return }
         viewModelScope.launch {
             _cargando.value = true
             try {
-                val exitoso = loginUseCase(phoneNumber, pin)
-                if (exitoso) {
-                    val nombre = getUserProfileUseCase(phoneNumber)?.fullName.orEmpty()
-                    sessionRepository.saveSession(phone = phoneNumber, name = nombre)
-                    _telefonoGuardado.value   = phoneNumber
-                    _nombreGuardado.value     = nombre
-                    _haySessionGuardada.value = true
-                    _loginExitoso.value       = phoneNumber
-                } else {
-                    _loginError.value = "Teléfono o PIN incorrectos"
+                withTimeout(Constants.NETWORK_TIMEOUT_MS) {
+                    val exitoso = loginUseCase(phoneNumber, pin)
+                    if (exitoso) {
+                        val nombre = getUserProfileUseCase(phoneNumber)?.fullName.orEmpty()
+                        sessionRepository.saveSession(phone = phoneNumber, name = nombre)
+                        _telefonoGuardado.value   = phoneNumber
+                        _nombreGuardado.value     = nombre
+                        _haySessionGuardada.value = true
+                        _biometriaActiva.value    = sessionRepository.isBiometriaActiva(phoneNumber)
+                        _loginExitoso.value       = phoneNumber
+                    } else {
+                        _loginError.value = "Teléfono o PIN incorrectos"
+                    }
                 }
+            } catch (e: TimeoutCancellationException) {
+                _loginError.value = timeoutMsg()
             } catch (e: Exception) {
                 _loginError.value = "Error de conexión: ${e.message}"
             } finally {
@@ -93,13 +106,9 @@ class LoginViewModel(
 
     fun olvidarSesionGuardada() {
         sessionRepository.clearSession()
-        _haySessionGuardada.value = false
-        _telefonoGuardado.value   = ""
-        _nombreGuardado.value     = ""
-        _biometriaActiva.value    = false
+        refrescarDatos()
     }
 
-    // ── Recuperación de PIN ───────────────────────────────────────────────────
     fun generarCodigoVerificacion(phoneNumber: String, documentNumber: String) {
         if (phoneNumber.isBlank() || documentNumber.isBlank()) {
             _errorRecuperacion.value = "Ingresa el teléfono y la cédula"; return
@@ -108,9 +117,13 @@ class LoginViewModel(
         viewModelScope.launch {
             _cargando.value = true
             try {
-                val code = generateCodeUseCase(phoneNumber, documentNumber)
-                if (code != null) _codigoGenerado.value = code
-                else _errorRecuperacion.value = "No se encontró un usuario con esos datos. Verifica el teléfono y la cédula."
+                withTimeout(Constants.NETWORK_TIMEOUT_MS) {
+                    val code = generateCodeUseCase(phoneNumber, documentNumber)
+                    if (code != null) _codigoGenerado.value = code
+                    else _errorRecuperacion.value = "No se encontró un usuario con esos datos. Verifica el teléfono y la cédula."
+                }
+            } catch (e: TimeoutCancellationException) {
+                _errorRecuperacion.value = timeoutMsg()
             } catch (e: Exception) {
                 _errorRecuperacion.value = "Error al generar el código: ${e.message}"
             } finally {
@@ -123,9 +136,13 @@ class LoginViewModel(
         viewModelScope.launch {
             _cargando.value = true
             try {
-                val ok = validateCodeUseCase(phoneParaReset, code)
-                if (ok) _codigoValidado.value = true
-                else _errorRecuperacion.value = "Código incorrecto. Verifica e intenta de nuevo."
+                withTimeout(Constants.NETWORK_TIMEOUT_MS) {
+                    val ok = validateCodeUseCase(phoneParaReset, code)
+                    if (ok) _codigoValidado.value = true
+                    else _errorRecuperacion.value = "Código incorrecto. Verifica e intenta de nuevo."
+                }
+            } catch (e: TimeoutCancellationException) {
+                _errorRecuperacion.value = timeoutMsg()
             } catch (e: Exception) {
                 _errorRecuperacion.value = "Error al validar: ${e.message}"
             } finally {
@@ -140,9 +157,13 @@ class LoginViewModel(
         viewModelScope.launch {
             _cargando.value = true
             try {
-                val exitoso = updateUserPinUseCase(phoneParaReset, nuevoPin)
-                if (exitoso) _loginExitoso.value = phoneParaReset
-                else _errorRecuperacion.value = "No se pudo actualizar el PIN"
+                withTimeout(Constants.NETWORK_TIMEOUT_MS) {
+                    val exitoso = updateUserPinUseCase(phoneParaReset, nuevoPin)
+                    if (exitoso) _loginExitoso.value = phoneParaReset
+                    else _errorRecuperacion.value = "No se pudo actualizar el PIN"
+                }
+            } catch (e: TimeoutCancellationException) {
+                _errorRecuperacion.value = timeoutMsg()
             } catch (e: Exception) {
                 _errorRecuperacion.value = "Error: ${e.message}"
             } finally {

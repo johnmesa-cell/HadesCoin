@@ -10,6 +10,7 @@ import com.example.hadescoin.presentation.auth.login.LoginView
 import com.example.hadescoin.presentation.auth.register.RegisterView
 import com.example.hadescoin.presentation.home.HomeView
 import com.example.hadescoin.presentation.notifications.NotificationsView
+import com.example.hadescoin.presentation.payment.PaymentView
 import com.example.hadescoin.presentation.transfer.TransferView
 import com.example.hadescoin.presentation.profile.ProfileView
 
@@ -59,6 +60,14 @@ fun AppNavigation() {
         ) { backStackEntry ->
             val phoneNumber = backStackEntry.arguments?.getString("phoneNumber") ?: ""
             NotificationsView(phoneNumber = phoneNumber, navController = navController)
+        }
+
+        composable(
+            route = "payment/{phoneNumber}",
+            arguments = listOf(navArgument("phoneNumber") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val phoneNumber = backStackEntry.arguments?.getString("phoneNumber") ?: ""
+            PaymentView(phoneNumber = phoneNumber, navController = navController)
         }
     }
 }

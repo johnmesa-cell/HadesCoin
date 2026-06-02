@@ -1,7 +1,9 @@
 package com.example.hadescoin.presentation.transfer
 
+import androidx.fragment.app.FragmentActivity
 import androidx.compose.animation.*
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -17,6 +19,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -24,12 +27,12 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.example.hadescoin.R
 import com.example.hadescoin.presentation.components.*
 import com.example.hadescoin.presentation.utils.BiometricHelper
+import com.example.hadescoin.presentation.utils.getInitials
 import com.example.hadescoin.ui.theme.*
 import java.util.Locale
 
@@ -53,6 +56,9 @@ fun TransferView(
     val transferError   by viewModel.transferError.observeAsState()
     val biometriaActiva by viewModel.biometriaActiva.observeAsState(false)
 
+    val receiverName       by viewModel.receiverName.observeAsState()
+    val lookingUpReceiver  by viewModel.lookingUpReceiver.observeAsState(false)
+
     val usarHuella = biometriaActiva && BiometricHelper.isDisponible(context)
 
     var mensajeError by remember { mutableStateOf("") }
@@ -73,10 +79,14 @@ fun TransferView(
         showConfirm       = showConfirm,
         usarHuella        = usarHuella,
         activity          = activity,
+        receiverName      = receiverName,
+        lookingUpReceiver = lookingUpReceiver,
         onReceiverChange  = { receiverPhone = it },
         onAmountChange    = { amount = it },
         onPinChange       = { pin = it },
         onReviewClick     = { showConfirm = true },
+        onLookupReceiver  = { phone -> viewModel.lookupReceiver(phone) },
+        onClearReceiver   = { viewModel.clearReceiverName() },
         onConfirmTransfer = {
             viewModel.transfer(
                 senderPhone          = senderPhone,
@@ -110,15 +120,18 @@ fun TransferViewContent(
     cargando: Boolean, showConfirm: Boolean,
     usarHuella: Boolean = false,
     activity: FragmentActivity? = null,
+    receiverName: String? = null,
+    lookingUpReceiver: Boolean = false,
     onReceiverChange: (String) -> Unit, onAmountChange: (String) -> Unit,
     onPinChange: (String) -> Unit, onReviewClick: () -> Unit,
+    onLookupReceiver: (String) -> Unit = {},
+    onClearReceiver: () -> Unit = {},
     onConfirmTransfer: () -> Unit, onDismissConfirm: () -> Unit, onBackClick: () -> Unit
 ) {
     val parsedAmount   = amount.toDoubleOrNull() ?: 0.0
     val remaining      = senderBalance - parsedAmount
     val exceedsBalance = parsedAmount > senderBalance && parsedAmount > 0.0
 
-    // Con huella: no se exige PIN en el formulario
     val isFormValid = !cargando && receiverPhone.length == 10 && parsedAmount > 0.0 && !exceedsBalance &&
             (if (usarHuella) true else pin.length == 4)
 
@@ -149,7 +162,7 @@ fun TransferViewContent(
             // ── Tarjeta de saldo ───────────────────────────────────────────
             Box(
                 modifier = Modifier.fillMaxWidth()
-                    .clip(RoundedCornerShape(16.dp))
+                    .clip(RoundedCornerShape(24.dp))
                     .background(Brush.linearGradient(colors = listOf(HadesPurple.copy(alpha = 0.6f), HadesNavyDark)))
                     .padding(horizontal = 20.dp, vertical = 16.dp)
             ) {
@@ -168,36 +181,139 @@ fun TransferViewContent(
 
             // ── Formulario ────────────────────────────────────────────────
             HadesCardBox {
-                Row(
-                    modifier            = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment   = Alignment.CenterVertically
-                ) {
-                    Text(text = stringResource(R.string.transfer_section_header), fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 2.sp, color = HadesCyan)
-                    // Indicador visual de modo huella activo
-                    if (usarHuella) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(20.dp))
-                                .background(HadesCyan.copy(alpha = 0.08f))
-                                .padding(horizontal = 8.dp, vertical = 3.dp)
-                        ) {
-                            Icon(imageVector = Icons.Filled.Fingerprint, contentDescription = null, tint = HadesCyan, modifier = Modifier.size(13.dp))
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text(text = "Huella activa", fontSize = 10.sp, color = HadesCyan, fontWeight = FontWeight.Medium)
-                        }
-                    }
-                }
-                Spacer(modifier = Modifier.height(4.dp))
+                HadesSectionHeader(text = stringResource(R.string.transfer_section_header))
+                Spacer(modifier = Modifier.height(8.dp))
 
                 HadesTextField(value = senderPhone,   onValueChange = {}, label = stringResource(R.string.label_from_phone), enabled = false)
                 HadesTextField(
                     value         = receiverPhone,
-                    onValueChange = { if (it.length <= 10 && it.all { c -> c.isDigit() } && (it.isEmpty() || it[0] == '3')) onReceiverChange(it) },
+                    onValueChange = {
+                        if (it.length <= 10 && it.all { c -> c.isDigit() } && (it.isEmpty() || it[0] == '3')) {
+                            onReceiverChange(it)
+                            if (it.length == 10) onLookupReceiver(it)
+                            else onClearReceiver()
+                        }
+                    },
                     label         = stringResource(R.string.label_receiver_phone),
                     keyboardType  = KeyboardType.Phone
                 )
+
+                // ── Card destinatario ──
+                AnimatedVisibility(
+                    visible = receiverPhone.length == 10,
+                    enter   = fadeIn() + expandVertically(),
+                    exit    = fadeOut() + shrinkVertically()
+                ) {
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(
+                                if (receiverName != null)
+                                    HadesCyan.copy(alpha = 0.07f)
+                                else
+                                    HadesOrange.copy(alpha = 0.06f)
+                            )
+                            .border(
+                                1.dp,
+                                if (receiverName != null)
+                                    HadesCyan.copy(alpha = 0.2f)
+                                else
+                                    HadesOrange.copy(alpha = 0.15f),
+                                RoundedCornerShape(12.dp)
+                            )
+                            .padding(horizontal = 16.dp, vertical = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        // Avatar con inicial o spinner
+                        Box(
+                            modifier = Modifier
+                                .size(40.dp)
+                                .clip(CircleShape)
+                                .background(
+                                    Brush.radialGradient(
+                                        colors = if (receiverName != null)
+                                            listOf(HadesCyan.copy(alpha = 0.25f), HadesNavyDark)
+                                        else
+                                            listOf(HadesOrange.copy(alpha = 0.2f), HadesNavyDark)
+                                    )
+                                )
+                                .border(
+                                    1.dp,
+                                    if (receiverName != null)
+                                        HadesCyan.copy(alpha = 0.35f)
+                                    else
+                                        HadesOrange.copy(alpha = 0.3f),
+                                    CircleShape
+                                ),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            if (lookingUpReceiver) {
+                                CircularProgressIndicator(
+                                    modifier  = Modifier.size(18.dp),
+                                    color     = HadesCyan,
+                                    strokeWidth = 2.dp
+                                )
+                            } else {
+                                Text(
+                                    text       = getInitials(receiverName ?: receiverPhone.take(1)),
+                                    fontSize   = if (receiverName != null) 14.sp else 16.sp,
+                                    fontWeight = FontWeight.Black,
+                                    color      = if (receiverName != null) HadesCyan else HadesOrange
+                                )
+                            }
+                        }
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text          = stringResource(R.string.transfer_recipient_label),
+                                fontSize      = 9.sp,
+                                letterSpacing = 1.sp,
+                                color         = HadesOnDark.copy(alpha = 0.45f)
+                            )
+                            Text(
+                                text       = when {
+                                    lookingUpReceiver -> stringResource(R.string.transfer_recipient_searching)
+                                    receiverName != null -> receiverName
+                                    else -> stringResource(R.string.transfer_recipient_not_found)
+                                },
+                                fontSize   = if (receiverName != null) 15.sp else 12.sp,
+                                fontWeight = if (receiverName != null) FontWeight.Bold else FontWeight.Normal,
+                                color      = when {
+                                    lookingUpReceiver -> HadesOnDark.copy(alpha = 0.4f)
+                                    receiverName != null -> HadesCyan
+                                    else -> HadesOrange.copy(alpha = 0.7f)
+                                }
+                            )
+                            // Teléfono siempre visible debajo del nombre
+                            if (receiverName != null && !lookingUpReceiver) {
+                                Text(
+                                    text  = receiverPhone,
+                                    fontSize = 11.sp,
+                                    color = HadesOnDark.copy(alpha = 0.4f)
+                                )
+                            }
+                        }
+                        // Ícono de estado
+                        if (!lookingUpReceiver) {
+                            Icon(
+                                imageVector = if (receiverName != null)
+                                    Icons.Filled.CheckCircle
+                                else
+                                    Icons.Filled.Cancel,
+                                contentDescription = null,
+                                tint = if (receiverName != null)
+                                    HadesCyan.copy(alpha = 0.5f)
+                                else
+                                    HadesOrange.copy(alpha = 0.5f),
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(4.dp))
+                }
+
                 HadesTextField(
                     value         = amount,
                     onValueChange = { if (it.length <= 12) onAmountChange(it) },
@@ -209,7 +325,6 @@ fun TransferViewContent(
                     Text(text = stringResource(R.string.warning_insufficient_balance), fontSize = 11.sp, color = HadesOrange, fontWeight = FontWeight.Medium, modifier = Modifier.padding(top = 2.dp, start = 4.dp))
                 }
 
-                // Campo PIN — solo visible cuando NO se usa huella
                 AnimatedVisibility(
                     visible = !usarHuella,
                     enter   = fadeIn() + expandVertically(),
@@ -224,7 +339,6 @@ fun TransferViewContent(
                     )
                 }
 
-                // Aviso cuando se usa huella (reemplaza al campo PIN)
                 AnimatedVisibility(
                     visible = usarHuella,
                     enter   = fadeIn() + expandVertically(),
@@ -250,7 +364,6 @@ fun TransferViewContent(
                 }
             }
 
-            // ── Resumen dinámico ──────────────────────────────────────────────
             AnimatedVisibility(
                 visible = parsedAmount > 0.0 && !exceedsBalance,
                 enter   = fadeIn() + expandVertically(),
@@ -258,7 +371,10 @@ fun TransferViewContent(
             ) {
                 Column {
                     Spacer(modifier = Modifier.height(16.dp))
-                    Text(text = stringResource(R.string.transfer_summary_header), fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 2.sp, color = HadesCyan, modifier = Modifier.padding(start = 4.dp, bottom = 8.dp))
+                    HadesSectionHeader(
+                        text     = stringResource(R.string.transfer_summary_header),
+                        modifier = Modifier.padding(start = 4.dp, bottom = 8.dp)
+                    )
                     HadesSummaryRow(items = listOf(
                         HadesSummaryItem(label = stringResource(R.string.label_to_send),   valor = parsedAmount,                 color = HadesOrange, prefijo = "- "),
                         HadesSummaryItem(label = stringResource(R.string.label_remaining),  valor = remaining.coerceAtLeast(0.0), color = HadesCyan,   prefijo = "  ")
@@ -323,11 +439,10 @@ private fun ConfirmTransferSheet(
             Text(text = "$${String.format(Locale.US, "%,.2f", amount)}", fontSize = 36.sp, fontWeight = FontWeight.Black, color = HadesOrange)
             Spacer(modifier = Modifier.height(20.dp))
 
-            // Recuadro de oruta
             Box(
                 modifier = Modifier.fillMaxWidth()
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(HadesNavy.copy(alpha = 0.5f))
+                    .clip(RoundedCornerShape(14.dp))
+                    .background(HadesNavyDark)
                     .padding(16.dp)
             ) {
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
@@ -344,9 +459,7 @@ private fun ConfirmTransferSheet(
             }
             Spacer(modifier = Modifier.height(24.dp))
 
-            // ── Botón de confirmación: huella (obligatoria) o PIN (fallback) ──
             if (usarHuella) {
-                // Huella como único método de confirmación
                 Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
                     IconButton(
                         onClick  = {
@@ -384,7 +497,6 @@ private fun ConfirmTransferSheet(
                     modifier  = Modifier.fillMaxWidth()
                 )
             } else {
-                // Botón CONFIRMAR normal (modo PIN)
                 HadesButton(text = stringResource(R.string.btn_confirm_transfer), onClick = onConfirm)
             }
 

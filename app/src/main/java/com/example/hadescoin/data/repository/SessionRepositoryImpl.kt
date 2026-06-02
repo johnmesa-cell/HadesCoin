@@ -17,6 +17,6 @@ class SessionRepositoryImpl(
     override fun clearSession() = local.clearSession()
 
     // ── Biometría ────────────────────────────────────────────────────────────
-    override fun isBiometriaActiva()              = local.isBiometriaActiva()
-    override fun setBiometriaActiva(activa: Boolean) = local.setBiometriaActiva(activa)
+    override fun isBiometriaActiva(phone: String)              = local.isBiometriaActiva(phone)
+    override fun setBiometriaActiva(phone: String, activa: Boolean) = local.setBiometriaActiva(phone, activa)
 }

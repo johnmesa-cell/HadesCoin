@@ -111,16 +111,34 @@
     <string name="transfer_success_message">Transferencia de $%s enviada correctamente.</string>
 
 
-    <!-- ══════════════════════════════════════════════
-         QR — Códigos QR (Bottom Sheet)
-    ══════════════════════════════════════════════ -->
-    <string name="qr_title">CÓDIGOS QR</string>
-    <string name="qr_subtitle">Elige qué quieres hacer con tu código QR.</string>
-    <string name="qr_scan_title">Escanear QR</string>
-    <string name="qr_scan_description">Lee el código QR de otra persona para enviarle dinero al instante.</string>
-    <string name="qr_generate_title">Generar mi QR</string>
-    <string name="qr_generate_description">Muestra tu código QR personal para que otros te envíen dinero.</string>
-    <string name="qr_coming_soon">Próximamente</string>
+     <!-- ══════════════════════════════════════════════
+          QR — Códigos QR (Bottom Sheet)
+     ══════════════════════════════════════════════ -->
+     <string name="qr_title">CÓDIGOS QR</string>
+     <string name="qr_subtitle">Elige qué quieres hacer con tu código QR.</string>
+     <string name="qr_scan_title">Escanear QR</string>
+     <string name="qr_scan_description">Lee el código QR de otra persona para enviarle dinero al instante.</string>
+     <string name="qr_generate_title">Generar mi QR</string>
+     <string name="qr_generate_description">Muestra tu código QR personal para que otros te envíen dinero.</string>
+     <string name="qr_coming_soon">Próximamente</string>
+
+
+     <!-- ══════════════════════════════════════════════
+          DEPOSIT INFO — Información de depósitos (Bottom Sheet)
+     ══════════════════════════════════════════════ -->
+     <string name="deposit_info_boton">Cómo depositar</string>
+     <string name="deposit_info_titulo">¿Cómo depositar saldo?</string>
+     <string name="deposit_info_subtitulo">Sigue estos escasos pasos para depositar en tu cuenta.</string>
+     <string name="deposit_info_paso_1_titulo">Accede al terminal</string>
+     <string name="deposit_info_paso_1_desc">Abre la app HadesCoin Cajero en el terminal físico</string>
+     <string name="deposit_info_paso_2_titulo">Ingresa tu teléfono</string>
+     <string name="deposit_info_paso_2_desc">Ingresa tu número de teléfono registrado en el terminal</string>
+     <string name="deposit_info_paso_3_titulo">Indica el monto</string>
+     <string name="deposit_info_paso_3_desc">Especifica cuánto dinero depositar y confirma la operación</string>
+     <string name="deposit_info_paso_4_titulo">Actualización automática</string>
+     <string name="deposit_info_paso_4_desc">Tu saldo se actualizará automáticamente en segundos</string>
+     <string name="deposit_info_tu_numero">Tu número:</string>
+     <string name="deposit_info_nota">Los depósitos se reflejan en segundos gracias a Firebase en tiempo real.</string>
 
 
     <!-- ══════════════════════════════════════════════
@@ -178,6 +196,8 @@
     ══════════════════════════════════════════════ -->
     <string name="notifications_title">NOTIFICACIONES</string>
     <string name="notifications_empty">No tienes notificaciones aún</string>
+    <string name="notifications_unread_count">%d sin leer</string>
+    <string name="notifications_mark_all_read">Marcar todas como leídas</string>
 
 
     <!-- ══════════════════════════════════════════════
@@ -195,6 +215,7 @@
     <string name="profile_pending_status">(Pendiente)</string>
     <string name="profile_security_section">SEGURIDAD</string>
     <string name="profile_customize_section">PERSONALIZAR</string>
+    <string name="profile_personal_section">INFORMACIÓN PERSONAL</string>
     <string name="btn_change_pin">Cambiar PIN</string>
     <string name="btn_forgot_pin">¿Olvidaste tu PIN?</string>
     <string name="profile_biometry_title">Desbloqueo con huella</string>
@@ -209,5 +230,90 @@
     <string name="dialog_update_nickname_title">Actualizar Apodo</string>
     <string name="label_your_nickname">Tu Apodo</string>
     <string name="btn_save">GUARDAR</string>
+    <string name="btn_view_full_profile">Ver perfil completo</string>
 
+     <!-- ══════════════════════════════════════════════
+          PAYMENT — Pago de servicios
+     ══════════════════════════════════════════════ -->
+     <string name="payment_boton">Pagar servicios</string>
+     <string name="payment_paso1_titulo">¿Qué servicio deseas pagar?</string>
+     <string name="payment_paso2_titulo">Datos del pago</string>
+     <string name="payment_paso3_titulo">Confirmar pago</string>
+     <string name="payment_referencia_hint">Referencia o N.º de contrato</string>
+     <string name="payment_monto_hint">Monto a pagar</string>
+     <string name="payment_btn_continuar">Continuar</string>
+     <string name="payment_btn_pagar">Pagar</string>
+     <string name="payment_btn_volver">Volver</string>
+     <string name="payment_exito_titulo">¡Pago exitoso!</string>
+     <string name="payment_exito_mensaje">Tu pago fue procesado correctamente.</string>
+     <string name="payment_error_monto">Ingresa un monto válido</string>
+     <string name="payment_error_referencia">Ingresa una referencia válida</string>
+     <string name="payment_error_saldo">Saldo insuficiente para este pago</string>
+     <string name="payment_resumen_referencia">Referencia:</string>
+     <string name="payment_resumen_monto">Monto:</string>
+     <string name="payment_servicio_energia">Energía eléctrica</string>
+     <string name="payment_servicio_agua">Agua</string>
+     <string name="payment_servicio_gas">Gas Natural</string>
+     <string name="payment_servicio_internet">Internet</string>
+     <string name="payment_servicio_telefono">Telefonía móvil</string>
+     <string name="payment_servicio_tv">TV por cable</string>
+     <string name="payment_servicio_gimnasio">Gimnasio</string>
+     <string name="payment_servicio_streaming">Streaming</string>
+     <string name="payment_servicio_seguro">Seguro</string>
+     <string name="payment_servicio_matricula">Matrícula UTP</string>
+
+    <!-- AUDITORÍA DE MEJORAS FINALES -->
+    <string name="home_history_section_title">HISTORIAL DE ACTIVIDAD</string>
+    <string name="home_search_placeholder">Buscar nombre o número...</string>
+    <string name="home_search_min_chars">Ingresa al menos 3 caracteres para buscar</string>
+    <string name="home_filter_all">Todos</string>
+    <string name="home_filter_income">Ingresos</string>
+    <string name="home_filter_expense">Egresos</string>
+    <string name="home_cd_filter_date">Filtrar por fecha</string>
+    <string name="cd_filter_date">Filtrar por fecha</string>
+    <string name="home_cd_clear_date">Limpiar fecha</string>
+    <string name="home_filter_date_label">Fecha: %s</string>
+    <string name="home_btn_view_profile">Ver perfil completo</string>
+
+    <string name="payment_bio_confirm_title">Confirmar Pago</string>
+    <string name="payment_bio_confirm_subtitle">Usa tu huella para pagar el servicio</string>
+    <string name="payment_error_amount_zero">El monto debe ser mayor a cero</string>
+    <string name="payment_error_service_invalid">Servicio no válido</string>
+
+    <string name="transfer_huella_activa">Huella activa</string>
+    <string name="transfer_bio_auth_label">Autorización por huella al confirmar</string>
+    <string name="transfer_bio_instructions">Usa tu huella para autorizar el envío</string>
+    <string name="transfer_bio_confirm_subtitle">Usa tu huella para autorizar el envío de %s</string>
+    <string name="transfer_btn_auth_tap">Toca para autorizar</string>
+
+    <!-- FILTROS DE DIRECCIÓN -->
+    <string name="filter_todos">Todos</string>
+    <string name="filter_ingresos">Ingresos</string>
+    <string name="filter_egresos">Egresos</string>
+
+    <string name="error_timeout_title">Sin conexión</string>
+    <string name="error_timeout_message">No fue posible completar la operación. Verifica tu conexión a internet e inténtalo de nuevo.</string>
+
+    <!-- DETALLE DE TRANSACCIÓN -->
+    <string name="tx_direction_received">Dinero recibido</string>
+    <string name="tx_direction_sent">Dinero enviado</string>
+    <string name="btn_close">CERRAR</string>
+
+    <string name="tx_detail_date">FECHA</string>
+    <string name="tx_detail_from">ORIGEN</string>
+    <string name="tx_detail_to">DESTINO</string>
+    <string name="tx_detail_code">CÓDIGO</string>
+    <string name="tx_detail_id">ID TRANSACCIÓN</string>
+
+    <string name="home_activity_header">HISTORIAL DE ACTIVIDAD</string>
+    <string name="transfer_recipient_label">DESTINATARIO</string>
+    <string name="transfer_recipient_searching">Buscando usuario…</string>
+    <string name="transfer_recipient_not_found">Usuario no encontrado</string>
+
+    <string name="login_welcome_back">¡Hola de nuevo!</string>
+    <string name="login_touch_fingerprint">Toca para usar tu huella</string>
+    <string name="login_or_pin">— o ingresa tu PIN —</string>
+    <string name="login_enter_pin">Ingresa tu PIN para continuar</string>
+    <string name="login_switch_account">Usar otra cuenta</string>
+    <string name="cd_fingerprint_auth">Autenticar con huella</string>
 </resources>

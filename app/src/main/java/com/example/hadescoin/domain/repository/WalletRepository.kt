@@ -32,4 +32,12 @@ interface WalletRepository {
     ): String?
 
     suspend fun markWithdrawalFailed(phoneNumber: String)
+
+    suspend fun payment(
+        phoneNumber:          String,
+        amount:               Double,
+        referencia:           String,
+        pin:                  String,
+        autenticadoConHuella: Boolean = false
+    ): Result<Unit>
 }

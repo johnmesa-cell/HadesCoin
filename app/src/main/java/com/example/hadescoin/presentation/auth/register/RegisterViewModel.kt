@@ -6,11 +6,13 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.hadescoin.di.ServiceLocator
 import com.example.hadescoin.domain.model.AppUser
+import com.example.hadescoin.domain.repository.SessionRepository
 import com.example.hadescoin.domain.usecase.RegisterUseCase
 import kotlinx.coroutines.launch
 
 class RegisterViewModel(
-    private val registerUseCase: RegisterUseCase = ServiceLocator.provideRegisterUseCase()
+    private val registerUseCase: RegisterUseCase = ServiceLocator.provideRegisterUseCase(),
+    private val sessionRepository: SessionRepository = ServiceLocator.provideSessionRepository()
 ) : ViewModel() {
 
     private val _cargando = MutableLiveData(false)
@@ -81,6 +83,7 @@ class RegisterViewModel(
                 )
                 val success = registerUseCase(user)
                 if (success) {
+                    sessionRepository.clearSession()
                     _registroExitoso.value = true
                 } else {
                     _registroError.value = "Ya existe una cuenta con ese número de teléfono"

@@ -9,6 +9,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Fingerprint
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.PersonAdd
 import androidx.compose.material.icons.filled.SwapHoriz
 import androidx.compose.material3.*
@@ -51,6 +52,15 @@ fun LoginView(
 
     var phoneNumber by remember { mutableStateOf("") }
     var pin         by remember { mutableStateOf("") }
+
+    // IMPORTANTE: Refrescar sesión cada vez que LoginView se recompone.
+    // Se necesita porque cuando vuelves del Registro (popBackStack), el ViewModel
+    // se reutiliza y sus datos caché no reflejan los cambios en SharedPreferences
+    // (específicamente clearSession() ejecutado por RegisterViewModel).
+    // Sin esto, el teléfono y nombre anterior persisten en el formulario.
+    LaunchedEffect(true) {
+        viewModel.refrescarDatos()
+    }
 
     LaunchedEffect(telefonoGuardado) {
         if (telefonoGuardado.isNotBlank()) phoneNumber = telefonoGuardado
@@ -172,13 +182,30 @@ fun LoginContent(
         ) {
             Spacer(Modifier.height(24.dp))
 
-            // ── Logo + título ────────────────────────────────────────────────
-            Image(
-                painter            = painterResource(R.drawable.ic_hadescoin_logo),
-                contentDescription = stringResource(R.string.cd_logo),
-                modifier           = Modifier.size(100.dp)
-            )
-            Spacer(Modifier.height(10.dp))
+            // ── Logo con halo de gradiente ──
+            Box(
+                modifier = Modifier
+                    .size(110.dp)
+                    .background(
+                        Brush.radialGradient(
+                            colors = listOf(
+                                HadesPurple.copy(alpha = 0.35f),
+                                Color.Transparent
+                            )
+                        ),
+                        shape = CircleShape
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                Image(
+                    painter            = painterResource(R.drawable.ic_hadescoin_logo),
+                    contentDescription = stringResource(R.string.cd_logo),
+                    modifier           = Modifier.size(80.dp)
+                )
+            }
+            Spacer(Modifier.height(14.dp))
+
+            // ── Wordmark ──
             Text(
                 text          = stringResource(R.string.login_title),
                 fontSize      = 32.sp,
@@ -187,30 +214,36 @@ fun LoginContent(
                 color         = HadesPurple,
                 textAlign     = TextAlign.Center
             )
-            Spacer(Modifier.height(6.dp))
+            Spacer(Modifier.height(4.dp))
+
+            // ── Línea de acento cyan→naranja ──
             Box(
                 modifier = Modifier
-                    .width(180.dp)
+                    .width(200.dp)
                     .height(2.dp)
-                    .background(Brush.horizontalGradient(listOf(Color.Transparent, HadesCyan, HadesOrange, Color.Transparent)))
+                    .background(
+                        Brush.horizontalGradient(
+                            listOf(
+                                Color.Transparent,
+                                HadesCyan,
+                                HadesOrange,
+                                Color.Transparent
+                            )
+                        )
+                    )
             )
             Spacer(Modifier.height(6.dp))
+
+            // ── Subtítulo con letterSpacing cyberpunk ──
             Text(
                 text          = stringResource(R.string.login_subtitle),
-                fontSize      = 11.sp,
+                fontSize      = 10.sp,
                 fontWeight    = FontWeight.Medium,
-                letterSpacing = 2.sp,
-                color         = HadesCyan.copy(alpha = 0.7f),
+                letterSpacing = 3.sp,
+                color         = HadesCyan.copy(alpha = 0.6f),
                 textAlign     = TextAlign.Center
             )
-            Spacer(Modifier.height(6.dp))
-            Box(
-                modifier = Modifier
-                    .width(100.dp)
-                    .height(1.dp)
-                    .background(Brush.horizontalGradient(listOf(Color.Transparent, HadesPurple.copy(alpha = 0.5f), Color.Transparent)))
-            )
-            Spacer(Modifier.height(24.dp))
+            Spacer(Modifier.height(28.dp))
 
             // ── Tarjeta principal ────────────────────────────────────────────
             HadesCardBox {
@@ -222,7 +255,7 @@ fun LoginContent(
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         Text(
-                            text          = "¡Hola de nuevo!",
+                            text          = stringResource(R.string.login_welcome_back),
                             fontSize      = 11.sp,
                             letterSpacing = 1.sp,
                             color         = HadesOnDark.copy(alpha = 0.45f),
@@ -252,14 +285,14 @@ fun LoginContent(
                             ) {
                                 Icon(
                                     imageVector        = Icons.Filled.Fingerprint,
-                                    contentDescription = "Autenticar con huella",
+                                    contentDescription = stringResource(R.string.cd_fingerprint_auth),
                                     tint               = HadesCyan,
                                     modifier           = Modifier.size(38.dp)
                                 )
                             }
                         }
                         Text(
-                            text      = "Toca para usar tu huella",
+                            text      = stringResource(R.string.login_touch_fingerprint),
                             fontSize  = 11.sp,
                             color     = HadesOnDark.copy(alpha = 0.4f),
                             textAlign = TextAlign.Center,
@@ -267,7 +300,7 @@ fun LoginContent(
                         )
                         Spacer(Modifier.height(14.dp))
                         Text(
-                            text      = "— o ingresa tu PIN —",
+                            text      = stringResource(R.string.login_or_pin),
                             fontSize  = 10.sp,
                             color     = HadesOnDark.copy(alpha = 0.3f),
                             textAlign = TextAlign.Center,
@@ -276,7 +309,7 @@ fun LoginContent(
                         Spacer(Modifier.height(8.dp))
                     } else {
                         Text(
-                            text      = "Ingresa tu PIN para continuar",
+                            text      = stringResource(R.string.login_enter_pin),
                             fontSize  = 11.sp,
                             color     = HadesOnDark.copy(alpha = 0.35f),
                             textAlign = TextAlign.Center,
@@ -325,7 +358,19 @@ fun LoginContent(
                     onClick  = onForgotPasswordClick,
                     modifier = Modifier.align(Alignment.End)
                 ) {
-                    Text("¿Olvidaste tu PIN?", color = HadesCyan, fontSize = 12.sp, fontWeight = FontWeight.Medium)
+                    Icon(
+                        imageVector        = Icons.Filled.Lock,
+                        contentDescription = null,
+                        tint               = HadesCyan.copy(alpha = 0.6f),
+                        modifier           = Modifier.size(13.dp)
+                    )
+                    Spacer(Modifier.width(4.dp))
+                    Text(
+                        text       = stringResource(R.string.btn_forgot_pin),
+                        color      = HadesCyan.copy(alpha = 0.8f),
+                        fontSize   = 12.sp,
+                        fontWeight = FontWeight.Medium
+                    )
                 }
 
                 // ── Opción cambiar cuenta (solo en modo inteligente) ──────────
@@ -350,7 +395,7 @@ fun LoginContent(
                         )
                         Spacer(Modifier.width(6.dp))
                         Text(
-                            text       = "Usar otra cuenta",
+                            text       = stringResource(R.string.login_switch_account),
                             color      = HadesOnDark.copy(alpha = 0.4f),
                             fontSize   = 12.sp,
                             fontWeight = FontWeight.Medium

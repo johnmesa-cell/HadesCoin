@@ -1,6 +1,8 @@
 package com.example.hadescoin.presentation.home
 
+import androidx.fragment.app.FragmentActivity
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -26,7 +28,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.example.hadescoin.R
@@ -45,9 +46,10 @@ import java.util.Locale
 
 private fun txIcon(type: String, direction: String): ImageVector {
     return when (type.uppercase()) {
-        "DEPOSIT"                                                          -> HadesIcons.ArrowDownToLine
+        "DEPOSIT" -> HadesIcons.ArrowDownToLine
         "WITHDRAW",
         "WITHDRAWAL_PENDING", "WITHDRAWAL_COMPLETED", "WITHDRAWAL_FAILED" -> HadesIcons.ArrowUpFromLine
+        "PAYMENT" -> Icons.Filled.Receipt
         else -> if (direction == "IN") Icons.Filled.ArrowDownward else Icons.Filled.ArrowUpward
     }
 }
@@ -58,8 +60,7 @@ fun HomeView(
     navController: NavController,
     viewModel: HomeViewModel = viewModel()
 ) {
-    val context  = LocalContext.current
-    val activity = context as? FragmentActivity
+    val activity = LocalContext.current as? FragmentActivity
 
     val cargando        by viewModel.cargando.observeAsState(false)
     val appUser         by viewModel.appUser.observeAsState()
@@ -68,14 +69,16 @@ fun HomeView(
     val codigoRetiro    by viewModel.codigoRetiro.observeAsState()
     val noLeidas        by viewModel.notificacionesNoLeidas.observeAsState(0)
     val biometriaActiva by viewModel.biometriaActiva.observeAsState(false)
+    val navegarALogin   by viewModel.navegarALogin.observeAsState(false)
 
-    val usarHuella = biometriaActiva && BiometricHelper.isDisponible(context)
+    val usarHuella = biometriaActiva && BiometricHelper.isDisponible(LocalContext.current)
 
     var mensajeError       by remember { mutableStateOf("") }
     var showError          by remember { mutableStateOf(false) }
     var menuExpanded       by remember { mutableStateOf(false) }
     var showWithdrawDialog by remember { mutableStateOf(false) }
     var showQrSheet        by remember { mutableStateOf(false) }
+    var mostrarDepositInfo by remember { mutableStateOf(false) }
 
     DisposableEffect(navController) {
         val listener = NavController.OnDestinationChangedListener { _, destination, _ ->
@@ -88,6 +91,14 @@ fun HomeView(
     LaunchedEffect(phoneNumber) { viewModel.loadWalletData(phoneNumber) }
     LaunchedEffect(error)       { error?.let { mensajeError = it; showError = true } }
 
+    LaunchedEffect(navegarALogin) {
+        if (navegarALogin) {
+            navController.navigate("login") {
+                popUpTo(0) { inclusive = true }
+            }
+        }
+    }
+
     HomeViewContent(
         appUser = appUser, transactions = transactions, noLeidas = noLeidas, cargando = cargando,
         menuExpanded    = menuExpanded,
@@ -99,7 +110,9 @@ fun HomeView(
         onProfile       = { navController.navigate("profile/$phoneNumber") },
         onNotifications = { navController.navigate("notifications/$phoneNumber") },
         onWithdrawAtm   = { menuExpanded = false; showWithdrawDialog = true },
-        onQr            = { menuExpanded = false; showQrSheet = true }
+        onQr            = { menuExpanded = false; showQrSheet = true },
+        onDepositInfo   = { menuExpanded = false; mostrarDepositInfo = true },
+        onPayment       = { menuExpanded = false; navController.navigate("payment/$phoneNumber") }
     )
 
     if (cargando && !showWithdrawDialog) ShowLoadingAlertDialog()
@@ -114,19 +127,20 @@ fun HomeView(
             codigoRetiro    = codigoRetiro,
             biometriaActiva = usarHuella,
             activity        = activity,
-            onGenerate      = { amount, pin, autenticadoConHuella ->
-                viewModel.generarCodigoRetiro(
-                    phoneNumber          = phoneNumber,
-                    pin                  = pin,
-                    amount               = amount,
-                    autenticadoConHuella = autenticadoConHuella
-                )
+            onGenerate      = { amount, pin, conHuella ->
+                viewModel.generarCodigoRetiro(phoneNumber, pin, amount, conHuella)
             },
             onDismiss = { showWithdrawDialog = false; viewModel.clearCodigoRetiro() }
         )
     }
     if (showQrSheet) {
         QrSheet(onDismiss = { showQrSheet = false })
+    }
+    if (mostrarDepositInfo) {
+        DepositInfoSheet(
+            phoneNumber = phoneNumber,
+            onDismiss   = { mostrarDepositInfo = false }
+        )
     }
 }
 
@@ -145,7 +159,9 @@ fun HomeViewContent(
     onProfile: () -> Unit = {},
     onNotifications: () -> Unit = {},
     onWithdrawAtm: () -> Unit = {},
-    onQr: () -> Unit = {}
+    onQr: () -> Unit = {},
+    onDepositInfo: () -> Unit = {},
+    onPayment: () -> Unit = {}
 ) {
     var showUserPanel    by remember { mutableStateOf(false) }
     var saldoVisible     by remember { mutableStateOf(true) }
@@ -165,7 +181,7 @@ fun HomeViewContent(
         val matchesDirection = when (filtroDireccion) { "TODOS" -> true; else -> tx.direction.uppercase() == filtroDireccion }
 
         val matchesSearch = if (searchQuery.length < 3) {
-            true // No se filtra si hay menos de 3 caracteres
+            true
         } else {
             val query = searchQuery.lowercase()
             tx.senderId.contains(query) ||
@@ -179,14 +195,14 @@ fun HomeViewContent(
     }
 
     val totalIngresos = transactions.filter { tx -> tx.direction == "IN"  && tx.type.uppercase() !in setOf("WITHDRAWAL_PENDING", "WITHDRAWAL_FAILED") }.sumOf { it.amount }
-    val totalEgresos  = transactions.filter { tx -> tx.direction == "OUT" && tx.type.uppercase() !in setOf("WITHDRAWAL_PENDING", "WITHDRAWAL_FAILED") }.sumOf { it.amount }
+    val totalEgresos  = transactions.filter { tx -> tx.direction == "OUT" && tx.type.uppercase() !in setOf("WITHDRAWAL_PENDING", "WITHDRAWAL_FAILED") }.sumOf { Math.abs(it.amount) }
 
     val speedDialItems = listOf(
         SpeedDialItem(label = stringResource(R.string.action_transfer), icon = Icons.Filled.SwapHoriz,     color = HadesCyan,   onClick = { onTransfer() }),
-        SpeedDialItem(label = stringResource(R.string.action_deposit),  icon = HadesIcons.ArrowDownToLine,  color = HadesCyan,   onClick = {}, enabled = false),
-        SpeedDialItem(label = "Retirar en Cajero",                       icon = HadesIcons.Landmark,         color = HadesOrange, onClick = { onWithdrawAtm() }),
-        SpeedDialItem(label = "Códigos QR",                              icon = Icons.Filled.QrCode,         color = HadesPurple, onClick = { onQr() }),
-        SpeedDialItem(label = stringResource(R.string.action_pay),      icon = Icons.Filled.CreditCard,     color = HadesPurple, onClick = {}, enabled = false)
+        SpeedDialItem(label = stringResource(R.string.action_withdraw),   icon = HadesIcons.Landmark,         color = HadesOrange, onClick = { onWithdrawAtm() }),
+        SpeedDialItem(label = stringResource(R.string.qr_title),                              icon = Icons.Filled.QrCode,         color = HadesPurple, onClick = { onQr() }),
+        SpeedDialItem(label = stringResource(R.string.deposit_info_boton), icon = Icons.Filled.Info,        color = HadesCyan,   onClick = { onDepositInfo() }),
+        SpeedDialItem(label = stringResource(R.string.payment_boton),    icon = Icons.Filled.Receipt,        color = HadesOrange, onClick = { onPayment() })
     )
 
     HadesScreen {
@@ -209,40 +225,89 @@ fun HomeViewContent(
                     Spacer(modifier = Modifier.height(28.dp))
                 }
                 item {
-                    Text(text = "HISTORIAL DE ACTIVIDAD", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = HadesCyan, letterSpacing = 2.sp)
+                    HadesSectionHeader(text = stringResource(R.string.home_activity_header))
                     Spacer(modifier = Modifier.height(16.dp))
                     HadesTextField(
                         value = searchQuery,
                         onValueChange = { if (it.length <= 20) searchQuery = it },
-                        label = "Buscar nombre o número...",
+                        label = stringResource(R.string.home_search_placeholder),
                         icon = Icons.Filled.Search,
                         modifier = Modifier.fillMaxWidth()
                     )
                     if (searchQuery.isNotEmpty() && searchQuery.length < 3) {
                         Text(
-                            text = "Ingresa al menos 3 caracteres para buscar",
+                            text = stringResource(R.string.home_search_min_chars),
                             fontSize = 10.sp,
                             color = HadesOrange.copy(alpha = 0.7f),
                             modifier = Modifier.padding(top = 4.dp, start = 4.dp)
                         )
                     }
                     Spacer(modifier = Modifier.height(12.dp))
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Box(modifier = Modifier.weight(1f)) {
-                            HadesFilterChipRow(opciones = listOf("TODOS", "IN", "OUT"), seleccionado = filtroDireccion, onSeleccion = { filtroDireccion = it }, labelTransform = { when (it) { "IN" -> "Ingresos"; "OUT" -> "Egresos"; else -> "Todos" } })
-                        }
-                        IconButton(onClick = { showDatePicker = true }, modifier = Modifier.size(40.dp).clip(RoundedCornerShape(10.dp)).background(if (fechaSeleccionada != null) HadesCyan.copy(alpha = 0.2f) else HadesNavyDark)) {
-                            Icon(imageVector = Icons.Filled.DateRange, contentDescription = "Filtrar por fecha", tint = if (fechaSeleccionada != null) HadesCyan else HadesOnDark.copy(alpha = 0.6f), modifier = Modifier.size(20.dp))
-                        }
-                        if (fechaSeleccionada != null) {
-                            IconButton(onClick = { fechaSeleccionada = null }, modifier = Modifier.size(24.dp)) {
-                                Icon(Icons.Filled.Close, contentDescription = "Limpiar fecha", tint = HadesOrange, modifier = Modifier.size(16.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        listOf("TODOS", "IN", "OUT").forEach { opcion ->
+                            val seleccionado = filtroDireccion == opcion
+                            val label = when (opcion) {
+                                "IN"  -> stringResource(R.string.filter_ingresos)
+                                "OUT" -> stringResource(R.string.filter_egresos)
+                                else  -> stringResource(R.string.filter_todos)
+                            }
+                            Box(
+                                modifier = Modifier
+                                    .height(40.dp)
+                                    .clip(RoundedCornerShape(10.dp))
+                                    .background(
+                                        if (seleccionado) HadesCyan.copy(alpha = 0.2f)
+                                        else HadesNavyDark
+                                    )
+                                    .clickable { filtroDireccion = opcion }
+                                    .padding(horizontal = 14.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text          = label.uppercase(),
+                                    fontSize      = 11.sp,
+                                    fontWeight    = FontWeight.Bold,
+                                    letterSpacing = 1.sp,
+                                    color         = if (seleccionado) HadesCyan
+                                                    else HadesOnDark.copy(alpha = 0.5f)
+                                )
                             }
                         }
+
+                        Spacer(modifier = Modifier.weight(1f))
+
+                        Box(
+                            modifier = Modifier
+                                .size(40.dp)
+                                .clip(RoundedCornerShape(10.dp))
+                                .background(
+                                    if (fechaSeleccionada != null) HadesCyan.copy(alpha = 0.2f)
+                                    else HadesNavyDark
+                                )
+                                .clickable {
+                                    if (fechaSeleccionada != null) {
+                                        fechaSeleccionada = null
+                                    } else {
+                                        showDatePicker = true
+                                    }
+                                },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Filled.DateRange,
+                                contentDescription = stringResource(R.string.cd_filter_date),
+                                tint = if (fechaSeleccionada != null) HadesCyan else HadesOnDark.copy(alpha = 0.6f),
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
                     }
-                    if (fechaSeleccionada != null) Text(text = "Fecha: $fechaSeleccionada", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = HadesCyan, modifier = Modifier.padding(top = 4.dp, start = 4.dp))
+                    if (fechaSeleccionada != null) Text(text = stringResource(R.string.home_filter_date_label, fechaSeleccionada!!), fontSize = 10.sp, fontWeight = FontWeight.Bold, color = HadesCyan, modifier = Modifier.padding(top = 4.dp, start = 4.dp))
                     Spacer(modifier = Modifier.height(12.dp))
-                    HadesFilterChipRow(opciones = listOf("TODOS", "TRANSFER", "DEPOSIT", "WITHDRAW"), seleccionado = filtroActivo, onSeleccion = { filtroActivo = it }, labelTransform = { translateTransactionType(it) })
+                    HadesFilterChipRow(opciones = listOf("TODOS", "TRANSFER", "DEPOSIT", "WITHDRAW", "PAYMENT"), seleccionado = filtroActivo, onSeleccion = { filtroActivo = it }, labelTransform = { translateTransactionType(it) })
                     Spacer(modifier = Modifier.height(20.dp))
                 }
                 item {
@@ -312,8 +377,14 @@ private fun BalanceCard(appUser: AppUser?, saldoVisible: Boolean, onToggleSaldo:
             Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(HadesOnDark.copy(alpha = 0.15f)))
             Spacer(modifier = Modifier.height(12.dp))
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                Column { Text(text = stringResource(R.string.label_phone),    fontSize = 9.sp, letterSpacing = 1.sp, color = HadesOnDark.copy(alpha = 0.5f)); Text(text = appUser?.phoneNumber    ?: "—", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = HadesOnDark) }
-                Column(horizontalAlignment = Alignment.End) { Text(text = stringResource(R.string.label_document), fontSize = 9.sp, letterSpacing = 1.sp, color = HadesOnDark.copy(alpha = 0.5f)); Text(text = appUser?.documentNumber ?: "—", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = HadesOnDark) }
+                Column {
+                    Text(text = stringResource(R.string.label_phone), fontSize = 9.sp, letterSpacing = 1.sp, color = HadesOnDark.copy(alpha = 0.5f))
+                    Text(text = appUser?.phoneNumber ?: "—", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = HadesOnDark)
+                }
+                Column(horizontalAlignment = Alignment.End) {
+                    Text(text = stringResource(R.string.label_document), fontSize = 9.sp, letterSpacing = 1.sp, color = HadesOnDark.copy(alpha = 0.5f))
+                    Text(text = appUser?.documentNumber ?: "—", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = HadesOnDark)
+                }
             }
         }
     }
@@ -326,8 +397,17 @@ private fun TransactionRow(tx: WalletTransaction, onClick: () -> Unit) {
     val prefix      = if (isIncome) "+" else "-"
     val icon        = txIcon(tx.type, tx.direction)
     val typeLabel   = translateTransactionType(tx.type)
-    Row(modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(HadesNavyDark).clickable { onClick() }.padding(horizontal = 16.dp, vertical = 14.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(14.dp))
+            .background(HadesNavyDark)
+            .clickable { onClick() }
+            .padding(horizontal = 16.dp, vertical = 14.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Row(modifier = Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically) {
             Box(modifier = Modifier.size(36.dp).clip(CircleShape).background(amountColor.copy(alpha = 0.12f)), contentAlignment = Alignment.Center) {
                 Icon(imageVector = icon, contentDescription = typeLabel, tint = amountColor, modifier = Modifier.size(18.dp))
             }
@@ -337,35 +417,171 @@ private fun TransactionRow(tx: WalletTransaction, onClick: () -> Unit) {
                 Text(text = formatTimestamp(tx.timestamp), fontSize = 11.sp,                                color = HadesOnDark.copy(alpha = 0.45f))
             }
         }
-        Text(text = "$prefix$ ${String.format(Locale.US, "%,.2f", tx.amount)}", fontWeight = FontWeight.Black, color = amountColor, fontSize = 15.sp)
+        Text(
+            text = "$prefix$ ${String.format(Locale.US, "%,.2f", tx.amount)}",
+            fontWeight = FontWeight.Black,
+            color = amountColor,
+            fontSize = 15.sp
+        )
     }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun UserPanelSheet(appUser: AppUser?, onDismiss: () -> Unit, onLogout: () -> Unit, onProfile: () -> Unit = {}) {
-    ModalBottomSheet(onDismissRequest = onDismiss, containerColor = HadesNavyDark) {
-        Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp).padding(bottom = 32.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-            Box(modifier = Modifier.size(72.dp).clip(CircleShape).background(Brush.radialGradient(colors = listOf(HadesPurple, HadesNavyDark))), contentAlignment = Alignment.Center) {
-                Text(text = getInitials(appUser?.fullName), fontSize = 26.sp, fontWeight = FontWeight.Black, color = HadesOnDark)
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        containerColor = HadesNavyDark,
+        dragHandle = {
+            Box(
+                modifier = Modifier
+                    .padding(top = 8.dp)
+                    .width(40.dp)
+                    .height(4.dp)
+                    .clip(RoundedCornerShape(2.dp))
+                    .background(HadesOnDark.copy(alpha = 0.2f))
+            )
+        }
+    ) {
+        // ── A. Cabecera con gradiente ──────────────────────────────────
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(
+                    Brush.verticalGradient(
+                        colors = listOf(HadesPurple, HadesNavyDark)
+                    )
+                )
+                .padding(vertical = 28.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                // Avatar circular con gradiente radial
+                Box(
+                    modifier = Modifier
+                        .size(80.dp)
+                        .clip(CircleShape)
+                        .background(
+                            Brush.radialGradient(
+                                colors = listOf(HadesPurpleGlow, HadesNavyDark)
+                            )
+                        )
+                        .border(2.dp, HadesCyan.copy(alpha = 0.4f), CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = getInitials(appUser?.fullName),
+                        fontSize = 28.sp,
+                        fontWeight = FontWeight.Black,
+                        color = HadesOnDark
+                    )
+                }
+                Spacer(modifier = Modifier.height(12.dp))
+                Text(
+                    text = appUser?.fullName ?: "...",
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = HadesOnDark
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = appUser?.phoneNumber ?: "—",
+                    fontSize = 13.sp,
+                    color = HadesOnDark.copy(alpha = 0.6f)
+                )
+                Spacer(modifier = Modifier.height(10.dp))
+                // Saldo visible en el sheet
+                Text(
+                    text = stringResource(R.string.label_available_balance).uppercase(),
+                    fontSize = 9.sp,
+                    letterSpacing = 2.sp,
+                    color = HadesOnDark.copy(alpha = 0.5f)
+                )
+                Text(
+                    text = "$ ${String.format(Locale.US, "%,.2f", appUser?.balance ?: 0.0)}",
+                    fontSize = 22.sp,
+                    fontWeight = FontWeight.Black,
+                    color = HadesCyan
+                )
             }
-            Spacer(modifier = Modifier.height(12.dp))
-            Text(text = appUser?.fullName ?: "...", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = HadesOnDark)
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(text = appUser?.phoneNumber ?: "—", fontSize = 14.sp, color = HadesOnDark.copy(alpha = 0.6f))
-            Spacer(modifier = Modifier.height(24.dp))
-            Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(HadesOnDark.copy(alpha = 0.1f)))
+        }
+
+        // ── B. Sección de datos con dividers ──────────────────────────
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 24.dp)
+                .padding(bottom = 32.dp)
+        ) {
             Spacer(modifier = Modifier.height(20.dp))
-            UserInfoRow(label = stringResource(R.string.label_document),     value = appUser?.documentNumber ?: "—")
+
+            // Fila documento
+            UserInfoRow(
+                label = stringResource(R.string.label_document),
+                value = appUser?.documentNumber ?: "—"
+            )
+            Spacer(modifier = Modifier.height(1.dp))
+            // Divider sutil
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(1.dp)
+                    .background(HadesOnDark.copy(alpha = 0.08f))
+            )
             Spacer(modifier = Modifier.height(12.dp))
-            UserInfoRow(label = stringResource(R.string.label_member_since), value = appUser?.createdAt?.take(10) ?: "—")
-            Spacer(modifier = Modifier.height(28.dp))
-            Button(onClick = onProfile, modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors(containerColor = HadesPurple.copy(alpha = 0.15f), contentColor = HadesPurple), shape = RoundedCornerShape(12.dp)) {
-                Icon(imageVector = Icons.Filled.Person, contentDescription = null, modifier = Modifier.size(18.dp)); Spacer(modifier = Modifier.width(8.dp)); Text(text = "Ver perfil completo", fontWeight = FontWeight.Bold)
+
+            // Fila miembro desde
+            UserInfoRow(
+                label = stringResource(R.string.label_member_since),
+                value = appUser?.createdAt?.take(10) ?: "—"
+            )
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            // Botón ver perfil completo
+            Button(
+                onClick = onProfile,
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = HadesPurple.copy(alpha = 0.15f),
+                    contentColor = HadesPurple
+                ),
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.Person,
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = stringResource(R.string.btn_view_full_profile),
+                    fontWeight = FontWeight.Bold
+                )
             }
+
             Spacer(modifier = Modifier.height(8.dp))
-            Button(onClick = { onDismiss(); onLogout() }, modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors(containerColor = HadesOrange.copy(alpha = 0.15f), contentColor = HadesOrange), shape = RoundedCornerShape(12.dp)) {
-                Icon(imageVector = Icons.AutoMirrored.Filled.ExitToApp, contentDescription = null, modifier = Modifier.size(18.dp)); Spacer(modifier = Modifier.width(8.dp)); Text(text = stringResource(R.string.btn_logout), fontWeight = FontWeight.Bold)
+
+            // Botón cerrar sesión
+            Button(
+                onClick = { onDismiss(); onLogout() },
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = HadesOrange.copy(alpha = 0.15f),
+                    contentColor = HadesOrange
+                ),
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.ExitToApp,
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = stringResource(R.string.btn_logout),
+                    fontWeight = FontWeight.Bold
+                )
             }
         }
     }
@@ -417,35 +633,158 @@ fun HadesDatePickerDialog(onDateSelected: (String) -> Unit, onDismiss: () -> Uni
     ) { DatePicker(state = datePickerState) }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TransactionDetailDialog(tx: WalletTransaction, onDismiss: () -> Unit) {
-    val isIncome = tx.direction == "IN"; val color = if (isIncome) HadesCyan else HadesOrange
-    AlertDialog(
-        onDismissRequest = onDismiss, containerColor = HadesNavyDark,
-        title = {
-            Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
-                Box(modifier = Modifier.size(60.dp).clip(CircleShape).background(color.copy(alpha = 0.1f)), contentAlignment = Alignment.Center) {
-                    Icon(imageVector = if (isIncome) Icons.Filled.ArrowDownward else Icons.Filled.ArrowUpward, contentDescription = null, tint = color, modifier = Modifier.size(32.dp))
-                }
-                Spacer(modifier = Modifier.height(12.dp))
-                Text(text = translateTransactionType(tx.type), fontSize = 18.sp, fontWeight = FontWeight.Bold, color = HadesOnDark)
+    val isIncome   = tx.direction == "IN"
+    val accentColor = if (isIncome) HadesCyan else HadesOrange
+    val icon        = txIcon(tx.type, tx.direction)
+
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        containerColor   = HadesNavyDark,
+        dragHandle = {
+            Box(
+                modifier = Modifier
+                    .padding(top = 8.dp)
+                    .width(40.dp)
+                    .height(4.dp)
+                    .clip(RoundedCornerShape(2.dp))
+                    .background(HadesOnDark.copy(alpha = 0.2f))
+            )
+        }
+    ) {
+        Column(
+            modifier            = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 24.dp)
+                .padding(bottom = 40.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // ── Ícono grande ──
+            Box(
+                modifier = Modifier
+                    .size(72.dp)
+                    .clip(CircleShape)
+                    .background(accentColor.copy(alpha = 0.12f))
+                    .border(1.dp, accentColor.copy(alpha = 0.25f), CircleShape),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector        = icon,
+                    contentDescription = null,
+                    tint               = accentColor,
+                    modifier           = Modifier.size(36.dp)
+                )
             }
-        },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                DetailItem(label = "Monto",    value = "$ ${String.format(Locale.US, "%,.2f", tx.amount)}", valueColor = color)
-                DetailItem(label = "Fecha",    value = formatTimestamp(tx.timestamp))
-                DetailItem(label = "Dirección", value = if (isIncome) "Recibido" else "Enviado")
-                if (tx.type == "TRANSFER") { DetailItem(label = "Origen", value = tx.senderId); DetailItem(label = "Destino", value = tx.receiverId) }
-                if (tx.verificationCode.isNotEmpty()) DetailItem(label = "Código", value = tx.verificationCode, valueColor = HadesPurple)
-                DetailItem(label = "ID Transacción", value = tx.id.take(12) + "...")
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // ── Tipo de transacción ──
+            Text(
+                text       = translateTransactionType(tx.type).uppercase(),
+                fontSize   = 11.sp,
+                fontWeight = FontWeight.Bold,
+                letterSpacing = 3.sp,
+                color      = HadesOnDark.copy(alpha = 0.5f)
+            )
+            Spacer(modifier = Modifier.height(6.dp))
+
+            // ── Monto grande y centrado ──
+            Text(
+                text       = "${if (isIncome) "+" else "-"}$ ${String.format(Locale.US, "%,.2f", tx.amount)}",
+                fontSize   = 38.sp,
+                fontWeight = FontWeight.Black,
+                color      = accentColor
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text  = if (isIncome)
+                            stringResource(R.string.tx_direction_received)
+                        else
+                            stringResource(R.string.tx_direction_sent),
+                fontSize = 12.sp,
+                color    = HadesOnDark.copy(alpha = 0.45f)
+            )
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            // ── Separador ──
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(1.dp)
+                    .background(HadesOnDark.copy(alpha = 0.08f))
+            )
+            Spacer(modifier = Modifier.height(20.dp))
+
+            // ── Datos secundarios en filas ──
+            DetailRow(
+                label = stringResource(R.string.tx_detail_date),
+                value = formatTimestamp(tx.timestamp)
+            )
+            if (tx.type == "TRANSFER") {
+                DetailRow(
+                    label = stringResource(R.string.tx_detail_from),
+                    value = tx.senderName.ifBlank { tx.senderId }
+                )
+                DetailRow(
+                    label = stringResource(R.string.tx_detail_to),
+                    value = tx.receiverName.ifBlank { tx.receiverId }
+                )
             }
-        },
-        confirmButton = { HadesButton(text = "CERRAR", onClick = onDismiss) }
-    )
+            if (tx.verificationCode.isNotEmpty()) {
+                DetailRow(
+                    label      = stringResource(R.string.tx_detail_code),
+                    value      = tx.verificationCode,
+                    valueColor = HadesPurple
+                )
+            }
+            DetailRow(
+                label = stringResource(R.string.tx_detail_id),
+                value = tx.id.take(12) + "…",
+                valueColor = HadesOnDark.copy(alpha = 0.5f)
+            )
+
+            Spacer(modifier = Modifier.height(28.dp))
+
+            HadesButton(
+                text     = stringResource(R.string.btn_close),
+                onClick  = onDismiss,
+                modifier = Modifier.fillMaxWidth()
+            )
+        }
+    }
 }
 
 @Composable
-private fun DetailItem(label: String, value: String, valueColor: Color = HadesOnDark) {
-    Column { Text(text = label, fontSize = 10.sp, color = HadesOnDark.copy(alpha = 0.5f), letterSpacing = 1.sp); Text(text = value, fontSize = 15.sp, fontWeight = FontWeight.Medium, color = valueColor) }
+private fun DetailRow(
+    label      : String,
+    value      : String,
+    valueColor : Color = HadesOnDark
+) {
+    Row(
+        modifier              = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 7.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment     = Alignment.CenterVertically
+    ) {
+        Text(
+            text          = label,
+            fontSize      = 11.sp,
+            letterSpacing = 1.sp,
+            color         = HadesOnDark.copy(alpha = 0.45f),
+            modifier      = Modifier.weight(1f)
+        )
+        Text(
+            text       = value,
+            fontSize   = 13.sp,
+            fontWeight = FontWeight.Bold,
+            color      = valueColor,
+            textAlign  = TextAlign.End,
+            modifier   = Modifier.weight(1.5f)
+        )
+    }
 }

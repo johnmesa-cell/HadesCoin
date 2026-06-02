@@ -82,4 +82,16 @@ class NotificationsViewModel(
     fun clearError() {
         _error.value = null
     }
+
+    fun marcarTodasComoLeidas(phoneNumber: String) {
+        val noLeidas = _notificaciones.value
+            ?.filter { !it.read } ?: return
+        noLeidas.forEach { notif ->
+            marcarComoLeida(phoneNumber, notif.id)
+        }
+    }
+
+    fun limpiarEstado() {
+        _cargando.value = false
+    }
 }

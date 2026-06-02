@@ -8,6 +8,6 @@ interface SessionRepository {
     fun clearSession()
 
     // ── Biometría ────────────────────────────────────────────────────────────
-    fun isBiometriaActiva(): Boolean
-    fun setBiometriaActiva(activa: Boolean)
+    fun isBiometriaActiva(phone: String): Boolean
+    fun setBiometriaActiva(phone: String, activa: Boolean)
 }

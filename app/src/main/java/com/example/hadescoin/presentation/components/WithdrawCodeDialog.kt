@@ -1,5 +1,6 @@
 package com.example.hadescoin.presentation.components
 
+import androidx.fragment.app.FragmentActivity
 import androidx.compose.animation.*
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
@@ -28,7 +29,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
-import androidx.fragment.app.FragmentActivity
 import com.example.hadescoin.R
 import com.example.hadescoin.presentation.utils.BiometricHelper
 import com.example.hadescoin.ui.theme.*
@@ -69,7 +69,7 @@ fun WithdrawCodeDialog(
 
     Dialog(onDismissRequest = { if (!cargando) onDismiss() }) {
         Surface(
-            shape          = RoundedCornerShape(20.dp),
+            shape          = RoundedCornerShape(24.dp),
             color          = HadesNavyDark,
             tonalElevation = 8.dp,
             modifier       = Modifier.fillMaxWidth()
@@ -315,12 +315,12 @@ private fun CodigoRetiroContent(codigo: String, monto: String, onCerrar: () -> U
                 .fillMaxWidth()
                 .background(
                     brush = Brush.horizontalGradient(listOf(HadesPurple.copy(alpha = 0.15f), HadesCyan.copy(alpha = 0.1f))),
-                    shape = RoundedCornerShape(16.dp)
+                    shape = RoundedCornerShape(14.dp)
                 )
                 .border(
                     width = 1.5.dp,
                     brush = Brush.horizontalGradient(listOf(HadesPurple, HadesCyan)),
-                    shape = RoundedCornerShape(16.dp)
+                    shape = RoundedCornerShape(14.dp)
                 )
                 .padding(vertical = 20.dp),
             contentAlignment = Alignment.Center

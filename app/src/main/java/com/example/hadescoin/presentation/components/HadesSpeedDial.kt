@@ -69,7 +69,7 @@ fun HadesSpeedDial(
                     // Label
                     Box(
                         modifier = Modifier
-                            .clip(RoundedCornerShape(8.dp))
+                            .clip(RoundedCornerShape(10.dp))
                             .background(
                                 if (item.enabled) HadesNavyDark
                                 else HadesNavyDark.copy(alpha = 0.5f)
